@@ -1,0 +1,801 @@
+{% load static %}<meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CareFlow — Hospital Admin Module</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --green-dark: #1a3d2b; --green-mid: #2d6a4f; --green-main: #3a8c64; --green-light: #52b788;
+    --green-pale: #d8f3dc; --green-bg: #d4f7e1; --accent-orange: #f4a261; --accent-gold: #e9c46a;
+    --accent-red: #e63946; --accent-blue: #4361ee; --accent-purple: #7b2d8b;
+    --white: #ffffff; --bg-primary: #ffffff; --bg-secondary: #f8fafb; --bg-tertiary: #eef1f4;
+    --text-primary: #263238; --text-secondary: #546e7a; --text-muted: #b0bec5;
+    --border-color: #dde3ea;
+    --gray-100: #f8fafb; --gray-200: #eef1f4; --gray-300: #dde3ea; --gray-400: #b0bec5;
+    --gray-500: #78909c; --gray-600: #546e7a; --gray-700: #37474f; --gray-800: #263238;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.06); --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.14);
+    --radius: 12px; --radius-lg: 18px; --sidebar-w: 240px; --topbar-h: 64px;
+  }
+  :root.dark-mode {
+    --bg-primary: #1a1a1a; --bg-secondary: #242424; --bg-tertiary: #2f2f2f;
+    --text-primary: #f0f0f0; --text-secondary: #c0c0c0; --text-muted: #808080;
+    --border-color: #404040;
+    --gray-100: #2f2f2f; --gray-200: #404040; --gray-300: #4a4a4a; --gray-400: #606060;
+    --gray-500: #808080; --gray-600: #a0a0a0; --gray-700: #c0c0c0; --gray-800: #e0e0e0;
+    --white: #1a1a1a;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.3); --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', 'Segoe UI', sans-serif; background: var(--bg-secondary); color: var(--text-primary); transition: background 0.3s ease, color 0.3s ease; min-height: 100vh; display: flex; overflow: hidden; }
+  .sidebar { width: var(--sidebar-w); background: var(--green-dark); height: 100vh; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; z-index: 100; overflow-y: auto; overflow-x: hidden; }
+  .sidebar::before { content: ''; position: absolute; bottom: -60px; right: -60px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(82,183,136,0.15) 0%, transparent 70%); pointer-events: none; }
+  .sidebar-logo { padding: 20px 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 38px; height: 38px; background: linear-gradient(135deg, var(--green-main), var(--green-light)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .logo-name { font-weight: 800; font-size: 18px; color: #ffffff; letter-spacing: -0.3px; }
+  .logo-sub { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.3px; }
+  .role-pill { margin: 12px 16px 8px; background: rgba(82,183,136,0.18); border: 1px solid rgba(82,183,136,0.3); border-radius: 20px; padding: 5px 12px; font-size: 11px; color: var(--green-light); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+  .role-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green-light); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
+  .nav-section { padding: 12px 16px 4px; font-size: 10px; color: rgba(255,255,255,0.28); font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin: 2px 8px; border-radius: 10px; cursor: pointer; color: rgba(255,255,255,0.72); font-size: 13.5px; font-weight: 500; transition: background 220ms ease, color 220ms ease, transform 220ms ease; position: relative; overflow: hidden; }
+  .nav-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: transparent; border-radius: 10px 0 0 10px; transition: background 220ms ease; }
+  .nav-item:hover { background: rgba(255,255,255,0.12); color: #7fe0c0; transform: translateX(4px); }
+  .nav-item:hover::before { background: rgba(183,240,221,0.45); }
+  .nav-item.active { background: var(--green-main); color: var(--white); font-weight: 600; }
+  .nav-item.active::before { background: rgba(255,255,255,0.55); }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-badge { margin-left: auto; background: var(--accent-orange); color: var(--white); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; min-width: 20px; text-align: center; }
+  .sidebar-bottom { margin-top: auto; padding: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .admin-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.06); }
+  .admin-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--green-main), var(--green-light)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: var(--white); flex-shrink: 0; }
+  .admin-info { flex: 1; overflow: hidden; }
+  .admin-name { font-size: 13px; color: var(--white); font-weight: 600; }
+  .admin-role { font-size: 11px; color: rgba(255,255,255,0.4); }
+  .main { margin-left: var(--sidebar-w); flex: 1; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
+  .topbar { height: var(--topbar-h); background: var(--white); border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; padding: 0 28px; gap: 16px; position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow-sm); }
+  .topbar-title { font-size: 18px; font-weight: 800; color: var(--green-dark); flex: 1; }
+  .topbar-title span { color: var(--green-main); }
+  .content { padding: 28px; flex: 1; background: #eef9f5; }
+  .view { display: none; }
+  .view.active { display: block; animation: fadeIn 0.22s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat-card { background: var(--white); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); position: relative; overflow: hidden; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s; }
+  .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: var(--radius) var(--radius) 0 0; }
+  .stat-card.green::after { background: var(--green-main); }
+  .stat-card.orange::after { background: var(--accent-orange); }
+  .stat-card.blue::after { background: var(--accent-blue); }
+  .stat-card.red::after { background: var(--accent-red); }
+  .stat-card.gold::after { background: var(--accent-gold); }
+  .stat-label { font-size: 11px; color: var(--gray-500); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .stat-value { font-size: 30px; font-weight: 800; line-height: 1; color: var(--gray-800); }
+  .stat-sub { font-size: 11.5px; color: var(--gray-500); margin-top: 5px; }
+  .stat-icon { position: absolute; top: 14px; right: 14px; font-size: 22px; opacity: 0.2; }
+  .panel { background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); overflow: hidden; margin-bottom: 20px; }
+  .panel-header { padding: 16px 20px; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; gap: 12px; }
+  .panel-header h3 { font-size: 15px; font-weight: 700; color: var(--gray-800); flex: 1; }
+  .panel-body { padding: 20px; }
+  .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .section-title { font-size: 16px; font-weight: 800; color: var(--gray-800); flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 9px; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; text-decoration: none; }
+  .btn-primary { background: var(--green-main); color: var(--white); }
+  .btn-primary:hover { background: var(--green-mid); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(58,140,100,0.3); }
+  .btn-outline { background: transparent; border: 1.5px solid var(--green-main); color: var(--green-main); }
+  .btn-outline:hover { background: var(--green-pale); }
+  .btn-danger { background: #ffeaea; color: var(--accent-red); border: 1.5px solid #fbb; }
+  .btn-danger:hover { background: var(--accent-red); color: var(--white); }
+  .btn-sm { padding: 5px 11px; font-size: 12px; border-radius: 7px; }
+  .btn-ghost { background: transparent; color: var(--gray-600); border: 1.5px solid var(--gray-300); }
+  .btn-ghost:hover { background: var(--gray-200); }
+  .btn-orange { background: var(--accent-orange); color: var(--white); }
+  .btn-blue { background: var(--accent-blue); color: var(--white); }
+  .btn-blue:hover { background: #2d4fd4; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-600); margin-bottom: 5px; letter-spacing: 0.3px; text-transform: uppercase; }
+  .form-input, .form-select, .form-textarea { width: 100%; padding: 9px 13px; border: 1.5px solid var(--gray-300); border-radius: 9px; font-family: inherit; font-size: 13.5px; color: var(--gray-700); background: var(--white); transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--green-main); box-shadow: 0 0 0 3px rgba(58,140,100,0.12); }
+  .form-input::placeholder { color: var(--gray-400); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .table-wrap { overflow-x: auto; }
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .data-table th { background: var(--gray-100); padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--gray-500); white-space: nowrap; }
+  .data-table td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tbody tr { transition: background 0.15s; }
+  .data-table tbody tr:hover { background: var(--green-bg); }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 700; }
+  .badge-green { background: var(--green-pale); color: var(--green-mid); }
+  .badge-orange { background: #fff3e0; color: #e65100; }
+  .badge-red { background: #ffeaea; color: var(--accent-red); }
+  .badge-blue { background: #e3f2fd; color: #1565c0; }
+  .badge-purple { background: #f3e5f5; color: var(--accent-purple); }
+  .badge-gray { background: var(--gray-200); color: var(--gray-500); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(3px); z-index: 1000; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+  .modal { background: var(--white); border-radius: 20px; width: 560px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: modalSlide 0.25s ease; }
+  .modal-lg { width: 720px; }
+  @keyframes modalSlide { from { transform: translateY(20px) scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; gap: 12px; position: sticky; top: 0; background: var(--white); z-index: 5; }
+  .modal-header h3 { font-size: 17px; font-weight: 800; flex: 1; color: var(--gray-800); }
+  .modal-close { width: 30px; height: 30px; border-radius: 50%; background: var(--gray-100); border: none; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--gray-500); transition: all 0.15s; }
+  .modal-close:hover { background: var(--gray-200); color: var(--gray-700); }
+  .modal-body { padding: 20px 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; gap: 10px; justify-content: flex-end; }
+  .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; }
+  .toast { background: var(--white); border-radius: 10px; padding: 12px 16px; box-shadow: var(--shadow-lg); border-left: 4px solid var(--green-main); font-size: 13.5px; font-weight: 500; color: var(--gray-700); display: flex; align-items: center; gap: 10px; animation: toastIn 0.3s ease; max-width: 340px; }
+  .toast.error { border-left-color: var(--accent-red); }
+  .toast.warning { border-left-color: var(--accent-orange); }
+  @keyframes toastIn { from { transform: translateX(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .toast.removing { animation: toastOut 0.25s ease forwards; }
+  @keyframes toastOut { to { transform: translateX(60px); opacity: 0; } }
+  .doctor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .doctor-card { background: var(--white); border: 1.5px solid var(--gray-200); border-radius: var(--radius-lg); padding: 18px; transition: all 0.2s; cursor: pointer; position: relative; }
+  .doctor-card:hover { border-color: var(--green-main); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .doc-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .doc-avatar-lg { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: var(--white); flex-shrink: 0; }
+  .doc-card-name { font-size: 14px; font-weight: 700; color: var(--gray-800); }
+  .doc-card-spec { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+  .doc-card-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .slot-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .slot-pill { padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; background: var(--green-pale); color: var(--green-mid); }
+  .doc-card-badge { position: absolute; top: 12px; right: 12px; }
+  .av-1 { background: linear-gradient(135deg,#1a3d2b,#3a8c64); }
+  .av-2 { background: linear-gradient(135deg,#4361ee,#7b2d8b); }
+  .av-3 { background: linear-gradient(135deg,#e63946,#f4a261); }
+  .av-4 { background: linear-gradient(135deg,#2d6a4f,#52b788); }
+  .av-5 { background: linear-gradient(135deg,#e9c46a,#f4a261); }
+  .av-6 { background: linear-gradient(135deg,#7b2d8b,#4361ee); }
+  .staff-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: var(--white); flex-shrink: 0; }
+  .staff-cell { display: flex; align-items: center; gap: 10px; }
+  .staff-name { font-weight: 600; font-size: 13.5px; color: var(--gray-800); }
+  .staff-dept { font-size: 11px; color: var(--gray-500); }
+  .analytics-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .chart-placeholder { background: linear-gradient(135deg, var(--green-pale), #c0f0d8); border-radius: var(--radius); padding: 20px; min-height: 200px; display: flex; flex-direction: column; gap: 6px; justify-content: flex-end; position: relative; overflow: hidden; }
+  .chart-title { position: absolute; top: 14px; left: 16px; font-size: 12px; font-weight: 700; color: var(--green-mid); text-transform: uppercase; letter-spacing: 0.5px; }
+  .bar-group { display: flex; align-items: flex-end; gap: 6px; height: 150px; }
+  .bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+  .bar { width: 100%; border-radius: 6px 6px 0 0; background: var(--green-main); transition: height 0.5s ease; }
+  .bar.orange { background: var(--accent-orange); }
+  .bar.blue { background: var(--accent-blue); }
+  .bar-label { font-size: 10px; font-weight: 600; color: var(--green-mid); }
+  .bar-val { font-size: 11px; font-weight: 700; color: var(--green-dark); }
+  .dept-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .dept-card { background: var(--white); border: 1.5px solid var(--gray-200); border-radius: var(--radius); padding: 16px; text-align: center; transition: all 0.2s; cursor: pointer; position: relative; }
+  .dept-card:hover { border-color: var(--green-main); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .dept-icon { font-size: 28px; margin-bottom: 8px; }
+  .dept-name { font-size: 13.5px; font-weight: 700; color: var(--gray-800); }
+  .dept-count { font-size: 11px; color: var(--gray-500); margin-top: 3px; }
+  .dept-card-actions { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+  .holiday-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--gray-100); }
+  .holiday-item:last-child { border-bottom: none; }
+  .holiday-date-chip { background: var(--accent-red); color: white; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 700; min-width: 70px; text-align: center; flex-shrink: 0; }
+  .tab-bar { display: flex; border-bottom: 2px solid var(--gray-200); margin-bottom: 20px; gap: 0; }
+  .tab { padding: 10px 20px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--gray-500); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+  .tab:hover { color: var(--green-main); }
+  .tab.active { color: var(--green-main); border-bottom-color: var(--green-main); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; animation: fadeIn 0.2s ease; }
+  .slot-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .time-slot { padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1.5px solid var(--gray-300); cursor: pointer; transition: all 0.15s; background: var(--white); color: var(--gray-600); }
+  .time-slot:hover { border-color: var(--green-main); color: var(--green-main); }
+  .time-slot.active { background: var(--green-main); border-color: var(--green-main); color: white; }
+  .time-slot.booked { background: var(--gray-200); border-color: var(--gray-300); color: var(--gray-400); cursor: default; }
+  .search-bar { display: flex; align-items: center; gap: 8px; background: var(--gray-100); border: 1.5px solid var(--gray-200); border-radius: 10px; padding: 8px 14px; transition: border-color 0.2s; flex: 1; max-width: 340px; }
+  .search-bar:focus-within { border-color: var(--green-main); background: var(--white); }
+  .search-bar input { border: none; background: transparent; font-family: inherit; font-size: 13.5px; color: var(--gray-700); outline: none; flex: 1; }
+  .search-bar input::placeholder { color: var(--gray-400); }
+  .icon-btn { width: 36px; height: 36px; border-radius: 9px; background: var(--gray-100); border: 1.5px solid var(--gray-200); display: flex; align-items: center; justify-content: center; font-size: 17px; cursor: pointer; transition: all 0.15s; color: var(--gray-600); }
+  .icon-btn:hover { background: var(--gray-200); color: var(--gray-800); }
+  .topbar-date { font-size: 12.5px; color: var(--gray-500); display: flex; align-items: center; gap: 6px; }
+  .topbar-actions { display: flex; align-items: center; gap: 8px; }
+  .switch { position: relative; display: inline-block; width: 38px; height: 22px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background-color: var(--gray-300); border-radius: 22px; cursor: pointer; transition: 0.3s; }
+  .slider::before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: 0.3s; }
+  input:checked + .slider { background-color: var(--green-main); }
+  input:checked + .slider::before { transform: translateX(16px); }
+  .table-controls { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--gray-200); flex-wrap: wrap; }
+  .filter-select { padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--gray-200); font-family: inherit; font-size: 12.5px; color: var(--gray-600); background: transparent; outline: none; cursor: pointer; }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--gray-400); }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 13.5px; }
+  .hospital-profile-header { background: linear-gradient(135deg, var(--green-dark), var(--green-mid)); border-radius: var(--radius-lg); padding: 28px; display: flex; align-items: center; gap: 20px; margin-bottom: 20px; color: white; }
+  .hospital-logo-box { width: 72px; height: 72px; background: rgba(255,255,255,0.15); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; font-size: 36px; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.25); }
+  .hospital-info h2 { font-size: 22px; font-weight: 800; }
+  .hospital-info p { font-size: 13px; opacity: 0.75; margin-top: 3px; }
+  .hospital-meta { display: flex; gap: 20px; margin-top: 10px; }
+  .hospital-meta-item { font-size: 12px; opacity: 0.7; display: flex; align-items: center; gap: 5px; }
+  .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--gray-100); }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-label { font-size: 13px; color: var(--gray-600); }
+  .metric-value { font-size: 14px; font-weight: 700; color: var(--gray-800); }
+  .progress-bar-wrap { background: var(--gray-200); border-radius: 20px; height: 8px; flex: 1; overflow: hidden; }
+  .progress-bar-fill { height: 100%; border-radius: 20px; background: var(--green-main); transition: width 0.6s ease; }
+  .heatmap-grid { display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 3px; font-size: 10px; }
+  .heatmap-cell { padding: 6px 4px; border-radius: 4px; text-align: center; font-weight: 600; font-size: 10px; color: var(--white); }
+  .heatmap-header { font-weight: 700; color: var(--gray-600); text-align: center; padding: 4px; font-size: 10px; }
+  .heatmap-row-label { font-weight: 600; color: var(--gray-500); display: flex; align-items: center; font-size: 10px; padding-right: 4px; }
+  .heat-0 { background: #e8f5e9; color: var(--gray-500) !important; }
+  .heat-1 { background: #a5d6a7; color: #2e7d32 !important; }
+  .heat-2 { background: #66bb6a; }
+  .heat-3 { background: #388e3c; }
+  .heat-4 { background: #1b5e20; }
+  .donut-wrap { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 10px 0; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--gray-600); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .export-row { display: flex; gap: 10px; }
+  .breadcrumb { font-size: 12px; color: var(--gray-500); display: flex; align-items: center; gap: 6px; }
+  .breadcrumb span { color: var(--green-main); }
+  @media(max-width:900px){ .doctor-grid{ grid-template-columns: repeat(2,1fr); } .dept-grid{ grid-template-columns: repeat(2,1fr); } .stats-row{ grid-template-columns: repeat(2,1fr); } }
+</style>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon">🏥</div><div><div class="logo-name">CareFlow</div><div class="logo-sub">Hospital Admin</div></div></div>
+  <div class="role-pill">{{ user.get_role_display|default:'Hospital Admin' }}</div>
+  <div class="nav-section">Overview</div>
+  <div class="nav-item active" onclick="setNav(this,'dashboard')"><span class="icon">📊</span> Dashboard</div>
+  <div class="nav-section">Hospital Setup</div>
+  <div class="nav-item" onclick="setNav(this,'hospital')"><span class="icon">🏥</span> Hospital Profile</div>
+  <div class="nav-item" onclick="setNav(this,'departments')"><span class="icon">🏢</span> Departments</div>
+  <div class="nav-item" onclick="setNav(this,'doctors')"><span class="icon">👨‍⚕️</span> Doctors <span class="nav-badge" id="badge-doctors">0</span></div>
+  <div class="nav-item" onclick="setNav(this,'slots')"><span class="icon">🕐</span> Time Slots</div>
+  <div class="nav-item" onclick="setNav(this,'holidays')"><span class="icon">📅</span> Holidays</div>
+  <div class="nav-section">Staff</div>
+  <div class="nav-item" onclick="setNav(this,'staff')"><span class="icon">👥</span> Staff Accounts</div>
+  <div class="nav-item" onclick="setNav(this,'roles')"><span class="icon">🔐</span> Roles & Access</div>
+  <div class="nav-section">Analytics</div>
+  <div class="nav-item" onclick="setNav(this,'analytics')"><span class="icon">📈</span> Reports</div>
+  <div class="nav-item" onclick="setNav(this,'heatmap')"><span class="icon">🌡️</span> Heatmap</div>
+  <div class="sidebar-bottom">
+    <div class="admin-card">
+      <div class="admin-avatar av-1">{{ user.first_name|first|default:'A' }}{{ user.last_name|first|default:'A' }}</div>
+      <div class="admin-info"><div class="admin-name">{{ user.first_name }} {{ user.last_name }}</div><div class="admin-role">{{ user.get_role_display }}</div></div>
+    </div>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Admin <span>Dashboard</span></div>
+    <div class="topbar-date">📅 <span id="today-date"></span></div>
+    <div class="topbar-actions">
+      <div class="icon-btn" onclick="toggleTheme()" id="theme-toggle" title="Toggle theme">🌙</div>
+      <div class="icon-btn" onclick="window.location.href='/logout/'" title="Logout">🚪</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="view-dashboard" class="view active">
+      <div class="stats-row" id="admin-stats-row">
+        <div class="stat-card green"><div class="stat-label">Total Doctors</div><div class="stat-value" id="stat-doctors">0</div><div class="stat-sub">Across departments</div><div class="stat-icon">👨‍⚕️</div></div>
+        <div class="stat-card blue"><div class="stat-label">Staff Accounts</div><div class="stat-value" id="stat-staff">0</div><div class="stat-sub">Active accounts</div><div class="stat-icon">👥</div></div>
+        <div class="stat-card orange"><div class="stat-label">Today's OPD</div><div class="stat-value" id="stat-opd">0</div><div class="stat-sub">Total patients today</div><div class="stat-icon">🏥</div></div>
+        <div class="stat-card red"><div class="stat-label">Departments</div><div class="stat-value" id="stat-depts">0</div><div class="stat-sub">Active departments</div><div class="stat-icon">🏢</div></div>
+      </div>
+      <div class="panel"><div class="panel-header"><h3>📊 Quick Overview</h3></div><div class="panel-body"><div style="text-align:center;padding:30px;color:var(--gray-400);font-size:14px;">Dashboard data loads from the API. Use the sidebar to manage departments, doctors, and staff.</div></div></div>
+    </div>
+
+    <div id="view-hospital" class="view">
+      <div class="hospital-profile-header">
+        <div class="hospital-logo-box" id="hospital-logo-display">🏥</div>
+        <div class="hospital-info" style="flex:1">
+          <h2 id="hp-name-display">CareFlow Medical Centre</h2>
+          <p id="hp-addr-display">📍 Loading...</p>
+          <div class="hospital-meta">
+            <div class="hospital-meta-item">📞 <span id="hp-phone-display">...</span></div>
+            <div class="hospital-meta-item">✉️ <span id="hp-email-display">...</span></div>
+            <div class="hospital-meta-item">🌐 <span id="hp-web-display">...</span></div>
+          </div>
+        </div>
+        <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.4);" onclick="openModal('modal-hospital')">✏️ Edit Profile</button>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>🏥 Hospital Details</h3></div>
+        <div class="panel-body"><div class="form-row"><div><div class="stat-label">Registration No.</div><div style="font-weight:600;" id="hp-reg-display">...</div></div><div><div class="stat-label">Established</div><div style="font-weight:600;" id="hp-est-display">...</div></div><div><div class="stat-label">Bed Capacity</div><div style="font-weight:600;" id="hp-bed-display">...</div></div><div><div class="stat-label">Accreditation</div><div id="hp-acc-display">...</div></div></div></div>
+      </div>
+    </div>
+
+    <div id="view-departments" class="view">
+      <div class="section-header"><div class="section-title">🏢 Departments</div><button class="btn btn-primary" onclick="openDeptModal()">+ Add Department</button></div>
+      <div class="dept-grid" id="dept-grid"></div>
+    </div>
+
+    <div id="view-doctors" class="view">
+      <div class="section-header"><div class="section-title">👨‍⚕️ Doctors</div><div class="search-bar"><span>🔍</span><input placeholder="Search doctors..." oninput="filterDoctors(this.value)" /></div><button class="btn btn-primary" onclick="openDoctorModal()">+ Add Doctor</button></div>
+      <div class="doctor-grid" id="doctor-grid"></div>
+    </div>
+
+    <div id="view-slots" class="view">
+      <div class="section-header"><div class="section-title">🕐 Time Slot Configuration</div></div>
+      <div class="panel">
+        <div class="panel-header"><h3>Select Doctor</h3><select class="form-select" style="max-width:260px;" id="slot-doctor-select" onchange="renderSlotConfig()"><option value="">-- Choose Doctor --</option></select></div>
+        <div class="panel-body" id="slot-config-body"><div class="empty-state"><div class="empty-icon">🕐</div><p>Select a doctor to configure time slots</p></div></div>
+      </div>
+    </div>
+
+    <div id="view-holidays" class="view">
+      <div class="section-header"><div class="section-title">📅 Holidays & Closures</div><button class="btn btn-primary" onclick="openHolidayModal()">+ Add Holiday</button><button class="btn btn-danger" onclick="openEmergencyModal()">🚨 Emergency Closure</button></div>
+      <div class="panel"><div class="panel-header"><h3>Upcoming Holidays</h3></div><div class="panel-body" id="holiday-list"></div></div>
+    </div>
+
+    <div id="view-staff" class="view">
+      <div class="section-header"><div class="section-title">👥 Staff Accounts</div><div class="search-bar"><span>🔍</span><input placeholder="Search staff..." oninput="filterStaff(this.value)" /></div><button class="btn btn-primary" onclick="openStaffModal()">+ Add Staff</button></div>
+      <div class="panel">
+        <div class="table-controls"><select class="filter-select" onchange="filterStaffByRole(this.value)"><option value="">All Roles</option><option>Admin</option><option>Doctor</option><option>Receptionist</option><option>View-Only</option></select><span style="margin-left:auto;font-size:12px;color:var(--gray-500);" id="staff-count">0 staff members</span></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>Role</th><th>Department</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead><tbody id="staff-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <div id="view-roles" class="view">
+      <div class="section-header"><div class="section-title">🔐 Roles & Access Control</div></div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;" id="roles-grid"></div>
+    </div>
+
+    <div id="view-analytics" class="view">
+      <div class="section-header"><div class="section-title">📈 Reports & Analytics</div><div class="export-row"><select class="form-select" style="max-width:140px;" id="analytics-range"><option value="daily">Daily</option><option value="weekly" selected>Weekly</option><option value="monthly">Monthly</option></select><button class="btn btn-outline" onclick="exportReport('excel')">📥 Excel</button><button class="btn btn-outline" onclick="exportReport('pdf')">📄 PDF</button></div></div>
+      <div class="panel"><div class="panel-header"><h3>📊 Analytics Dashboard</h3></div><div class="panel-body"><div style="text-align:center;padding:30px;color:var(--gray-400);font-size:14px;">Analytics data coming soon with full reports integration.</div></div></div>
+    </div>
+
+    <div id="view-heatmap" class="view">
+      <div class="section-header"><div class="section-title">🌡️ Busiest Days & Hours Heatmap</div></div>
+      <div class="panel"><div class="panel-header"><h3>Patient Volume by Hour & Day</h3></div><div class="panel-body" id="heatmap-container"></div></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-hospital"><div class="modal">
+  <div class="modal-header"><h3>🏥 Edit Hospital Profile</h3><button class="modal-close" onclick="closeModal('modal-hospital')">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Hospital Name</label><input class="form-input" id="hp-name" /></div>
+    <div class="form-group"><label>Address</label><textarea class="form-textarea" id="hp-addr"></textarea></div>
+    <div class="form-row"><div class="form-group"><label>Phone</label><input class="form-input" id="hp-phone" /></div><div class="form-group"><label>Email</label><input class="form-input" id="hp-email" /></div></div>
+    <div class="form-row"><div class="form-group"><label>Website</label><input class="form-input" id="hp-web" /></div><div class="form-group"><label>Logo Emoji</label><input class="form-input" id="hp-logo" /></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-hospital')">Cancel</button><button class="btn btn-primary" onclick="saveHospitalProfile()">💾 Save Changes</button></div>
+</div></div>
+
+<div class="modal-overlay" id="modal-dept"><div class="modal">
+  <div class="modal-header"><h3 id="dept-modal-title">🏢 Add Department</h3><button class="modal-close" onclick="closeModal('modal-dept')">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Department Name</label><input class="form-input" id="dept-name" /></div>
+    <div class="form-row"><div class="form-group"><label>Icon</label><input class="form-input" id="dept-icon" /></div><div class="form-group"><label>Floor</label><input class="form-input" id="dept-floor" /></div></div>
+    <div class="form-group"><label>Head of Department</label><input class="form-input" id="dept-head" /></div>
+    <div class="form-group"><label>Description</label><textarea class="form-textarea" id="dept-desc"></textarea></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-dept')">Cancel</button><button class="btn btn-primary" onclick="saveDept()">+ Add Department</button></div>
+</div></div>
+
+<div class="modal-overlay" id="modal-doctor"><div class="modal modal-lg">
+  <div class="modal-header"><h3 id="doctor-modal-title">👨‍⚕️ Add Doctor</h3><button class="modal-close" onclick="closeModal('modal-doctor')">✕</button></div>
+  <div class="modal-body">
+    <div class="form-row"><div class="form-group"><label>Full Name</label><input class="form-input" id="doc-name" /></div><div class="form-group"><label>Speciality</label><input class="form-input" id="doc-spec" /></div></div>
+    <div class="form-row"><div class="form-group"><label>Department</label><select class="form-select" id="doc-dept"></select></div><div class="form-group"><label>Qualification</label><input class="form-input" id="doc-qual" /></div></div>
+    <div class="form-row"><div class="form-group"><label>Phone</label><input class="form-input" id="doc-phone" /></div><div class="form-group"><label>Email</label><input class="form-input" id="doc-email" /></div></div>
+    <div class="form-row"><div class="form-group"><label>Token Prefix</label><input class="form-input" id="doc-prefix" style="max-width:80px;" placeholder="A" /></div><div class="form-group"><label>Slots/Day</label><input type="number" class="form-input" id="doc-slots" value="20" /></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-doctor')">Cancel</button><button class="btn btn-primary" onclick="saveDoctor()">+ Add Doctor</button></div>
+</div></div>
+
+<div class="modal-overlay" id="modal-staff"><div class="modal">
+  <div class="modal-header"><h3 id="staff-modal-title">👤 Add Staff Account</h3><button class="modal-close" onclick="closeModal('modal-staff')">✕</button></div>
+  <div class="modal-body">
+    <div class="form-row"><div class="form-group"><label>Full Name</label><input class="form-input" id="staff-name" /></div><div class="form-group"><label>Email</label><input class="form-input" id="staff-email" /></div></div>
+    <div class="form-row"><div class="form-group"><label>Role</label><select class="form-select" id="staff-role"><option>Admin</option><option>Doctor</option><option>Receptionist</option><option>View-Only</option></select></div><div class="form-group"><label>Department</label><select class="form-select" id="staff-dept"></select></div></div>
+    <div class="form-row"><div class="form-group"><label>Phone</label><input class="form-input" id="staff-phone" /></div><div class="form-group"><label>Password</label><input type="password" class="form-input" id="staff-pass" /></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-staff')">Cancel</button><button class="btn btn-primary" onclick="saveStaff()">+ Create Account</button></div>
+</div></div>
+
+<div class="modal-overlay" id="modal-holiday"><div class="modal">
+  <div class="modal-header"><h3>📅 Add Holiday</h3><button class="modal-close" onclick="closeModal('modal-holiday')">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Holiday Name</label><input class="form-input" id="hol-name" /></div>
+    <div class="form-row"><div class="form-group"><label>Date</label><input type="date" class="form-input" id="hol-date" /></div><div class="form-group"><label>Type</label><select class="form-select" id="hol-type"><option>National Holiday</option><option>State Holiday</option><option>Hospital Closure</option><option>Maintenance</option></select></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-holiday')">Cancel</button><button class="btn btn-primary" onclick="saveHoliday()">+ Add Holiday</button></div>
+</div></div>
+
+<div class="modal-overlay" id="modal-emergency"><div class="modal">
+  <div class="modal-header"><h3>🚨 Emergency Closure</h3><button class="modal-close" onclick="closeModal('modal-emergency')">✕</button></div>
+  <div class="modal-body">
+    <div style="background:#fff0f0;border:1.5px solid #fbb;border-radius:var(--radius);padding:14px;margin-bottom:16px;font-size:13px;color:var(--accent-red);">⚠️ This will immediately close all OPD slots.</div>
+    <div class="form-group"><label>Reason</label><input class="form-input" id="emg-reason" /></div>
+    <div class="form-row"><div class="form-group"><label>From Date</label><input type="date" class="form-input" id="emg-from" /></div><div class="form-group"><label>To Date</label><input type="date" class="form-input" id="emg-to" /></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-emergency')">Cancel</button><button class="btn btn-danger" onclick="saveEmergency()">🚨 Confirm Closure</button></div>
+</div></div>
+
+<div class="modal-overlay" id="modal-confirm"><div class="modal" style="width:400px;">
+  <div class="modal-header"><h3>⚠️ Confirm Delete</h3><button class="modal-close" onclick="closeModal('modal-confirm')">✕</button></div>
+  <div class="modal-body"><p style="font-size:14px;color:var(--gray-700);" id="confirm-msg">Are you sure?</p></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-confirm')">Cancel</button><button class="btn btn-danger" id="confirm-yes-btn">Delete</button></div>
+</div></div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script src="{% static 'js/api.js' %}"></script>
+<script>
+let doctors = [];
+let departments = [];
+let staffList = [];
+let holidays = [];
+let editingDoctorId = null;
+let editingStaffId = null;
+let editingDeptId = null;
+
+async function loadAdminData() {
+  try {
+    const [docs, depts, staff, hols] = await Promise.all([
+      API.admin.doctors(),
+      API.admin.departments(),
+      API.admin.users(),
+      API.admin.holidays(),
+    ]);
+    doctors = docs;
+    departments = depts;
+    staffList = staff;
+    holidays = hols;
+
+    document.getElementById('stat-doctors').textContent = doctors.length;
+    document.getElementById('stat-staff').textContent = staffList.filter(u => u.is_active).length;
+    document.getElementById('stat-depts').textContent = departments.length;
+    document.getElementById('badge-doctors').textContent = doctors.length;
+
+    renderDepts();
+    renderDoctors();
+    renderStaff();
+    renderHolidays();
+    populateSlotDoctors();
+    populateDeptDropdowns();
+    loadHospitalProfile();
+  } catch (e) { console.error('Failed to load admin data:', e); showToast(e.message, 'error'); }
+}
+
+async function loadHospitalProfile() {
+  try {
+    const p = await API.admin.hospitalProfile();
+    document.getElementById('hp-name-display').textContent = p.name;
+    document.getElementById('hp-addr-display').innerHTML = '📍 ' + p.address;
+    document.getElementById('hp-phone-display').textContent = p.phone;
+    document.getElementById('hp-email-display').textContent = p.email;
+    document.getElementById('hp-web-display').textContent = p.website;
+    document.getElementById('hospital-logo-display').textContent = p.logo_icon;
+    document.getElementById('hp-reg-display').textContent = p.registration_no;
+    document.getElementById('hp-est-display').textContent = p.established;
+    document.getElementById('hp-bed-display').textContent = p.bed_capacity + ' Beds';
+    document.getElementById('hp-acc-display').innerHTML = `<span class="badge badge-green">${p.accreditation}</span>`;
+    document.getElementById('hp-name').value = p.name;
+    document.getElementById('hp-addr').value = p.address;
+    document.getElementById('hp-phone').value = p.phone;
+    document.getElementById('hp-email').value = p.email;
+    document.getElementById('hp-web').value = p.website;
+    document.getElementById('hp-logo').value = p.logo_icon;
+  } catch (e) { console.error('Failed to load hospital profile:', e); }
+}
+
+function renderDepts() {
+  const g = document.getElementById('dept-grid');
+  g.innerHTML = departments.map(d => `<div class="dept-card">
+    <div class="dept-icon">${d.icon||'🏢'}</div>
+    <div class="dept-name">${d.name}</div>
+    <div class="dept-count">${d.doctors_count||0} doctors · ${d.floor||''}</div>
+    <div style="font-size:11px;color:var(--gray-400);margin-top:4px;">${d.description||''}</div>
+    <div class="dept-card-actions"><button class="btn btn-outline btn-sm" onclick="editDept(${d.id})">✏️ Edit</button><button class="btn btn-danger btn-sm" onclick="confirmDelete('dept',${d.id})">🗑</button></div>
+  </div>`).join('') + `<div class="dept-card" style="border-style:dashed;background:var(--gray-100);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:160px;" onclick="openDeptModal()"><div style="font-size:28px;opacity:0.4;">+</div><div style="font-size:13px;color:var(--gray-400);font-weight:600;">Add Department</div></div>`;
+}
+
+function populateDeptDropdowns() {
+  const opts = '<option value="">Select</option>' + departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+  const sel = document.getElementById('doc-dept');
+  if (sel) sel.innerHTML = opts;
+  const sel2 = document.getElementById('staff-dept');
+  if (sel2) sel2.innerHTML = opts;
+}
+
+function openDeptModal(data) {
+  editingDeptId = data ? data.id : null;
+  document.getElementById('dept-modal-title').textContent = data ? '✏️ Edit Department' : '🏢 Add Department';
+  document.getElementById('dept-name').value = data ? data.name : '';
+  document.getElementById('dept-icon').value = data ? data.icon : '';
+  document.getElementById('dept-floor').value = data ? data.floor : '';
+  document.getElementById('dept-head').value = data ? data.head : '';
+  document.getElementById('dept-desc').value = data ? data.description : '';
+  openModal('modal-dept');
+}
+function editDept(id) { openDeptModal(departments.find(d => d.id === id)); }
+
+async function saveDept() {
+  const name = document.getElementById('dept-name').value.trim();
+  if (!name) { showToast('Department name required', 'error'); return; }
+  const data = { name, icon: document.getElementById('dept-icon').value || '🏢', floor: document.getElementById('dept-floor').value, head: document.getElementById('dept-head').value, description: document.getElementById('dept-desc').value };
+  try {
+    if (editingDeptId) {
+      await API.admin.updateDept(editingDeptId, data);
+      showToast('Department updated ✅');
+    } else {
+      await API.admin.createDept(data);
+      showToast('Department added ✅');
+    }
+    editingDeptId = null;
+    closeModal('modal-dept');
+    loadAdminData();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function renderDoctors(filter) {
+  const g = document.getElementById('doctor-grid');
+  const list = filter ? doctors.filter(d => (d.name||'').toLowerCase().includes(filter) || (d.specialty||'').toLowerCase().includes(filter)) : doctors;
+  g.innerHTML = list.map(d => `<div class="doctor-card">
+    <div class="doc-card-badge"><span class="badge ${d.status==='active'?'badge-green':'badge-orange'}">${d.status==='active'?'✅ Active':'🟡 On Leave'}</span></div>
+    <div class="doc-card-header"><div class="doc-avatar-lg ${d.avatar_color||'av-1'}">${(d.name||'').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div><div><div class="doc-card-name">${d.name}</div><div class="doc-card-spec">${d.specialty||''}</div><div style="font-size:11px;color:var(--gray-400);">${d.qualification||''}</div></div></div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">🏢 ${d.department_name||''}</div>
+    <div style="font-size:12px;color:var(--gray-500);">📅 ${d.days_available||''}</div>
+    <div class="slot-pills">${d.morning_slots ? `<span class="slot-pill">🌅 ${d.morning_slots}</span>` : ''}${d.evening_slots ? `<span class="slot-pill">🌆 ${d.evening_slots}</span>` : ''}<span class="slot-pill" style="background:#e3f2fd;color:#1565c0;">${d.slots_per_day||0} slots/day</span></div>
+    <div class="doc-card-actions"><button class="btn btn-outline btn-sm" style="flex:1" onclick="editDoctor(${d.id})">✏️ Edit</button><button class="btn btn-danger btn-sm" onclick="confirmDelete('doctor',${d.id})">🗑</button></div>
+  </div>`).join('');
+  document.getElementById('badge-doctors').textContent = doctors.length;
+}
+
+function filterDoctors(v) { renderDoctors(v.toLowerCase()); }
+
+function openDoctorModal(data) {
+  editingDoctorId = data ? data.id : null;
+  document.getElementById('doctor-modal-title').textContent = data ? '✏️ Edit Doctor' : '👨‍⚕️ Add Doctor';
+  document.getElementById('doc-name').value = data ? data.name : '';
+  document.getElementById('doc-spec').value = data ? data.specialty : '';
+  document.getElementById('doc-dept').value = data ? (data.department || '') : '';
+  document.getElementById('doc-qual').value = data ? data.qualification : '';
+  document.getElementById('doc-phone').value = data ? data.phone : '';
+  document.getElementById('doc-email').value = data ? data.email : '';
+  document.getElementById('doc-prefix').value = data ? data.prefix : '';
+  document.getElementById('doc-slots').value = data ? data.slots_per_day : 20;
+  openModal('modal-doctor');
+}
+function editDoctor(id) { openDoctorModal(doctors.find(d => d.id === id)); }
+
+async function saveDoctor() {
+  const name = document.getElementById('doc-name').value.trim();
+  if (!name) { showToast('Doctor name required', 'error'); return; }
+  const data = {
+    name, specialty: document.getElementById('doc-spec').value,
+    department: document.getElementById('doc-dept').value || null,
+    qualification: document.getElementById('doc-qual').value,
+    phone: document.getElementById('doc-phone').value,
+    email: document.getElementById('doc-email').value,
+    prefix: document.getElementById('doc-prefix').value,
+    slots_per_day: parseInt(document.getElementById('doc-slots').value) || 20,
+    avatar_color: 'av-1', days_available: 'Mon–Fri', status: 'active',
+  };
+  try {
+    if (editingDoctorId) {
+      await API.admin.updateDoctor(editingDoctorId, data);
+      showToast(`${name} updated ✅`);
+    } else {
+      await API.admin.createDoctor(data);
+      showToast(`${name} added ✅`);
+    }
+    editingDoctorId = null;
+    closeModal('modal-doctor');
+    loadAdminData();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function populateSlotDoctors() {
+  const sel = document.getElementById('slot-doctor-select');
+  if (sel) sel.innerHTML = '<option value="">-- Choose Doctor --</option>' + doctors.map(d => `<option value="${d.id}">${d.name} — ${d.department_name||''}</option>`).join('');
+}
+
+function renderSlotConfig() {
+  const id = parseInt(document.getElementById('slot-doctor-select').value);
+  const body = document.getElementById('slot-config-body');
+  if (!id) { body.innerHTML = '<div class="empty-state"><div class="empty-icon">🕐</div><p>Select a doctor to configure time slots</p></div>'; return; }
+  const doc = doctors.find(d => d.id === id);
+  const times = ['09:00','09:20','09:40','10:00','10:20','10:40','11:00','11:20','11:40','12:00','12:20','12:40','17:00','17:20','17:40','18:00','18:20','18:40'];
+  body.innerHTML = `<div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;"><div class="doc-avatar-lg ${doc.avatar_color||'av-1'}">${(doc.name||'').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div><div><div style="font-weight:700;font-size:15px;color:var(--gray-800);">${doc.name}</div><div style="font-size:13px;color:var(--gray-500);">${doc.specialty||''} · ${doc.department_name||''}</div></div></div></div>
+    <div style="font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Today's Slot Availability</div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;"><div style="display:flex;align-items:center;gap:5px;font-size:12px;"><div style="width:14px;height:14px;border-radius:3px;background:var(--green-main);"></div> Available</div><div style="display:flex;align-items:center;gap:5px;font-size:12px;"><div style="width:14px;height:14px;border-radius:3px;background:var(--gray-300);"></div> Booked</div></div>
+    <div class="slot-grid">${times.map((t,i) => `<div class="time-slot active" onclick="this.classList.toggle('active')">${t}</div>`).join('')}</div>
+    <div style="margin-top:16px;display:flex;gap:10px;"><button class="btn btn-primary" onclick="showToast('Slot configuration saved ✅')">💾 Save Slots</button><button class="btn btn-outline" onclick="showToast('Slots reset to default','warning')">↺ Reset</button></div>`;
+}
+
+function renderHolidays() {
+  const list = document.getElementById('holiday-list');
+  list.innerHTML = holidays.map(h => `<div class="holiday-item"><div class="holiday-date-chip">${new Date(h.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</div><div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--gray-800);">${h.name}</div><div style="font-size:12px;color:var(--gray-500);">${h.type||''}</div></div><button class="btn btn-danger btn-sm" onclick="confirmDelete('holiday',${h.id})">🗑</button></div>`).join('');
+}
+
+function openHolidayModal() {
+  document.getElementById('hol-name').value = '';
+  document.getElementById('hol-date').value = '';
+  document.getElementById('hol-type').value = 'National Holiday';
+  openModal('modal-holiday');
+}
+
+async function saveHoliday() {
+  const name = document.getElementById('hol-name').value.trim();
+  const date = document.getElementById('hol-date').value;
+  if (!name || !date) { showToast('Name and date required', 'error'); return; }
+  try {
+    await API.admin.createHoliday({ name, date, type: document.getElementById('hol-type').value });
+    showToast(`${name} added ✅`);
+    closeModal('modal-holiday');
+    loadAdminData();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function openEmergencyModal() {
+  document.getElementById('emg-reason').value = '';
+  document.getElementById('emg-from').value = '';
+  document.getElementById('emg-to').value = '';
+  openModal('modal-emergency');
+}
+
+async function saveEmergency() {
+  const reason = document.getElementById('emg-reason').value.trim();
+  if (!reason) { showToast('Reason required', 'error'); return; }
+  try {
+    await API.admin.emergencyClosure({ reason, from_date: document.getElementById('emg-from').value, to_date: document.getElementById('emg-to').value });
+    showToast('🚨 Emergency closure activated', 'error');
+    closeModal('modal-emergency');
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function renderStaff(filter) {
+  const tbody = document.getElementById('staff-tbody');
+  const list = filter ? staffList.filter(s => (s.username||'').toLowerCase().includes(filter) || (s.email||'').toLowerCase().includes(filter) || (s.first_name||'').toLowerCase().includes(filter) || (s.last_name||'').toLowerCase().includes(filter)) : staffList;
+  const roleLabels = { admin: 'Admin', doctor: 'Doctor', receptionist: 'Receptionist', view_only: 'View-Only', hospital_admin: 'Admin' };
+  const roleBadge = { admin: 'badge-purple', doctor: 'badge-blue', receptionist: 'badge-green', view_only: 'badge-gray', hospital_admin: 'badge-purple' };
+  tbody.innerHTML = list.map(s => `<tr>
+    <td><div class="staff-cell"><div class="staff-avatar av-1">${(s.first_name||'')[0]||''}${(s.last_name||'')[0]||''}</div><div><div class="staff-name">${s.first_name||s.username||''} ${s.last_name||''}</div><div class="staff-dept">${s.phone||''}</div></div></div></td>
+    <td><span class="badge ${roleBadge[s.role]||'badge-gray'}">${roleLabels[s.role]||s.role||''}</span></td>
+    <td style="font-size:13px;color:var(--gray-600);">-</td>
+    <td style="font-size:13px;color:var(--gray-600);">${s.email||''}</td>
+    <td><span class="badge ${s.is_active?'badge-green':'badge-gray'}">${s.is_active?'✅ Active':'❌ Inactive'}</span></td>
+    <td><div style="display:flex;gap:6px;"><button class="btn btn-danger btn-sm" onclick="showToast('User deletion via API coming soon','warning')">🗑</button></div></td>
+  </tr>`).join('');
+  document.getElementById('staff-count').textContent = `${list.length} staff member${list.length!==1?'s':''}`;
+}
+
+function filterStaff(v) { renderStaff(v.toLowerCase()); }
+function filterStaffByRole(v) { renderStaff(); }
+
+function openStaffModal() {
+  document.getElementById('staff-modal-title').textContent = '👤 Add Staff Account';
+  document.getElementById('staff-name').value = '';
+  document.getElementById('staff-email').value = '';
+  document.getElementById('staff-role').value = 'Receptionist';
+  document.getElementById('staff-dept').value = '';
+  document.getElementById('staff-phone').value = '';
+  document.getElementById('staff-pass').value = '';
+  openModal('modal-staff');
+}
+
+async function saveStaff() {
+  const name = document.getElementById('staff-name').value.trim();
+  if (!name) { showToast('Name required', 'error'); return; }
+  const parts = name.split(' ');
+  const data = {
+    username: document.getElementById('staff-email').value.split('@')[0],
+    email: document.getElementById('staff-email').value,
+    first_name: parts[0], last_name: parts.slice(1).join(' '),
+    role: document.getElementById('staff-role').value.toLowerCase().replace(' ','_'),
+    phone: document.getElementById('staff-phone').value,
+    password: document.getElementById('staff-pass').value || 'password123',
+  };
+  try {
+    await API.post('/api/auth/register/', data);
+    showToast(`${name} account created ✅`);
+    closeModal('modal-staff');
+    loadAdminData();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+const rolesData = [
+  { name:'Admin', icon:'👑', desc:'Full access to all modules including hospital setup, staff management, billing, and reports.', perms:['Hospital Profile','Departments','Doctors','Staff Accounts','All Reports','Role Management','System Settings'] },
+  { name:'Doctor', icon:'👨‍⚕️', desc:'Access to their own OPD queue, patient records, and appointment schedule.', perms:['Own Queue','Patient Records','Appointment Schedule','Prescription'] },
+  { name:'Receptionist', icon:'📋', desc:'Can manage OPD queue, check-in patients, issue tokens, and view doctor schedules.', perms:['Queue Management','Walk-In Tokens','Check-In','Doctor Schedule View','Patient Search'] },
+  { name:'View-Only', icon:'👁️', desc:'Read-only access to dashboards and reports. Cannot modify any data.', perms:['Dashboard View','Reports View'] },
+];
+
+function renderRoles() {
+  const g = document.getElementById('roles-grid');
+  g.innerHTML = rolesData.map(r => `<div class="panel" style="margin-bottom:0;"><div class="panel-header"><div class="doc-avatar-lg av-1" style="width:38px;height:38px;font-size:16px;">${r.icon}</div><h3>${r.name}</h3><span class="badge badge-green"></span></div><div class="panel-body"><div style="font-size:13px;color:var(--gray-600);margin-bottom:12px;">${r.desc}</div><div style="font-size:11px;font-weight:700;color:var(--gray-500);margin-bottom:8px;">Permissions</div><div style="display:flex;flex-wrap:wrap;gap:6px;">${r.perms.map(p => `<span class="badge badge-green" style="font-size:11px;">✅ ${p}</span>`).join('')}</div></div></div>`).join('');
+}
+
+function confirmDelete(type, id) {
+  const labels = { doctor: 'doctor', dept: 'department', holiday: 'holiday' };
+  document.getElementById('confirm-msg').textContent = `Are you sure you want to delete this ${labels[type]||'item'}?`;
+  document.getElementById('confirm-yes-btn').onclick = async () => {
+    try {
+      if (type === 'doctor') { await API.admin.deleteDoctor(id); }
+      else if (type === 'dept') { await API.admin.deleteDept(id); }
+      else if (type === 'holiday') { await API.admin.deleteHoliday(id); }
+      closeModal('modal-confirm');
+      showToast(`${labels[type]||'Item'} deleted`, 'error');
+      loadAdminData();
+    } catch (e) { showToast(e.message, 'error'); }
+  };
+  openModal('modal-confirm');
+}
+
+async function saveHospitalProfile() {
+  const data = {
+    name: document.getElementById('hp-name').value,
+    address: document.getElementById('hp-addr').value,
+    phone: document.getElementById('hp-phone').value,
+    email: document.getElementById('hp-email').value,
+    website: document.getElementById('hp-web').value,
+    logo_icon: document.getElementById('hp-logo').value,
+  };
+  try {
+    await API.admin.updateHospitalProfile(data);
+    showToast('Hospital profile updated ✅');
+    closeModal('modal-hospital');
+    loadHospitalProfile();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function exportReport(type) { showToast(`📥 Exporting ${type.toUpperCase()} report...`, 'warning'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }); });
+
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''}`;
+  t.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span> ${msg}`;
+  c.appendChild(t);
+  setTimeout(() => { t.classList.add('removing'); setTimeout(() => t.remove(), 260); }, 3500);
+}
+
+function setDate() { const d = new Date(); document.getElementById('today-date').innerHTML = `<strong>${d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'})}</strong>`; }
+function toggleTheme() { const isDark = document.documentElement.classList.toggle('dark-mode'); localStorage.setItem('careflow-admin-theme', isDark?'dark':'light'); document.getElementById('theme-toggle').textContent = isDark?'☀️':'🌙'; }
+function initTheme() { const saved = localStorage.getItem('careflow-admin-theme'); const pref = window.matchMedia('(prefers-color-scheme: dark)').matches; const isDark = saved ? saved==='dark' : pref; if (isDark) { document.documentElement.classList.add('dark-mode'); document.getElementById('theme-toggle').textContent='☀️'; } }
+
+const viewTitles = {
+  dashboard: 'Admin <span>Dashboard</span>', hospital: 'Hospital <span>Profile</span>',
+  departments: 'Manage <span>Departments</span>', doctors: 'Manage <span>Doctors</span>',
+  slots: 'Time Slot <span>Configuration</span>', holidays: 'Holidays & <span>Closures</span>',
+  staff: 'Staff <span>Accounts</span>', roles: 'Roles & <span>Access Control</span>',
+  analytics: 'Reports & <span>Analytics</span>', heatmap: 'Busiest Hours <span>Heatmap</span>',
+};
+
+function setNav(el, view) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.getElementById('topbar-title').innerHTML = viewTitles[view] || view;
+  if (view === 'departments') renderDepts();
+  if (view === 'doctors') renderDoctors();
+  if (view === 'staff') renderStaff();
+  if (view === 'holidays') renderHolidays();
+  if (view === 'slots') populateSlotDoctors();
+  if (view === 'roles') renderRoles();
+  if (view === 'heatmap') renderHeatmap();
+}
+
+function renderHeatmap() {
+  const hours = ['8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM','5 PM'];
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const data = [[3,5,8,7,6,5,2],[4,6,9,8,7,6,2],[5,8,10,9,8,7,3],[4,7,9,8,8,6,2],[5,9,10,9,9,7,3],[3,5,7,6,5,4,1],[2,3,5,4,4,3,1],[1,2,3,3,2,2,1],[2,4,6,5,5,4,1],[4,7,8,7,8,5,2]];
+  const cont = document.getElementById('heatmap-container');
+  cont.innerHTML = `<div class="heatmap-grid"><div></div>${days.map(d => `<div class="heatmap-header">${d}</div>`).join('')}${hours.map((h,i) => `<div class="heatmap-row-label">${h}</div>${days.map((_,j) => { const v=data[i][j]; const lvl=v<=2?0:v<=4?1:v<=6?2:v<=8?3:4; return `<div class="heatmap-cell heat-${lvl}" title="${days[j]} ${h}">${v*12}</div>`; }).join('')}`).join('')}</div>`;
+}
+
+setDate(); initTheme(); loadAdminData(); renderRoles();
+</script>
+</body>
+</html>

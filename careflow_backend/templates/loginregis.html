@@ -1,0 +1,247 @@
+{% load static %}<meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareFlow — Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/login-style.css' %}">
+</head>
+<body>
+
+    <div class="auth-wrapper">
+        <div class="auth-container">
+
+            <!-- View 1: Phone Entry -->
+            <div class="auth-card" id="phone-view">
+                <h3>Welcome to CareFlow</h3>
+                <p class="auth-subtitle">Enter your mobile number to log in or create a new account.</p>
+                
+                <form onsubmit="handlePhoneSubmit(event)">
+                    <div class="input-group">
+                        <label for="phone"><i class="fa-solid fa-phone"></i> Mobile Number</label>
+                        <div class="phone-input-wrapper">
+                            <span class="country-code">+977</span>
+                            <input type="tel" id="phone" placeholder="98XXXXXXXX" pattern="[9][6-8][0-9]{8}" required autofocus>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-auth-submit" id="phone-submit-btn">
+                        Send Verification Code <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <div id="phone-error" class="hidden" style="color:#e63946;font-size:13px;text-align:center;margin-top:12px;"></div>
+            </div>
+
+            <!-- View 2: OTP Verification -->
+            <div class="auth-card hidden" id="otp-view">
+                <button class="back-link-btn" onclick="switchView('phone-view')">
+                    <i class="fa-solid fa-arrow-left"></i> Change Number
+                </button>
+                <h3>Enter Verification Code</h3>
+                <p class="auth-subtitle">A 6-digit code has been sent to <strong id="otp-phone-display"></strong></p>
+                
+                <form onsubmit="handleOTPSubmit(event)">
+                    <div class="input-group">
+                        <label for="otp-code"><i class="fa-solid fa-shield-halved"></i> One-Time Password (OTP)</label>
+                        <input type="text" id="otp-code" class="otp-input" placeholder="0 0 0 0 0 0" maxlength="6" pattern="[0-9]{6}" required autofocus>
+                    </div>
+
+                    <button type="submit" class="btn-auth-submit" id="otp-submit-btn">Verify & Login</button>
+                    
+                    <div class="resend-container">
+                        Didn't receive the code? <a href="#" class="resend-link" onclick="resendOTP(event)">Resend</a>
+                    </div>
+                </form>
+
+                <div id="otp-error" class="hidden" style="color:#e63946;font-size:13px;text-align:center;margin-top:12px;"></div>
+            </div>
+
+            <!-- View 3: Registration (for new users) -->
+            <div class="auth-card hidden" id="register-view">
+                <button class="back-link-btn" onclick="switchView('phone-view')">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+                <h3>Complete Your Profile</h3>
+                <p class="auth-subtitle">Create your account to get started.</p>
+                
+                <form onsubmit="handleRegisterSubmit(event)">
+                    <div class="input-group">
+                        <label for="reg-name"><i class="fa-regular fa-user"></i> Full Name</label>
+                        <input type="text" id="reg-name" placeholder="e.g. Ram Thapa" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="reg-email"><i class="fa-regular fa-envelope"></i> Email</label>
+                        <input type="email" id="reg-email" placeholder="e.g. ram@example.com">
+                    </div>
+
+                    <button type="submit" class="btn-auth-submit" id="register-submit-btn">
+                        Create Account & Enter <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <div id="register-error" class="hidden" style="color:#e63946;font-size:13px;text-align:center;margin-top:12px;"></div>
+            </div>
+
+            <footer class="auth-footer">
+                By continuing, you agree to CareFlow's <a href="#">Terms of Service</a> & <a href="#">Privacy Policy</a>.
+            </footer>
+
+        </div>
+    </div>
+
+    <script>
+        let currentPhone = '';
+
+        function switchView(viewId) {
+            document.querySelectorAll('.auth-card').forEach(card => card.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+            document.getElementById('phone-error')?.classList.add('hidden');
+            document.getElementById('otp-error')?.classList.add('hidden');
+            document.getElementById('register-error')?.classList.add('hidden');
+        }
+
+        function showError(id, msg) {
+            const el = document.getElementById(id);
+            if (el) { el.textContent = msg; el.classList.remove('hidden'); }
+        }
+
+        function getCSRF() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+
+        async function handlePhoneSubmit(e) {
+            e.preventDefault();
+            const phone = '+977' + document.getElementById('phone').value.trim();
+            currentPhone = phone;
+            const btn = document.getElementById('phone-submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = 'Checking...';
+
+            try {
+                const check = await fetch('/api/auth/check-phone/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                    body: JSON.stringify({ phone }),
+                });
+                const checkData = await check.json();
+
+                const otpRes = await fetch('/api/auth/send-otp/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                    body: JSON.stringify({ phone }),
+                });
+                const otpData = await otpRes.json();
+
+                document.getElementById('otp-phone-display').textContent = phone;
+
+                if (checkData.exists) {
+                    switchView('otp-view');
+                } else {
+                    switchView('register-view');
+                }
+            } catch (err) {
+                showError('phone-error', 'Failed to connect. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Send Verification Code <i class="fa-solid fa-arrow-right"></i>';
+            }
+        }
+
+        async function handleOTPSubmit(e) {
+            e.preventDefault();
+            const otp = document.getElementById('otp-code').value.trim();
+            if (otp.length !== 6) { showError('otp-error', 'Please enter a valid 6-digit code'); return; }
+            const btn = document.getElementById('otp-submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = 'Verifying...';
+
+            try {
+                const res = await fetch('/api/auth/verify-otp/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                    body: JSON.stringify({ phone: currentPhone, otp }),
+                });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Invalid OTP');
+                }
+                const data = await res.json();
+                localStorage.setItem('careflow_token', data.access);
+                redirectAfterLogin(data.user);
+            } catch (err) {
+                showError('otp-error', err.message || 'Invalid OTP. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Verify & Login';
+            }
+        }
+
+        async function resendOTP(e) {
+            e.preventDefault();
+            try {
+                await fetch('/api/auth/send-otp/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                    body: JSON.stringify({ phone: currentPhone }),
+                });
+                showError('otp-error', '');
+                document.getElementById('otp-error').textContent = '✅ Code resent!';
+                document.getElementById('otp-error').style.color = '#2d6a4f';
+                document.getElementById('otp-error').classList.remove('hidden');
+            } catch (err) {
+                showError('otp-error', 'Failed to resend. Try again.');
+            }
+        }
+
+        async function handleRegisterSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            if (!name) { showError('register-error', 'Name is required'); return; }
+            const parts = name.split(' ');
+            const first_name = parts[0];
+            const last_name = parts.slice(1).join(' ');
+            const btn = document.getElementById('register-submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = 'Creating Account...';
+
+            try {
+                const res = await fetch('/api/auth/register/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                    body: JSON.stringify({ phone: currentPhone, first_name, last_name, email, role: 'receptionist' }),
+                });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Registration failed');
+                }
+                const data = await res.json();
+                localStorage.setItem('careflow_token', data.access);
+                redirectAfterLogin(data.user);
+            } catch (err) {
+                showError('register-error', err.message || 'Registration failed. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Create Account & Enter <i class="fa-solid fa-arrow-right"></i>';
+            }
+        }
+
+        function redirectAfterLogin(user) {
+            if (!user) { window.location.href = '/reception/'; return; }
+            const role = user.role;
+            if (role === 'hospital_admin' || role === 'super_admin') {
+                window.location.href = '/admin-panel/';
+            } else {
+                window.location.href = '/reception/';
+            }
+        }
+
+        document.getElementById('otp-code')?.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').slice(0, 6);
+        });
+    </script>
+</body>
+</html>
