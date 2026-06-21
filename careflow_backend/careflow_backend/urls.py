@@ -4,7 +4,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import render, redirect
 from django.contrib.auth import views as auth_views
-from accounts.views import LoginView
+from accounts.views import LoginView, LogoutView as CustomLogoutView
+from admin_panel import views as admin_views
 
 
 def login_registration_page(request):
@@ -20,12 +21,13 @@ urlpatterns = [
     # Serve reception and admin HTML pages
     path('reception/', include('reception.urls_page')),
     path('admin-panel/', include('admin_panel.urls_page')),
+    path('super-admin/', admin_views.super_admin_dashboard, name='super-admin'),
 
     # Login/Registration page
     path('login/', login_registration_page, name='login'),
 
     # Logout
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('logout/', CustomLogoutView.as_view(), name='logout'),
 
     # API login for JWT (kept for backwards compatibility)
     path('api/login/', LoginView.as_view(), name='api_login'),

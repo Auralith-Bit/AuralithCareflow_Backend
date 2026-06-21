@@ -11,4 +11,13 @@ urlpatterns = [
     path('check-phone/', views.CheckPhoneView.as_view(), name='check-phone'),
     path('send-otp/', views.SendOTPView.as_view(), name='send-otp'),
     path('verify-otp/', views.VerifyOTPView.as_view(), name='verify-otp'),
+    path('create-staff/', views.CreateStaffView.as_view(), name='create-staff'),
+    path('users/<int:pk>/toggle-status/', views.ToggleUserStatusView.as_view(), name='toggle-user-status'),
+    path('users/<int:pk>/update/', views.UpdateUserView.as_view(), name='update-user'),
+    path('users/<int:pk>/', views.UserDetailView.as_view(), name='user-detail'),
+    path('users/<int:pk>/groups/', views.UserGroupsView.as_view(), name='user-groups'),
+    path('user-group-mappings/', views.UserGroupMappingsView.as_view(), name='user-group-mappings'),
+    path('permissions/', views.PermissionListView.as_view(), name='permissions'),
+    path('groups/', views.GroupListCreateView.as_view(), name='groups'),
+    path('groups/<int:pk>/', views.GroupDetailView.as_view(), name='group-detail'),
 ]

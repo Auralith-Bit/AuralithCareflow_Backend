@@ -43,6 +43,10 @@
                 <h3>Enter Verification Code</h3>
                 <p class="auth-subtitle">A 6-digit code has been sent to <strong id="otp-phone-display"></strong></p>
                 
+                <div id="otp-demo-display" class="hidden" style="background:#e8f5e9;border:1px dashed #2d6a4f;border-radius:8px;padding:10px;text-align:center;margin-bottom:16px;font-size:14px;">
+                    <strong>Demo OTP:</strong> <span style="font-size:22px;letter-spacing:4px;font-weight:700;color:#2d6a4f;" id="otp-code-display"></span>
+                </div>
+
                 <form onsubmit="handleOTPSubmit(event)">
                     <div class="input-group">
                         <label for="otp-code"><i class="fa-solid fa-shield-halved"></i> One-Time Password (OTP)</label>
@@ -67,7 +71,7 @@
                 <h3>Complete Your Profile</h3>
                 <p class="auth-subtitle">Create your account to get started.</p>
                 
-                <form onsubmit="handleRegisterSubmit(event)">
+                    <form onsubmit="handleRegisterSubmit(event)">
                     <div class="input-group">
                         <label for="reg-name"><i class="fa-regular fa-user"></i> Full Name</label>
                         <input type="text" id="reg-name" placeholder="e.g. Ram Thapa" required>
@@ -75,6 +79,23 @@
                     <div class="input-group">
                         <label for="reg-email"><i class="fa-regular fa-envelope"></i> Email</label>
                         <input type="email" id="reg-email" placeholder="e.g. ram@example.com">
+                    </div>
+                    <div class="input-group">
+                        <label for="reg-gender"><i class="fa-regular fa-venus-mars"></i> Gender</label>
+                        <select id="reg-gender" required>
+                            <option value="">Select Gender</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="reg-dob"><i class="fa-regular fa-calendar"></i> Date of Birth</label>
+                        <input type="date" id="reg-dob" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="reg-address"><i class="fa-regular fa-location-dot"></i> Address</label>
+                        <textarea id="reg-address" rows="2" placeholder="e.g. Kathmandu, Nepal" required></textarea>
                     </div>
 
                     <button type="submit" class="btn-auth-submit" id="register-submit-btn">
@@ -94,6 +115,14 @@
 
     <script>
         let currentPhone = '';
+        let currentOTP = '';
+
+        function showOTPDisplay() {
+            const el = document.getElementById('otp-demo-display');
+            if (el) {
+                el.classList.remove('hidden');
+            }
+        }
 
         function switchView(viewId) {
             document.querySelectorAll('.auth-card').forEach(card => card.classList.add('hidden'));
@@ -134,11 +163,14 @@
                     body: JSON.stringify({ phone }),
                 });
                 const otpData = await otpRes.json();
+                currentOTP = otpData.otp || '';
 
                 document.getElementById('otp-phone-display').textContent = phone;
+                document.getElementById('otp-code-display').textContent = currentOTP;
 
                 if (checkData.exists) {
                     switchView('otp-view');
+                    showOTPDisplay();
                 } else {
                     switchView('register-view');
                 }
@@ -182,11 +214,15 @@
         async function resendOTP(e) {
             e.preventDefault();
             try {
-                await fetch('/api/auth/send-otp/', {
+                const res = await fetch('/api/auth/send-otp/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
                     body: JSON.stringify({ phone: currentPhone }),
                 });
+                const data = await res.json();
+                currentOTP = data.otp || '';
+                document.getElementById('otp-code-display').textContent = currentOTP;
+                showOTPDisplay();
                 showError('otp-error', '');
                 document.getElementById('otp-error').textContent = '✅ Code resent!';
                 document.getElementById('otp-error').style.color = '#2d6a4f';
@@ -200,6 +236,9 @@
             e.preventDefault();
             const name = document.getElementById('reg-name').value.trim();
             const email = document.getElementById('reg-email').value.trim();
+            const gender = document.getElementById('reg-gender').value;
+            const date_of_birth = document.getElementById('reg-dob').value;
+            const address = document.getElementById('reg-address').value.trim();
             if (!name) { showError('register-error', 'Name is required'); return; }
             const parts = name.split(' ');
             const first_name = parts[0];
@@ -212,7 +251,7 @@
                 const res = await fetch('/api/auth/register/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
-                    body: JSON.stringify({ phone: currentPhone, first_name, last_name, email, role: 'receptionist' }),
+                    body: JSON.stringify({ phone: currentPhone, first_name, last_name, email, gender, date_of_birth, address }),
                 });
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
@@ -230,12 +269,17 @@
         }
 
         function redirectAfterLogin(user) {
-            if (!user) { window.location.href = '/reception/'; return; }
             const role = user.role;
-            if (role === 'hospital_admin' || role === 'super_admin') {
+            if (role === 'super_admin') {
+                window.location.href = '/super-admin/';
+            } else if (role === 'hospital_admin') {
                 window.location.href = '/admin-panel/';
-            } else {
+            } else if (role === 'receptionist') {
                 window.location.href = '/reception/';
+            } else if (role === 'doctor') {
+                window.location.href = '/doctor/';
+            } else {
+                window.location.href = '/patient/';
             }
         }
 

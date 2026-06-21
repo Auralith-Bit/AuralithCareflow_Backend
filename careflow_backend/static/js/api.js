@@ -84,7 +84,7 @@ const API = {
     return data;
   },
 
-  async register(phone, first_name, last_name, email = '', role = 'receptionist') {
+  async register(phone, first_name, last_name, email = '', role = 'patient') {
     const res = await fetch('/api/auth/register/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrfToken() },
@@ -152,5 +152,16 @@ const API = {
     createSlot(data) { return API.post('/api/admin/slots/', data); },
     emergencyClosure(data) { return API.post('/api/admin/emergency-closures/', data); },
     users(params = '') { return API.get('/api/auth/users/' + params); },
+    createStaff(data) { return API.post('/api/auth/create-staff/', data); },
+    toggleUserStatus(id) { return API.patch(`/api/auth/users/${id}/toggle-status/`); },
+    updateUser(id, data) { return API.patch(`/api/auth/users/${id}/update/`, data); },
+    userDetail(id) { return API.get(`/api/auth/users/${id}/`); },
+    updateUserGroups(id, groupIds) { return API.put(`/api/auth/users/${id}/groups/`, { groups: groupIds }); },
+    userGroupMappings() { return API.get('/api/auth/user-group-mappings/'); },
+    permissions() { return API.get('/api/auth/permissions/'); },
+    groups() { return API.get('/api/auth/groups/'); },
+    createGroup(data) { return API.post('/api/auth/groups/', data); },
+    updateGroup(id, data) { return API.put(`/api/auth/groups/${id}/`, data); },
+    deleteGroup(id) { return API.del(`/api/auth/groups/${id}/`); },
   },
 };

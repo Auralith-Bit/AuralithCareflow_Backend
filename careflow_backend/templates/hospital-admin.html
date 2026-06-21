@@ -686,15 +686,12 @@ async function saveStaff() {
   if (!name) { showToast('Name required', 'error'); return; }
   const parts = name.split(' ');
   const data = {
-    username: document.getElementById('staff-email').value.split('@')[0],
-    email: document.getElementById('staff-email').value,
     first_name: parts[0], last_name: parts.slice(1).join(' '),
     role: document.getElementById('staff-role').value.toLowerCase().replace(' ','_'),
     phone: document.getElementById('staff-phone').value,
-    password: document.getElementById('staff-pass').value || 'password123',
   };
   try {
-    await API.post('/api/auth/register/', data);
+    await API.admin.createStaff(data);
     showToast(`${name} account created ✅`);
     closeModal('modal-staff');
     loadAdminData();
