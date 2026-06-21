@@ -34,7 +34,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'careflow_backend.urls'
+ROOT_URLCONF = 'backend.urls'
 
 TEMPLATES = [
     {
@@ -51,7 +51,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'careflow_backend.wsgi.application'
+WSGI_APPLICATION = 'backend.wsgi.application'
 
 DATABASES = {
     'default': {
