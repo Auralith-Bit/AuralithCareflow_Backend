@@ -11,6 +11,7 @@ from .models import User
 from .serializers import UserSerializer, PermissionSerializer, GroupSerializer, UserDetailSerializer
 from .permissions import IsHospitalAdmin
 from django.contrib.auth.models import Group, Permission
+from admin_panel.models import Doctor
 
 
 # In-memory OTP store for demo (phone -> {otp, time})
@@ -201,6 +202,17 @@ class CreateStaffView(APIView):
         )
         user.set_unusable_password()
         user.save()
+
+        if role == 'doctor':
+            used = set(Doctor.objects.values_list('prefix', flat=True))
+            prefix = next((l for l in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' if l not in used), f'D{Doctor.objects.count() + 1}')
+            Doctor.objects.create(
+                user=user,
+                name=f"{first_name} {last_name}".strip(),
+                phone=phone,
+                prefix=prefix,
+            )
+
         return Response(UserSerializer(user).data, status=201)
 
 
