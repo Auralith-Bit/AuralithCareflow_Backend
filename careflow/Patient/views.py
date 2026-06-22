@@ -1,0 +1,403 @@
+from rest_framework import generics, permissions, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.shortcuts import render
+from django.contrib.auth import login as auth_login
+from django.contrib.auth.decorators import login_required
+from rest_framework_simplejwt.tokens import RefreshToken
+from accounts.models import User
+from accounts.permissions import IsAdminOrReceptionist
+from admin_panel.models import Doctor, Department
+from reception.models import QueueEntry
+from .models import PatientProfile, FamilyMember, Appointment
+from .serializers import (
+    PatientProfileSerializer, PatientProfileUpdateSerializer,
+    FamilyMemberSerializer, AppointmentSerializer, AppointmentCreateSerializer,
+)
+
+
+@login_required
+def patient_dashboard(request):
+    return render(request, 'patient.html')
+
+
+class PatientRegisterView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        phone = request.data.get('phone', '').strip()
+        first_name = request.data.get('first_name', '').strip()
+        last_name = request.data.get('last_name', '').strip()
+        email = request.data.get('email', '').strip()
+        date_of_birth = request.data.get('date_of_birth')
+        blood_group = request.data.get('blood_group', '')
+        address = request.data.get('address', '')
+
+        if not phone or not first_name:
+            return Response({'error': 'Phone and name are required'}, status=400)
+        if User.objects.filter(phone=phone).exists():
+            return Response({'error': 'Phone already registered'}, status=400)
+
+        username = f"pat_{phone[-10:]}"
+        base_username = username
+        suffix = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}_{suffix}"
+            suffix += 1
+
+        user = User(
+            username=username,
+            phone=phone,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            role=User.Role.PATIENT,
+        )
+        user.set_unusable_password()
+        user.save()
+
+        profile = PatientProfile.objects.create(
+            user=user,
+            date_of_birth=date_of_birth,
+            blood_group=blood_group,
+            address=address,
+        )
+
+        refresh = RefreshToken.for_user(user)
+        auth_login(request, user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': {
+                'id': user.id,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'phone': user.phone,
+                'email': user.email,
+                'role': user.role,
+            },
+            'profile': PatientProfileSerializer(profile).data,
+        }, status=status.HTTP_201_CREATED)
+
+
+class PatientProfileView(APIView):
+    def get(self, request):
+        profile, _ = PatientProfile.objects.get_or_create(user=request.user)
+        return Response(PatientProfileSerializer(profile).data)
+
+    def patch(self, request):
+        profile, _ = PatientProfile.objects.get_or_create(user=request.user)
+        user = request.user
+
+        profile_fields = ['date_of_birth', 'blood_group', 'address', 'emergency_contact']
+        profile_data = {k: v for k, v in request.data.items() if k in profile_fields}
+        if profile_data:
+            p_serializer = PatientProfileUpdateSerializer(profile, data=profile_data, partial=True)
+            p_serializer.is_valid(raise_exception=True)
+            p_serializer.save()
+
+        user_fields = ['first_name', 'last_name', 'email']
+        changed = False
+        for field in user_fields:
+            if field in request.data:
+                setattr(user, field, request.data[field])
+                changed = True
+        if changed:
+            user.save()
+
+        return Response(PatientProfileSerializer(profile).data)
+
+
+class FamilyMemberListCreateView(generics.ListCreateAPIView):
+    serializer_class = FamilyMemberSerializer
+
+    def get_queryset(self):
+        profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
+        return FamilyMember.objects.filter(patient=profile, is_active=True)
+
+    def perform_create(self, serializer):
+        profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
+        serializer.save(patient=profile)
+
+
+class FamilyMemberDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = FamilyMemberSerializer
+
+    def get_queryset(self):
+        profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
+        return FamilyMember.objects.filter(patient=profile)
+
+
+class DepartmentListView(generics.ListAPIView):
+    queryset = Department.objects.filter(is_active=True)
+    serializer_class = None
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        depts = Department.objects.filter(is_active=True)
+        data = [{'id': d.id, 'name': d.name, 'icon': d.icon} for d in depts]
+        return Response(data)
+
+
+class DoctorPublicListView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        dept_filter = request.query_params.get('department')
+        doctors = Doctor.objects.filter(is_active=True, status='active')
+        if dept_filter:
+            doctors = doctors.filter(department__name__iexact=dept_filter)
+
+        data = []
+        for d in doctors:
+            waiting = QueueEntry.objects.filter(doctor=d, status='waiting').count()
+            data.append({
+                'id': d.id,
+                'name': d.name,
+                'specialty': d.specialty,
+                'department': d.department.name if d.department else '',
+                'qualification': d.qualification,
+                'prefix': d.prefix,
+                'avatar_color': d.avatar_color,
+                'slots_per_day': d.slots_per_day,
+                'days_available': d.days_available,
+                'morning_slots': d.morning_slots,
+                'evening_slots': d.evening_slots,
+                'waiting_count': waiting,
+                'slots_left': max(0, d.slots_per_day - waiting),
+                'status': d.status,
+            })
+        return Response(data)
+
+
+class DoctorPublicDetailView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk):
+        d = Doctor.objects.get(pk=pk, is_active=True)
+        waiting = QueueEntry.objects.filter(doctor=d, status='waiting').count()
+        data = {
+            'id': d.id,
+            'name': d.name,
+            'specialty': d.specialty,
+            'department': d.department.name if d.department else '',
+            'qualification': d.qualification,
+            'prefix': d.prefix,
+            'avatar_color': d.avatar_color,
+            'slots_per_day': d.slots_per_day,
+            'days_available': d.days_available,
+            'morning_slots': d.morning_slots,
+            'evening_slots': d.evening_slots,
+            'waiting_count': waiting,
+            'slots_left': max(0, d.slots_per_day - waiting),
+            'status': d.status,
+        }
+        return Response(data)
+
+
+class AvailableSlotsView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        doctor_id = request.query_params.get('doctor_id')
+        date_str = request.query_params.get('date')
+
+        if not doctor_id or not date_str:
+            return Response({'error': 'doctor_id and date are required'}, status=400)
+
+        from datetime import datetime, date
+        try:
+            selected_date = date.fromisoformat(date_str)
+        except ValueError:
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD'}, status=400)
+
+        day_of_week = selected_date.weekday()
+        doctor = Doctor.objects.filter(id=doctor_id, is_active=True).first()
+        if not doctor:
+            return Response({'error': 'Doctor not found'}, status=404)
+
+        slots = list(doctor.time_slots.filter(day_of_week=day_of_week))
+        existing_appointments = Appointment.objects.filter(
+            doctor_name=doctor.name,
+            appointment_date=selected_date,
+            status__in=['confirmed', 'scheduled'],
+        )
+
+        booked_times = set()
+        for apt in existing_appointments:
+            booked_times.add(apt.appointment_time.strftime('%H:%M'))
+
+        available = []
+        for slot in slots:
+            time_key = slot.start_time.strftime('%H:%M')
+            if time_key not in booked_times:
+                available.append({
+                    'time': time_key,
+                    'label': slot.start_time.strftime('%I:%M %p').lstrip('0'),
+                })
+
+        return Response({
+            'date': date_str,
+            'day': selected_date.strftime('%A'),
+            'doctor_id': doctor.id,
+            'doctor_name': doctor.name,
+            'slots': available,
+            'total_available': len(available),
+        })
+
+
+class AppointmentListCreateView(generics.ListCreateAPIView):
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return AppointmentCreateSerializer
+        return AppointmentSerializer
+
+    def get_queryset(self):
+        profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
+        qs = Appointment.objects.filter(patient=profile)
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return qs
+
+    def perform_create(self, serializer):
+        profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
+        from reception.models import TokenCounter
+        from admin_panel.models import Doctor
+        doctor = Doctor.objects.filter(name=serializer.validated_data['doctor_name']).first()
+        prefix = doctor.prefix if doctor else 'X'
+        token = TokenCounter.get_next_token(prefix)
+        serializer.save(patient=profile, token=token)
+
+
+class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = AppointmentSerializer
+
+    def get_queryset(self):
+        profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
+        return Appointment.objects.filter(patient=profile)
+
+    def perform_destroy(self, instance):
+        instance.status = Appointment.Status.CANCELLED
+        instance.save()
+
+
+class AppointmentRescheduleView(APIView):
+    def patch(self, request, pk):
+        profile, _ = PatientProfile.objects.get_or_create(user=request.user)
+        appointment = Appointment.objects.filter(pk=pk, patient=profile).first()
+        if not appointment:
+            return Response({'error': 'Appointment not found'}, status=404)
+
+        new_date = request.data.get('appointment_date')
+        new_time = request.data.get('appointment_time')
+        if not new_date or not new_time:
+            return Response({'error': 'appointment_date and appointment_time are required'}, status=400)
+
+        from datetime import datetime, date, time
+        if isinstance(new_date, str):
+            new_date = date.fromisoformat(new_date)
+        if isinstance(new_time, str):
+            new_time = time.fromisoformat(new_time)
+
+        appointment.appointment_date = new_date
+        appointment.appointment_time = new_time
+        appointment.status = Appointment.Status.RESCHEDULED
+        appointment.save()
+
+        return Response(AppointmentSerializer(appointment).data)
+
+
+class QueueStatusView(APIView):
+    def get(self, request):
+        doctor_name = request.query_params.get('doctor')
+        token = request.query_params.get('token')
+        if not doctor_name or not token:
+            return Response({'error': 'doctor and token params required'}, status=400)
+        entries = QueueEntry.objects.filter(
+            doctor_name__icontains=doctor_name
+        ).exclude(status__in=['done', 'cancelled']).order_by('time')
+        now_serving = entries.filter(status='serving').first()
+        ahead = 0
+        my_entry = entries.filter(token=token).first()
+        if my_entry and now_serving:
+            all_ids = list(entries.values_list('id', flat=True))
+            my_pos = all_ids.index(my_entry.id)
+            serving_pos = all_ids.index(now_serving.id) if now_serving.id in all_ids else 0
+            ahead = max(0, my_pos - serving_pos)
+        return Response({
+            'now_serving': now_serving.token if now_serving else None,
+            'tokens_ahead': ahead,
+            'total_waiting': entries.filter(status='waiting').count(),
+            'my_status': my_entry.status if my_entry else None,
+        })
+
+
+class DoctorQueueListView(APIView):
+    def get(self, request):
+        doctor_name = request.query_params.get('doctor')
+        if not doctor_name:
+            return Response({'error': 'doctor param required'}, status=400)
+        entries = QueueEntry.objects.filter(
+            doctor_name__icontains=doctor_name
+        ).exclude(status__in=['done', 'cancelled']).order_by('time')
+        data = []
+        for e in entries:
+            data.append({
+                'id': e.id,
+                'token': e.token,
+                'patient_name': e.patient_name,
+                'status': e.status,
+                'visit_type': e.visit_type,
+                'time': e.time.strftime('%I:%M %p').lstrip('0') if e.time else '',
+            })
+        now_serving = entries.filter(status='serving').first()
+        completed = QueueEntry.objects.filter(
+            doctor_name__icontains=doctor_name, status='done'
+        ).count()
+        return Response({
+            'queue': data,
+            'now_serving': now_serving.token if now_serving else None,
+            'total_active': entries.count(),
+            'total_completed': completed,
+            'doctor_name': doctor_name,
+        })
+
+
+class PatientActivityView(APIView):
+    def get(self, request):
+        profile, _ = PatientProfile.objects.get_or_create(user=request.user)
+        appointments = Appointment.objects.filter(patient=profile, status__in=['completed', 'missed', 'cancelled']).order_by('-updated_at')[:10]
+        data = []
+        for apt in appointments:
+            from django.utils import timezone
+            days_ago = (timezone.now().date() - apt.appointment_date).days
+            time_label = f"{days_ago} days ago" if days_ago > 0 else "Today"
+            data.append({
+                'id': apt.id,
+                'doctor_name': apt.doctor_name,
+                'department_name': apt.department_name,
+                'date': apt.appointment_date.isoformat(),
+                'time': apt.appointment_time.strftime('%I:%M %p').lstrip('0'),
+                'status': apt.status,
+                'time_label': time_label,
+            })
+        return Response(data)
+
+
+class MyBookingsView(generics.ListAPIView):
+    serializer_class = AppointmentSerializer
+
+    def get_queryset(self):
+        profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
+        from datetime import date
+        filter_type = self.request.query_params.get('filter', 'upcoming')
+        qs = Appointment.objects.filter(patient=profile)
+        if filter_type == 'upcoming':
+            qs = qs.filter(appointment_date__gte=date.today()).exclude(status__in=['cancelled', 'completed', 'missed'])
+        elif filter_type == 'history':
+            qs = qs.filter(
+                status__in=['completed', 'cancelled', 'missed']
+            ) | qs.filter(appointment_date__lt=date.today())
+        return qs.order_by('-appointment_date', '-appointment_time')[:20]
