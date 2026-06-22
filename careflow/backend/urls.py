@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 from django.shortcuts import render, redirect
 from django.contrib.auth import views as auth_views
 from accounts.views import LoginView, LogoutView as CustomLogoutView
-from admin_panel import views as admin_views
+from hospital_admin import views as hospital_admin_views
 
 
 def login_registration_page(request):
@@ -16,12 +16,12 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')),
     path('api/reception/', include('reception.urls')),
-    path('api/admin/', include('admin_panel.urls')),
+    path('api/admin/', include('hospital_admin.urls')),
 
     # Serve reception and admin HTML pages
     path('reception/', include('reception.urls_page')),
-    path('admin-panel/', include('admin_panel.urls_page')),
-    path('super-admin/', admin_views.super_admin_dashboard, name='super-admin'),
+    path('admin-panel/', include('hospital_admin.urls_page')),
+    path('super-admin/', include('super_admin.urls_page')),
 
     # Login/Registration page
     path('login/', login_registration_page, name='login'),

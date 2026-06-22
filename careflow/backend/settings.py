@@ -20,7 +20,8 @@ INSTALLED_APPS = [
     'django_filters',
     'accounts',
     'reception',
-    'admin_panel',
+    'hospital_admin',
+    'super_admin',
 ]
 
 MIDDLEWARE = [

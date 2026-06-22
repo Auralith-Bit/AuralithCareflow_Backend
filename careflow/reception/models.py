@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from accounts.models import User
-from admin_panel.models import Doctor
+from hospital_admin.models import Doctor
 
 
 class Patient(models.Model):

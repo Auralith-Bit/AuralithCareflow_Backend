@@ -20,11 +20,6 @@ def admin_dashboard(request):
     return render(request, 'hospital-admin.html')
 
 
-@login_required
-def super_admin_dashboard(request):
-    return render(request, 'super-admin.html')
-
-
 class DepartmentViewSet(viewsets.ModelViewSet):
     queryset = Department.objects.filter(is_active=True)
     serializer_class = DepartmentSerializer

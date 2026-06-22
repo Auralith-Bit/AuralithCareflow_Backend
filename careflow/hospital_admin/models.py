@@ -14,6 +14,7 @@ class Department(models.Model):
 
     class Meta:
         ordering = ['name']
+        db_table = 'admin_panel_department'
 
     def __str__(self):
         return self.name
@@ -43,6 +44,7 @@ class Doctor(models.Model):
 
     class Meta:
         ordering = ['name']
+        db_table = 'admin_panel_doctor'
 
     def __str__(self):
         return self.name
@@ -65,6 +67,7 @@ class HospitalProfile(models.Model):
     class Meta:
         verbose_name = 'Hospital Profile'
         verbose_name_plural = 'Hospital Profile'
+        db_table = 'admin_panel_hospitalprofile'
 
     def save(self, *args, **kwargs):
         self.pk = 1
@@ -95,6 +98,7 @@ class Holiday(models.Model):
 
     class Meta:
         ordering = ['date']
+        db_table = 'admin_panel_holiday'
 
     def __str__(self):
         return f"{self.name} ({self.date})"
@@ -113,6 +117,7 @@ class TimeSlot(models.Model):
 
     class Meta:
         ordering = ['day_of_week', 'start_time']
+        db_table = 'admin_panel_timeslot'
 
     def __str__(self):
         return f"{self.doctor.name} - {self.get_day_of_week_display()} {self.start_time}-{self.end_time}"
@@ -128,6 +133,7 @@ class EmergencyClosure(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        db_table = 'admin_panel_emergencyclosure'
 
     def __str__(self):
         return f"Emergency: {self.reason[:50]}"

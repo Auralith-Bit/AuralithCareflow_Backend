@@ -11,7 +11,7 @@ from .models import User
 from .serializers import UserSerializer, PermissionSerializer, GroupSerializer, UserDetailSerializer
 from .permissions import IsHospitalAdmin
 from django.contrib.auth.models import Group, Permission
-from admin_panel.models import Doctor
+from hospital_admin.models import Doctor
 
 
 # In-memory OTP store for demo (phone -> {otp, time})

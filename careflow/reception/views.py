@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import IsReceptionist
-from admin_panel.models import Doctor
+from hospital_admin.models import Doctor
 from .models import Patient, QueueEntry, ActivityLog, TokenCounter
 from .serializers import (
     PatientSerializer, QueueEntrySerializer,
