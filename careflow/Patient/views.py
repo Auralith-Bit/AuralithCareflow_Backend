@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import User
 from accounts.permissions import IsAdminOrReceptionist
-from admin_panel.models import Doctor, Department
+from hospital_admin.models import Doctor, Department
 from reception.models import QueueEntry
 from .models import PatientProfile, FamilyMember, Appointment
 from .serializers import (
@@ -264,7 +264,7 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
         from reception.models import TokenCounter
-        from admin_panel.models import Doctor
+        from hospital_admin.models import Doctor
         doctor = Doctor.objects.filter(name=serializer.validated_data['doctor_name']).first()
         prefix = doctor.prefix if doctor else 'X'
         token = TokenCounter.get_next_token(prefix)
