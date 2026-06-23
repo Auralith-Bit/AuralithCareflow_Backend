@@ -2367,16 +2367,69 @@
 
 <!-- Unified JavaScript -->
 <script>
-    /* Mock Data */
-    const mockDoctorsPool = [
-        { id: 1, name: "Dr. Pawan Joshi",    spec: "MBBS, DCH",                 dept: "Pediatrics",   status: "On Break",  rate: 4.6, price: 600,  slots: 5,  avatar: "PJ", color: "#f59e0b" },
-        { id: 2, name: "Dr. Ramesh KC",      spec: "MD, Senior Cardiologist",    dept: "Cardiology",   status: "Available", rate: 4.9, price: 800,  slots: 2,  avatar: "RK", color: "#15b887" },
-        { id: 3, name: "Dr. Sunita Sharma",  spec: "MBBS, MD - Dermatology",     dept: "Dermatology",  status: "Available", rate: 4.7, price: 700,  slots: 8,  avatar: "SS", color: "#15b887" },
-        { id: 4, name: "Dr. Anil Shrestha",  spec: "MS - Orthopedics",           dept: "Orthopedics",  status: "On Break",  rate: 4.5, price: 650,  slots: 0,  avatar: "AS", color: "#f59e0b" },
-        { id: 5, name: "Dr. Gagan Barra",    spec: "MBBS - General Physician",   dept: "General OPD",  status: "Available", rate: 4.4, price: 400,  slots: 12, avatar: "GB", color: "#15b887" }
-    ];
+    /* State */
+    let doctors = [];
+    let selectedDoctor = null;
+    let selectedPatient = null;
+    let myBookingsData = [];
+    let liveQueueState = {};
+    function getInitials(name) {
+        return String(name || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
+    }
 
-    let liveQueueState = { nowServing: 44, myToken: 47, totalTokens: 60 };
+    async function loadDoctors() {
+        try { doctors = await API.patient.doctors() || []; } catch (e) { doctors = []; }
+    }
+
+    async function loadProfile() {
+        try {
+            const p = await API.patient.profile();
+            selectedPatient = {
+                name: [p.first_name, p.last_name].filter(Boolean).join(' ') || p.phone,
+                phone: p.phone, email: p.email, address: p.address,
+                blood: p.blood_group, date_of_birth: p.date_of_birth,
+            };
+            updateProfileDisplay(p);
+        } catch (e) { selectedPatient = null; }
+    }
+
+    function updateProfileDisplay(p) {
+        if (!p) return;
+        const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.phone;
+        setText('disp-name', name);
+        setText('disp-phone', p.phone);
+        setText('disp-email', p.email || '');
+        setText('disp-blood', p.blood_group || '');
+        setText('disp-address', p.address || '');
+        const initials = getInitials(name);
+        document.querySelectorAll('.sidebar .avatar').forEach(el => el.textContent = initials);
+        document.querySelectorAll('.sidebar .user-info h3').forEach(el => el.textContent = name);
+        document.querySelectorAll('.sidebar .user-info p').forEach(el => el.textContent = p.phone);
+        document.querySelectorAll('.profile-badge-avatar').forEach(el => el.textContent = initials);
+        document.querySelectorAll('.gradient-profile-card h2').forEach(el => el.textContent = name);
+        document.querySelectorAll('.gradient-profile-card .phone-sub').forEach(el => el.textContent = p.phone);
+    }
+
+    async function loadMyBookings() {
+        try { myBookingsData = await API.patient.myBookings('filter=upcoming') || []; } catch (e) { myBookingsData = []; }
+    }
+
+    async function loadQueueStatus(token, doctorName) {
+        if (!token || !doctorName) return;
+        try {
+            liveQueueState = await API.patient.queueStatus('token=' + encodeURIComponent(token) + '&doctor=' + encodeURIComponent(doctorName));
+        } catch (e) { liveQueueState = {}; }
+    }
+
+    async function initPatientApp() {
+        await Promise.all([loadDoctors(), loadProfile(), loadMyBookings()]);
+        updateGreeting();
+        renderDoctorsList();
+        renderBookDoctorList();
+        renderMyBookings();
+        updateBookingSummaryFields();
+        navigateTo('dashboard');
+    }
 
     /* Theme Controller */
     const savedTheme = localStorage.getItem('careflow-theme') ||
@@ -2454,24 +2507,19 @@
 
     /* Queue Metrics */
     function updateQueueMetrics() {
-        const ahead = Math.max(0, liveQueueState.myToken - liveQueueState.nowServing);
-        const serving = liveQueueState.nowServing;
-        const pct = Math.round((serving / liveQueueState.totalTokens) * 100);
-        const tokenLabel = `A-${serving}`;
+        const nowServing = liveQueueState.now_serving;
+        const ahead = liveQueueState.tokens_ahead || 0;
+        const totalWaiting = liveQueueState.total_waiting || 0;
+        const tokenLabel = nowServing || '--';
 
-        // Dashboard elements
         setText('serving-token-display', tokenLabel);
         setText('live-box-token', tokenLabel);
         setText('tokens-ahead-display', ahead);
-        setWidth('tracker-progress-bar', pct + '%');
-        setText('tracker-completion-text', `${pct}% of queue completed today`);
+        setText('tracker-completion-text', `${totalWaiting} waiting in queue`);
         setText('sidebar-queue-badge', `${ahead} Ahead`);
 
-        // Live Queue page elements
         setText('lq-now-serving', tokenLabel);
-        setText('lq-completed', serving - 1);
-        setText('lq-progress-label', `${tokenLabel} Serving Now`);
-        setWidth('lq-progress-fill', pct + '%');
+        setText('lq-progress-label', tokenLabel + ' Serving Now');
         setText('lq-ahead-count', ahead);
     }
 
@@ -2480,8 +2528,9 @@
 
     function getSelectedAppointmentDate() {
         const dayEl = document.querySelector('.calendar-grid .day.available.selected');
-        const day = Number(dayEl?.textContent.trim() || 3);
-        const date = new Date(2026, 5, day);
+        const today = new Date();
+        const day = Number(dayEl?.textContent.trim() || today.getDate());
+        const date = new Date(today.getFullYear(), today.getMonth(), day);
         const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
         const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
@@ -2648,10 +2697,10 @@
         if (!target) return;
         target.innerHTML = '';
 
-        const filtered = mockDoctorsPool.filter(doc => {
-            const matchDept   = filterDept ? doc.dept === filterDept : true;
+        const filtered = doctors.filter(doc => {
+            const matchDept   = filterDept ? doc.department === filterDept : true;
             const matchSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                doc.dept.toLowerCase().includes(searchQuery.toLowerCase());
+                                doc.department.toLowerCase().includes(searchQuery.toLowerCase());
             return matchDept && matchSearch;
         });
 
@@ -2661,69 +2710,54 @@
         }
 
         filtered.forEach(doc => {
-            const isAvail = doc.status === 'Available';
+            const isAvail = doc.status === 'active';
+            const rating = doc.rating ? doc.rating.toFixed(1) : '--';
+            const initials = getInitials(doc.name);
+            const avatarColor = doc.avatar_color || '#15b887';
             const card = document.createElement('div');
             card.className = 'doctor-inner-card';
             card.innerHTML = `
                 <div class="doc-info-block">
-                    <div class="doc-avatar-dash" style="background:${doc.color}">${doc.avatar}</div>
+                    <div class="doc-avatar-dash" style="background:${avatarColor}">${initials}</div>
                     <div class="doc-text">
                         <h3>${doc.name}</h3>
-                        <p>${doc.spec} — <strong>${doc.dept}</strong></p>
+                        <p>${doc.qualification || doc.specialty} — <strong>${doc.department}</strong></p>
                         <div class="doc-meta-tags">
-                            <span class="break-badge ${isAvail ? 'available' : ''}">${doc.status}</span>
-                            <span class="rating"><i class="fa-solid fa-star"></i> ${doc.rate}</span>
-                            <span class="price">Rs. ${doc.price}</span>
+                            <span class="break-badge ${isAvail ? 'available' : ''}">${isAvail ? 'Available' : 'On Break'}</span>
+                            <span class="rating"><i class="fa-solid fa-star"></i> ${rating}</span>
                         </div>
                     </div>
                 </div>
                 <div class="doc-action-block">
                     <button class="book-now-btn"
-                        ${doc.slots === 0 ? 'disabled style="background:grey;cursor:not-allowed"' : ''}
+                        ${doc.slots_left === 0 ? 'disabled style="background:grey;cursor:not-allowed"' : ''}
                         onclick="handleBooking(${doc.id})">
-                        ${doc.slots > 0 ? 'Book Now' : 'Filled'}
+                        ${doc.slots_left > 0 ? 'Book Now' : 'Filled'}
                     </button>
                     <button class="view-profile-btn" onclick="alert('${doc.name} profile coming soon!')">View Profile</button>
-                    <span class="slots-left">${doc.slots} slots left</span>
+                    <span class="slots-left">${doc.slots_left} slots left</span>
                 </div>`;
             target.appendChild(card);
         });
     }
 
     window.handleBooking = (docId) => {
-        const doc = mockDoctorsPool.find(d => d.id === docId);
-        if (doc && doc.slots > 0) {
+        const doc = doctors.find(d => d.id === docId);
+        if (doc && doc.slots_left > 0) {
             selectedDoctor = doc;
             navigateTo('book-appointment');
         }
     };
 
     /* Book Doctor Selection */
-    let selectedDoctor = null;
-    let selectedPatient = {
-        name: 'Sushil Thapa',
-        phone: '+977-9812345678',
-        address: 'Kathmandu, Nepal',
-        blood: 'B+',
-        reason: 'General consultation'
-    };
-
-    const doctorRooms = {
-        1: 'Room 5, Pediatrics Block',
-        2: 'Room 3, OPD Block',
-        3: 'Room 7, Dermatology Block',
-        4: 'Room 2, Orthopedics Block',
-        5: 'Room 1, General OPD'
-    };
-
     function renderBookDoctorList(filterDept = '', searchQuery = '') {
         const list = document.getElementById('book-doctor-list');
         if (!list) return;
         list.innerHTML = '';
-        const filtered = mockDoctorsPool.filter(doc => {
-            const matchDept = filterDept ? doc.dept === filterDept : true;
+        const filtered = doctors.filter(doc => {
+            const matchDept = filterDept ? doc.department === filterDept : true;
             const matchSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                doc.dept.toLowerCase().includes(searchQuery.toLowerCase());
+                                doc.department.toLowerCase().includes(searchQuery.toLowerCase());
             return matchDept && matchSearch;
         });
         if (filtered.length === 0) {
@@ -2731,30 +2765,31 @@
             return;
         }
         filtered.forEach(doc => {
-            const isAvail = doc.status === 'Available';
+            const isAvail = doc.status === 'active';
+            const rating = doc.rating ? doc.rating.toFixed(1) : '--';
+            const initials = getInitials(doc.name);
+            const avatarColor = doc.avatar_color || '#15b887';
             const card = document.createElement('div');
             card.className = 'selectable-doctor-card' + (selectedDoctor && selectedDoctor.id === doc.id ? ' selected' : '');
             card.dataset.docId = doc.id;
             card.innerHTML = `
                 <div class="sdc-left">
-                    <div class="sdc-avatar" style="background:${doc.color}">${doc.avatar}</div>
+                    <div class="sdc-avatar" style="background:${avatarColor}">${initials}</div>
                     <div class="sdc-info">
                         <h3>${doc.name}</h3>
-                        <p class="sdc-spec">${doc.spec}</p>
+                        <p class="sdc-spec">${doc.qualification || doc.specialty}</p>
                         <div class="sdc-tags">
-                            <span class="sdc-dept">${doc.dept}</span>
-                            <span class="${isAvail ? 'sdc-status-avail' : 'sdc-status-break'}">${doc.status}</span>
-                            <span class="sdc-rating"><i class="fa-solid fa-star"></i> ${doc.rate}</span>
+                            <span class="sdc-dept">${doc.department}</span>
+                            <span class="${isAvail ? 'sdc-status-avail' : 'sdc-status-break'}">${isAvail ? 'Available' : 'On Break'}</span>
+                            <span class="sdc-rating"><i class="fa-solid fa-star"></i> ${rating}</span>
                         </div>
                     </div>
                 </div>
                 <div class="sdc-right">
-                    <div class="sdc-price">Rs. ${doc.price}</div>
-                    <div class="sdc-price-sub">per visit</div>
-                    <div class="sdc-slots ${doc.slots <= 3 ? 'low' : ''}">${doc.slots > 0 ? doc.slots + ' slots left' : 'Fully booked'}</div>
+                    <div class="sdc-slots ${doc.slots_left <= 3 ? 'low' : ''}">${doc.slots_left > 0 ? doc.slots_left + ' slots left' : 'Fully booked'}</div>
                     <div class="sdc-select-check"><i class="fa-solid fa-check"></i></div>
                 </div>`;
-            if (doc.slots > 0) {
+            if (doc.slots_left > 0) {
                 card.addEventListener('click', () => selectBookDoctor(doc.id));
             } else {
                 card.style.opacity = '0.55';
@@ -2765,27 +2800,27 @@
     }
 
     function selectBookDoctor(docId) {
-        const doc = mockDoctorsPool.find(d => d.id === docId);
+        const doc = doctors.find(d => d.id === docId);
         if (!doc) return;
         selectedDoctor = doc;
 
-        // card selection state
         document.querySelectorAll('.selectable-doctor-card').forEach(c => {
             c.classList.toggle('selected', parseInt(c.dataset.docId) === docId);
         });
 
-        //  preview panel
+        const rating = doc.rating ? doc.rating.toFixed(1) : '--';
+        const initials = getInitials(doc.name);
         document.getElementById('doc-preview-placeholder').style.display = 'none';
         document.getElementById('doc-preview-content').style.display = 'block';
-        document.getElementById('prev-avatar').textContent = doc.avatar;
+        document.getElementById('prev-avatar').textContent = initials;
         document.getElementById('prev-name').textContent = doc.name;
-        document.getElementById('prev-spec').textContent = doc.spec;
-        document.getElementById('prev-dept-tag').textContent = doc.dept;
-        document.getElementById('prev-status-tag').textContent = doc.status;
-        document.getElementById('prev-rating').textContent = doc.rate;
-        document.getElementById('prev-slots').textContent = doc.slots;
-        document.getElementById('prev-price').textContent = doc.price;
-        document.getElementById('prev-location').textContent = doctorRooms[doc.id] || 'OPD Block';
+        document.getElementById('prev-spec').textContent = doc.qualification || doc.specialty;
+        document.getElementById('prev-dept-tag').textContent = doc.department;
+        document.getElementById('prev-status-tag').textContent = doc.status === 'active' ? 'Available' : 'On Break';
+        document.getElementById('prev-rating').textContent = rating;
+        document.getElementById('prev-slots').textContent = doc.slots_left;
+        document.getElementById('prev-price').textContent = '--';
+        document.getElementById('prev-location').textContent = 'OPD Block';
     }
 
     document.getElementById('proceed-to-step2').addEventListener('click', () => {
@@ -2793,11 +2828,6 @@
         openPatientInfoModal();
     });
 
-    function uploadNewBooking(newBookingPayload) {
-    const primaryKey = newBookingPayload.token;
-    bookingData[primaryKey] = newBookingPayload;
-    executeRenderFilteringEngine(); // Instantly rebuilds UI grid layout
-}
     // Step 1 dept filter
     document.getElementById('book-dept-filter').addEventListener('click', e => {
         const pill = e.target.closest('.filter-pill');
@@ -2814,11 +2844,10 @@
 
     /* Patient Info Modal */
     window.openPatientInfoModal = () => {
-        // Pre-fill from profile data
-        const profileName    = document.getElementById('disp-name')?.textContent    || 'Sushil Thapa';
-        const profilePhone   = document.getElementById('disp-phone')?.textContent   || '+977-9812345678';
-        const profileBlood   = document.getElementById('disp-blood')?.textContent   || 'B+';
-        const profileAddress = document.getElementById('disp-address')?.textContent || 'Kathmandu, Nepal';
+        const profileName    = document.getElementById('disp-name')?.textContent    || (selectedPatient ? selectedPatient.name : '');
+        const profilePhone   = document.getElementById('disp-phone')?.textContent   || (selectedPatient ? selectedPatient.phone : '');
+        const profileBlood   = document.getElementById('disp-blood')?.textContent   || (selectedPatient ? selectedPatient.blood : '');
+        const profileAddress = document.getElementById('disp-address')?.textContent || (selectedPatient ? selectedPatient.address : '');
         document.getElementById('pt-name').value    = profileName;
         document.getElementById('pt-phone').value   = profilePhone;
         document.getElementById('pt-address').value = profileAddress;
@@ -2850,9 +2879,9 @@
             document.getElementById('pt-dob').value     = '';
             document.getElementById('pt-reason').value  = '';
         } else {
-            const profileName    = document.getElementById('disp-name')?.textContent    || 'Sushil Thapa';
-            const profilePhone   = document.getElementById('disp-phone')?.textContent   || '+977-9812345678';
-            const profileAddress = document.getElementById('disp-address')?.textContent || 'Kathmandu, Nepal';
+            const profileName    = document.getElementById('disp-name')?.textContent    || (selectedPatient ? selectedPatient.name : '');
+            const profilePhone   = document.getElementById('disp-phone')?.textContent   || (selectedPatient ? selectedPatient.phone : '');
+            const profileAddress = document.getElementById('disp-address')?.textContent || (selectedPatient ? selectedPatient.address : '');
             document.getElementById('pt-name').value    = profileName;
             document.getElementById('pt-phone').value   = profilePhone;
             document.getElementById('pt-address').value = profileAddress;
@@ -2871,25 +2900,24 @@
             reason: document.getElementById('pt-reason').value.trim() || 'General consultation'
         };
         closePatientInfoModal();
-        // Populate step 2 panel with selected doctor
-        document.getElementById('dt-doc-avatar').textContent    = selectedDoctor.avatar;
-        document.getElementById('dt-doc-avatar').style.background = selectedDoctor.color;
+        const initials = getInitials(selectedDoctor.name);
+        const avatarColor = selectedDoctor.avatar_color || '#15b887';
+        const rating = selectedDoctor.rating ? selectedDoctor.rating.toFixed(1) : '--';
+        document.getElementById('dt-doc-avatar').textContent    = initials;
+        document.getElementById('dt-doc-avatar').style.background = avatarColor;
         document.getElementById('dt-doc-name').textContent      = selectedDoctor.name;
-        document.getElementById('dt-doc-spec').textContent      = selectedDoctor.spec + ' — ' + selectedDoctor.dept;
-        document.getElementById('dt-doc-rating').textContent    = '★ ' + selectedDoctor.rate;
-        document.getElementById('dt-room').textContent          = doctorRooms[selectedDoctor.id] || 'OPD Block';
-        document.getElementById('dt-fee').textContent           = 'Rs. ' + selectedDoctor.price;
-        // Populate payment page
-        document.getElementById('pay-doc-avatar').textContent   = selectedDoctor.avatar;
+        document.getElementById('dt-doc-spec').textContent      = (selectedDoctor.qualification || selectedDoctor.specialty) + ' — ' + selectedDoctor.department;
+        document.getElementById('dt-doc-rating').textContent    = '★ ' + rating;
+        document.getElementById('dt-room').textContent          = 'OPD Block';
+        document.getElementById('dt-fee').textContent           = '--';
+        document.getElementById('pay-doc-avatar').textContent   = initials;
         document.getElementById('pay-doc-name').textContent     = selectedDoctor.name;
-        document.getElementById('pay-doc-spec').textContent     = selectedDoctor.spec + ' • ' + selectedDoctor.dept;
-        document.getElementById('pay-room').textContent         = doctorRooms[selectedDoctor.id] || 'OPD Block';
-        document.getElementById('pay-fee').textContent          = 'Rs. ' + selectedDoctor.price;
-        const charge = Math.round(selectedDoctor.price * 0.025);
-        const total  = selectedDoctor.price + charge;
-        document.getElementById('pay-charge').textContent       = 'Rs. ' + charge;
-        document.getElementById('pay-total').textContent        = total;
-        document.getElementById('pay-amount').textContent       = total;
+        document.getElementById('pay-doc-spec').textContent     = (selectedDoctor.qualification || selectedDoctor.specialty) + ' • ' + selectedDoctor.department;
+        document.getElementById('pay-room').textContent         = 'OPD Block';
+        document.getElementById('pay-fee').textContent          = '--';
+        document.getElementById('pay-charge').textContent       = 'Rs. 0';
+        document.getElementById('pay-total').textContent        = 0;
+        document.getElementById('pay-amount').textContent       = 0;
         updateBookingSummaryFields();
         navigateTo('book-datetime');
     };
@@ -2916,14 +2944,46 @@
         cardForm.classList.toggle('visible', method === 'card');
     };
 
-    window.handlePaymentConfirm = () => {
-        const method = document.querySelector('.payment-option.selected')?.dataset.method;
-        const labels = { esewa: 'eSewa', khalti: 'Khalti', card: 'Debit/Credit Card' };
+    window.handlePaymentConfirm = async () => {
         const total   = document.getElementById('pay-total').textContent;
         const docName = document.getElementById('pay-doc-name').textContent;
-        addConfirmedBooking(total);
-        alert(`✅ Payment of Rs. ${total} via ${labels[method] || method} confirmed!\n\nBooking with ${docName} is confirmed.\nYour token number will be sent via SMS.`);
-        navigateTo('my-bookings');
+        if (!selectedDoctor || !selectedPatient) {
+            alert('Missing doctor or patient information.');
+            return;
+        }
+        try {
+            const slot = document.querySelector('.slots-grid .slot-btn.selected');
+            const time = slot ? slot.textContent.trim().split('\n')[0].trim() : '09:00';
+            const day = document.querySelector('.calendar-grid .day.available.selected');
+            const dateStr = day ? day.dataset.date : new Date().toISOString().split('T')[0];
+            const appointment = await API.patient.createAppointment({
+                doctor_id: selectedDoctor.id,
+                doctor_name: selectedDoctor.name,
+                doctor_specialty: selectedDoctor.specialty || '',
+                department_name: selectedDoctor.department || '',
+                appointment_date: dateStr,
+                appointment_time: time,
+                notes: selectedPatient.reason || '',
+                patient_name: selectedPatient.name,
+                patient_phone: selectedPatient.phone,
+            });
+            myBookingsData.unshift({
+                id: appointment.id,
+                doctor_name: appointment.doctor_name || selectedDoctor.name,
+                department_name: appointment.department_name || selectedDoctor.department,
+                appointment_date: appointment.appointment_date || dateStr,
+                appointment_time: appointment.appointment_time || time,
+                location: appointment.location || '',
+                token: appointment.token,
+                fee: appointment.fee,
+                status: appointment.status || 'confirmed',
+            });
+            renderMyBookings();
+            alert(`✅ Appointment confirmed!\n\nDoctor: ${docName}\nToken: ${appointment.token}\n\nSMS confirmation will be sent shortly.`);
+            navigateTo('my-bookings');
+        } catch (e) {
+            alert('Booking failed: ' + e.message);
+        }
     };
 
     /* Edit Profile Modal */
@@ -2945,7 +3005,7 @@
         document.body.style.overflow = '';
     };
 
-    window.saveProfileEdit = () => {
+    window.saveProfileEdit = async () => {
         const name    = document.getElementById('edit-name').value.trim();
         const phone   = document.getElementById('edit-phone').value.trim();
         const email   = document.getElementById('edit-email').value.trim();
@@ -2954,22 +3014,35 @@
         const address = document.getElementById('edit-address').value.trim();
         if (!name) { alert('Full name is required.'); return; }
 
-        // Update all display fields
+        const [firstName, ...rest] = name.split(' ');
+        const lastName = rest.join(' ');
+        try {
+            await API.patient.updateProfile({
+                first_name: firstName,
+                last_name: lastName,
+                email: email,
+                date_of_birth: dob || null,
+                blood_group: blood,
+                address: address,
+            });
+        } catch (e) {
+            alert('Failed to save profile: ' + e.message);
+            return;
+        }
+
         document.getElementById('disp-name').textContent    = name;
         document.getElementById('disp-phone').textContent   = phone;
         document.getElementById('disp-email').textContent   = email;
         document.getElementById('disp-blood').textContent   = blood;
         document.getElementById('disp-address').textContent = address;
 
-        // Format DOB for display
         if (dob) {
             const d = new Date(dob + 'T00:00:00');
             const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
             document.getElementById('disp-dob').textContent = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
         }
 
-        //  sidebar and profile header
-        const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+        const initials = getInitials(name);
         document.querySelectorAll('.sidebar .avatar').forEach(el => el.textContent = initials);
         document.querySelectorAll('.sidebar .user-info h3').forEach(el => el.textContent = name);
         document.querySelectorAll('.sidebar .user-info p').forEach(el => el.textContent = phone);
@@ -2978,9 +3051,14 @@
         document.querySelectorAll('.gradient-profile-card .phone-sub').forEach(el => el.textContent = phone);
         const bloodTagEls = document.querySelectorAll('.gradient-profile-card .tag-pill');
         if (bloodTagEls[1]) bloodTagEls[1].textContent = blood + ' Blood';
+        if (selectedPatient) {
+            selectedPatient.name = name;
+            selectedPatient.phone = phone;
+            selectedPatient.address = address;
+            selectedPatient.blood = blood;
+        }
 
         closeEditProfileModal();
-        // Brief success flash
         const btn = document.querySelector('#edit-profile-modal .modal-btn-confirm');
         if (btn) { btn.textContent = '✓ Saved!'; setTimeout(() => btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes', 1500); }
         setTimeout(() => alert('✅ Profile updated successfully!'), 100);
@@ -2991,12 +3069,10 @@
     });
 
     /* Dynamic Calendar */
-    let modalCalYear  = 2026;
-    let modalCalMonth = 5; // 0-indexed: June = 5
+    let modalCalYear  = new Date().getFullYear();
+    let modalCalMonth = new Date().getMonth();
     let selectedModalDate = null;
     let currentRescheduleToken = null;
-    const WEEKDAYS_ALLOWED = [1,2,3,4,5]; // Mon–Fri available
-    const FULL_DAYS = [11, 14, 21]; // these dates are "full" in the demo
 
     function renderModalCalendar() {
         const grid = document.getElementById('modal-cal-grid');
@@ -3008,32 +3084,27 @@
         title.textContent = months[modalCalMonth] + ' ' + modalCalYear;
 
         const today = new Date();
-        const firstDay = new Date(modalCalYear, modalCalMonth, 1).getDay(); // 0=Sun
+        const firstDay = new Date(modalCalYear, modalCalMonth, 1).getDay();
         const daysInMonth = new Date(modalCalYear, modalCalMonth + 1, 0).getDate();
 
         let html = '';
-        // Weekday headers
         ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
             html += `<div class="modal-weekday">${d}</div>`;
         });
-        // Blank cells
         for (let i = 0; i < firstDay; i++) html += `<div class="modal-day"></div>`;
-        // Days
         for (let d = 1; d <= daysInMonth; d++) {
             const dateObj = new Date(modalCalYear, modalCalMonth, d);
             const dow = dateObj.getDay();
             const isPast = dateObj < new Date(today.getFullYear(), today.getMonth(), today.getDate());
             const isWeekend = (dow === 0 || dow === 6);
-            const isFull = FULL_DAYS.includes(d);
             const isToday = (d === today.getDate() && modalCalMonth === today.getMonth() && modalCalYear === today.getFullYear());
             const isSelected = selectedModalDate &&
                 selectedModalDate.getDate() === d &&
                 selectedModalDate.getMonth() === modalCalMonth &&
                 selectedModalDate.getFullYear() === modalCalYear;
 
-            if (isPast || isWeekend || isFull) {
-                const cls = isFull ? 'modal-day' : 'modal-day';
-                html += `<div class="${cls}" style="opacity:0.35;" title="${isFull ? 'Fully booked' : 'Unavailable'}">${d}</div>`;
+            if (isPast || isWeekend) {
+                html += `<div class="modal-day" style="opacity:0.35;" title="Unavailable">${d}</div>`;
             } else {
                 const cls = 'modal-day avail' + (isToday ? ' today' : '') + (isSelected ? ' selected' : '');
                 const label = shortMonths[modalCalMonth] + ' ' + d + ', ' + modalCalYear;
@@ -3138,16 +3209,27 @@
         summary.style.display = 'block';
     }
 
-    const myBookings = [
-        { doctor: 'Dr. Ramesh KC', dept: 'General OPD', date: 'Wed, Jun 3, 2026', time: '11:00 AM', location: 'Room 3, OPD Block', token: 'A-47', paid: '820', avatar: 'RK', color: '#e6f7f2', avatarColor: '#10a37f', status: 'Confirmed', ahead: '3 ahead' },
-        { doctor: 'Dr. Sita Karki', dept: 'Cardiology', date: 'Thu, Jun 12, 2026', time: '10:00 AM', location: 'Cardiology Ward', token: 'B-12', paid: '1,020', avatar: 'SK', color: '#eff6ff', avatarColor: '#2563eb', status: 'Scheduled' }
-    ];
+    function formatDateLabel(dateStr, timeStr) {
+        if (!dateStr) return '--';
+        const d = new Date(dateStr + 'T00:00:00');
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        const label = `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+        if (!timeStr) return label;
+        const [h, m] = String(timeStr).split(':');
+        const hour = parseInt(h);
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return `${label} • ${displayHour}:${m} ${period}`;
+    }
 
-    const bookingData = {};
-
-    function syncBookingLookup() {
-        Object.keys(bookingData).forEach(token => delete bookingData[token]);
-        myBookings.forEach(booking => { bookingData[booking.token] = booking; });
+    function formatTimeDisplay(timeStr) {
+        if (!timeStr) return '--';
+        const [h, m] = String(timeStr).split(':');
+        const hour = parseInt(h);
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return `${displayHour}:${m} ${period}`;
     }
 
     function formatDepartmentLabel(dept) {
@@ -3157,86 +3239,65 @@
     function renderMyBookings() {
         const grid = document.getElementById('appointments-grid');
         if (!grid) return;
-        syncBookingLookup();
-        setText('my-bookings-upcoming-tab', `Upcoming (${myBookings.length})`);
-        grid.innerHTML = myBookings.map(booking => `
+        setText('my-bookings-upcoming-tab', `Upcoming (${myBookingsData.length})`);
+        grid.innerHTML = myBookingsData.map(b => {
+            const initials = getInitials(b.doctor_name);
+            const dateTime = formatDateLabel(b.appointment_date, b.appointment_time);
+            const timeOnly = formatTimeDisplay(b.appointment_time);
+            const statusClass = (b.status || 'confirmed').toLowerCase();
+            const feeDisplay = b.fee ? 'Rs. ' + b.fee : '--';
+            return `
             <div class="appointment-card">
                 <div class="card-header-banner">
-                    <div class="datetime-text">${booking.date} • ${booking.time}</div>
-                    <div class="token-badge">Token: ${booking.token}</div>
+                    <div class="datetime-text">${dateTime}</div>
+                    <div class="token-badge">Token: ${b.token}</div>
                 </div>
                 <div class="card-body-content">
                     <div class="doctor-profile-row">
                         <div class="doc-avatar-block">
-                            <div class="initials-avatar" style="background:${booking.color};color:${booking.avatarColor};">${booking.avatar}</div>
+                            <div class="initials-avatar" style="background:#e6f7f2;color:#10a37f;">${initials}</div>
                             <div class="doc-text">
-                                <h3>${booking.doctor}</h3>
-                                <p>${formatDepartmentLabel(booking.dept)}</p>
+                                <h3>${b.doctor_name}</h3>
+                                <p>${formatDepartmentLabel(b.department_name)}</p>
                             </div>
                         </div>
-                        <span class="status-pill ${booking.status.toLowerCase()}">${booking.status}</span>
+                        <span class="status-pill ${statusClass}">${b.status}</span>
                     </div>
                     <div class="meta-details-line">
-                        <div class="item"><i class="fa-solid fa-location-dot"></i> ${booking.location}</div>
-                        ${booking.ahead ? `<div class="item"><i class="fa-solid fa-users"></i> ${booking.ahead}</div>` : ''}
-                        <div class="item"><i class="fa-solid fa-wallet"></i> Paid Rs. <span class="paid-amount">${booking.paid}</span></div>
+                        <div class="item"><i class="fa-solid fa-location-dot"></i> ${b.location || 'OPD Block'}</div>
+                        <div class="item"><i class="fa-solid fa-wallet"></i> Fee: ${feeDisplay}</div>
                     </div>
                     <div class="actions-footer-row">
                         <button class="btn-action" onclick="navigateTo('live-queue')"><i class="fa-solid fa-list-check"></i> Track Queue</button>
-                        <button class="btn-action" onclick="exportBookingSlipFromValues('${escapeHtml(booking.token)}', '${escapeHtml(booking.doctor)}', '${escapeHtml(booking.dept)}', '${escapeHtml(booking.date)}', '${escapeHtml(booking.time)}', '${escapeHtml(booking.location)}', '${escapeHtml(booking.paid)}', '${escapeHtml(booking.status)}')"><i class="fa-solid fa-file-pdf"></i> Export to PDF</button>
-                        <button class="btn-action" onclick="openRescheduleModal('${booking.token}')"><i class="fa-solid fa-arrow-rotate-right"></i> Reschedule</button>
+                        <button class="btn-action" onclick="exportBookingSlipFromValues('${escapeHtml(b.token)}', '${escapeHtml(b.doctor_name)}', '${escapeHtml(b.department_name)}', '${escapeHtml(b.appointment_date)}', '${escapeHtml(timeOnly)}', '${escapeHtml(b.location || 'OPD Block')}', '${escapeHtml(b.fee || '0')}', '${escapeHtml(b.status)}')"><i class="fa-solid fa-file-pdf"></i> Export to PDF</button>
                     </div>
                 </div>
-            </div>
-        `).join('');
-    }
-
-    function nextTokenForDoctor(doc) {
-        const prefix = (doc?.dept || 'General OPD').charAt(0).toUpperCase();
-        const number = 10 + myBookings.length + Math.floor(Math.random() * 70);
-        return `${prefix}-${number}`;
-    }
-
-    function addConfirmedBooking(total) {
-        if (!selectedDoctor) return;
-        const token = nextTokenForDoctor(selectedDoctor);
-        myBookings.unshift({
-            doctor: selectedDoctor.name,
-            dept: selectedDoctor.dept,
-            date: getSelectedAppointmentDate(),
-            time: getSelectedAppointmentTime(),
-            location: doctorRooms[selectedDoctor.id] || 'OPD Block',
-            token,
-            paid: total,
-            avatar: selectedDoctor.avatar,
-            color: '#e6f7f2',
-            avatarColor: selectedDoctor.color,
-            status: 'Confirmed',
-            ahead: 'New booking'
-        });
-        renderMyBookings();
+            </div>`;
+        }).join('');
     }
 
     window.openRescheduleModal = (token) => {
-        const data = bookingData[token];
+        const data = myBookingsData.find(b => b.token === token);
         if (!data) return;
         currentRescheduleToken = token;
 
         selectedModalDate = null;
         document.querySelectorAll('.modal-slot.avail').forEach(slot => slot.classList.remove('selected'));
 
-        const parsedDate = parseBookingDateLabel(data.date) || new Date();
+        const parsedDate = new Date(data.appointment_date + 'T00:00:00');
         modalCalYear = parsedDate.getFullYear();
         modalCalMonth = parsedDate.getMonth();
 
-        document.getElementById('modal-doc-subtitle').textContent  = data.doctor + ' — ' + data.dept;
-        document.getElementById('modal-curr-doc').textContent      = data.doctor;
-        document.getElementById('modal-curr-date').textContent     = data.date;
-        document.getElementById('modal-curr-time').textContent     = data.time;
-        document.getElementById('modal-curr-loc').textContent      = data.location;
+        const dateTime = formatDateLabel(data.appointment_date, data.appointment_time);
+        const feeDisplay = data.fee ? 'Rs. ' + data.fee : '--';
+        document.getElementById('modal-doc-subtitle').textContent  = data.doctor_name + ' — ' + data.department_name;
+        document.getElementById('modal-curr-doc').textContent      = data.doctor_name;
+        document.getElementById('modal-curr-date').textContent     = formatDateLabel(data.appointment_date);
+        document.getElementById('modal-curr-time').textContent     = formatTimeDisplay(data.appointment_time);
+        document.getElementById('modal-curr-loc').textContent      = data.location || 'OPD Block';
         document.getElementById('modal-curr-token').textContent    = data.token;
-        document.getElementById('modal-curr-paid').textContent     = 'Rs. ' + data.paid;
-        document.getElementById('modal-notice-paid').textContent   = data.paid;
+        document.getElementById('modal-curr-paid').textContent     = feeDisplay;
+        document.getElementById('modal-notice-paid').textContent   = data.fee || '0';
         document.getElementById('reschedule-new-summary').style.display = 'none';
         renderModalCalendar();
         document.getElementById('reschedule-modal').classList.add('open');
@@ -3248,7 +3309,7 @@
         document.body.style.overflow = '';
     };
 
-    window.confirmReschedule = () => {
+    window.confirmReschedule = async () => {
         const slotEl = document.querySelector('.modal-slot.selected');
         if (!slotEl) { alert('Please select a time slot.'); return; }
         if (!selectedModalDate) { alert('Please select a new date.'); return; }
@@ -3266,16 +3327,32 @@
         const label = buildDateLabel(selectedDate);
         const time = formatTimeLabel(slotEl.textContent);
 
-        const booking = myBookings.find(item => item.token === currentRescheduleToken);
+        const booking = myBookingsData.find(item => item.token === currentRescheduleToken);
         if (booking) {
-            booking.date = label;
-            booking.time = time;
-            booking.status = 'Rescheduled';
-            syncBookingLookup();
-            renderMyBookings();
+            try {
+                // Cancel old appointment
+                await API.patient.cancelAppointment(booking.id);
+                // Create new appointment with new date/time
+                const newApt = await API.patient.createAppointment({
+                    doctor_id: selectedDoctor?.id || 0,
+                    doctor_name: booking.doctor_name,
+                    doctor_specialty: '',
+                    department_name: booking.department_name,
+                    appointment_date: selectedDate.toISOString().split('T')[0],
+                    appointment_time: slotEl.textContent.trim().split('\n')[0].trim(),
+                    notes: 'Rescheduled',
+                    patient_name: selectedPatient?.name || '',
+                    patient_phone: selectedPatient?.phone || '',
+                });
+                // Refresh bookings
+                myBookingsData = await API.patient.myBookings('filter=upcoming') || [];
+                renderMyBookings();
+                alert(`✅ Appointment rescheduled!\n\nNew date: ${label}\nNew time: ${time}\nNew token: ${newApt.token}\n\nSMS confirmation will be sent shortly.`);
+            } catch (e) {
+                alert('Reschedule failed: ' + e.message);
+            }
         }
 
-        alert(`✅ Appointment rescheduled!\n\nNew date: ${label}\nNew time: ${time}\n\nSMS confirmation will be sent shortly.`);
         closeRescheduleModal();
     };
 
@@ -3353,18 +3430,13 @@
     };
 
     /* Initialization */
-    updateGreeting();
-    updateQueueMetrics();
-    getActiveDeptAndRender();
-    renderBookDoctorList();
-    renderMyBookings();
-    updateBookingSummaryFields();
-    navigateTo('dashboard');  // Start on dashboard
+    initPatientApp();
 
-    // Simulate live queue advancing every 30 seconds
-    setInterval(() => {
-        if (liveQueueState.nowServing < liveQueueState.myToken) {
-            liveQueueState.nowServing++;
+    // Refresh queue every 30 seconds
+    setInterval(async () => {
+        if (myBookingsData.length > 0) {
+            const b = myBookingsData[0];
+            await loadQueueStatus(b.token, b.doctor_name);
             updateQueueMetrics();
         }
     }, 30000);
