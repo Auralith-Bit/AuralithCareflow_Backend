@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'reception',
     'hospital_admin',
     'super_admin',
+    'Patient',
 ]
 
 MIDDLEWARE = [

@@ -18,10 +18,14 @@ urlpatterns = [
     path('api/reception/', include('reception.urls')),
     path('api/admin/', include('hospital_admin.urls')),
 
-    # Serve reception and admin HTML pages
+    # Serve reception, admin, and patient HTML pages
     path('reception/', include('reception.urls_page')),
     path('admin-panel/', include('hospital_admin.urls_page')),
     path('super-admin/', include('super_admin.urls_page')),
+    path('patient/', include('Patient.urls_page')),
+
+    # Patient API
+    path('api/patient/', include('Patient.urls')),
 
     # Login/Registration page
     path('login/', login_registration_page, name='login'),
