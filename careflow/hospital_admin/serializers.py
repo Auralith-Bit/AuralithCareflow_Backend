@@ -3,9 +3,19 @@ from .models import Department, Doctor, HospitalProfile, Holiday, TimeSlot, Emer
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
+    doctors_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Department
         fields = '__all__'
+
+    def get_doctors_count(self, obj):
+        count = obj.doctors.count()
+        if obj.head:
+            head_doc = Doctor.objects.filter(name=obj.head, is_active=True).exclude(department=obj).first()
+            if head_doc:
+                count += 1
+        return count
 
 
 class DoctorSerializer(serializers.ModelSerializer):

@@ -144,7 +144,7 @@ const API = {
     updateDoctor(id, data) { return API.put(`/api/admin/doctors/${id}/`, data); },
     deleteDoctor(id) { return API.del(`/api/admin/doctors/${id}/`); },
     hospitalProfile() { return API.get('/api/admin/hospital-profile/'); },
-    updateHospitalProfile(data) { return API.put('/api/admin/hospital-profile/1/', data); },
+    updateHospitalProfile(data) { return API.put('/api/admin/hospital-profile/', data); },
     holidays(params = '') { return API.get('/api/admin/holidays/' + params); },
     createHoliday(data) { return API.post('/api/admin/holidays/', data); },
     deleteHoliday(id) { return API.del(`/api/admin/holidays/${id}/`); },

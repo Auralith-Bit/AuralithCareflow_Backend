@@ -12,4 +12,5 @@ router.register(r'emergency-closures', views.EmergencyClosureViewSet, basename='
 urlpatterns = [
     path('', include(router.urls)),
     path('hospital-profile/', views.HospitalProfileView.as_view(), name='hospital-profile'),
+    path('dashboard-stats/', views.DashboardStatsView.as_view(), name='dashboard-stats'),
 ]
