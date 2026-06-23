@@ -47,11 +47,42 @@ class DoctorViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         doctor = serializer.save()
+        if not doctor.user:
+            base_username = f"doctor_{doctor.id}"
+            username = base_username
+            suffix = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}_{suffix}"
+                suffix += 1
+            user = User(
+                username=username,
+                phone=doctor.phone or '',
+                first_name=doctor.name,
+                email=doctor.email or '',
+                role='doctor',
+            )
+            user.set_unusable_password()
+            user.save()
+            doctor.user = user
+            doctor.save(update_fields=['user'])
         self._sync_time_slots(doctor)
 
     def perform_update(self, serializer):
         doctor = serializer.save()
+        if doctor.user:
+            user = doctor.user
+            user.first_name = doctor.name
+            user.phone = doctor.phone or ''
+            user.email = doctor.email or ''
+            user.save(update_fields=['first_name', 'phone', 'email'])
         self._sync_time_slots(doctor)
+
+    def perform_destroy(self, instance):
+        if instance.user:
+            instance.user.is_active = False
+            instance.user.save(update_fields=['is_active'])
+        instance.is_active = False
+        instance.save(update_fields=['is_active'])
 
     def _sync_time_slots(self, doctor):
         TimeSlot.objects.filter(doctor=doctor).delete()

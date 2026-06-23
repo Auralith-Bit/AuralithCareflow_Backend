@@ -455,14 +455,18 @@ function initTheme() {
 
 async function loadData() {
   try {
-    const users = await API.admin.users();
+    const [users, doctorRecords] = await Promise.all([
+      API.admin.users(),
+      API.admin.doctors().catch(() => []),
+    ]);
     allUsers = users;
     const admins = users.filter(u => u.role === 'hospital_admin');
-    const doctors = users.filter(u => u.role === 'doctor');
+    const userDoctors = users.filter(u => u.role === 'doctor');
     const receptionists = users.filter(u => u.role === 'receptionist');
     const patients = users.filter(u => u.role === 'patient');
+    const doctorCount = Math.max(userDoctors.length, (doctorRecords || []).length);
     document.getElementById('stat-admins').textContent = admins.length;
-    document.getElementById('stat-doctors').textContent = doctors.length;
+    document.getElementById('stat-doctors').textContent = doctorCount;
     document.getElementById('stat-receptionists').textContent = receptionists.length;
     document.getElementById('stat-patients').textContent = patients.length;
     renderStaffList();
