@@ -43,7 +43,7 @@ class AppointmentCreateSerializer(serializers.Serializer):
     location = serializers.CharField(required=False, allow_blank=True, default='')
     appointment_date = serializers.DateField()
     appointment_time = serializers.TimeField()
-    fee = serializers.DecimalField(max_digits=10, decimal_places=2, default=0)
+    fee = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True, default='')
     patient_name = serializers.CharField(required=False, allow_blank=True, default='')
     patient_phone = serializers.CharField(required=False, allow_blank=True, default='')

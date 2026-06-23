@@ -52,7 +52,7 @@ class Appointment(models.Model):
     appointment_date = models.DateField()
     appointment_time = models.TimeField()
     token = models.CharField(max_length=20, blank=True)
-    fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.CONFIRMED)
     notes = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)

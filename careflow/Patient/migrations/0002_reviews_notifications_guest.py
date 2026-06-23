@@ -17,6 +17,11 @@ class Migration(migrations.Migration):
             name='status',
             field=models.CharField(choices=[('pending', 'Pending'), ('confirmed', 'Confirmed'), ('scheduled', 'Scheduled'), ('rescheduled', 'Rescheduled'), ('arrived', 'Arrived'), ('in_progress', 'In Progress'), ('completed', 'Completed'), ('cancelled', 'Cancelled'), ('no_show', 'No Show'), ('missed', 'Missed')], default='confirmed', max_length=20),
         ),
+        migrations.AlterField(
+            model_name='appointment',
+            name='fee',
+            field=models.DecimalField(blank=True, decimal_places=2, default=None, max_digits=10, null=True),
+        ),
         migrations.CreateModel(
             name='NotificationLog',
             fields=[

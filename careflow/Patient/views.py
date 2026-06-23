@@ -314,12 +314,9 @@ class QueueStatusView(APIView):
             my_pos = all_ids.index(my_entry.id)
             serving_pos = all_ids.index(now_serving.id) if now_serving.id in all_ids else 0
             ahead = max(0, my_pos - serving_pos)
-        avg_consultation_minutes = 10
-        estimated_wait_minutes = ahead * avg_consultation_minutes
         return Response({
             'now_serving': now_serving.token if now_serving else None,
             'tokens_ahead': ahead,
-            'estimated_wait_minutes': estimated_wait_minutes,
             'total_waiting': entries.filter(status='waiting').count(),
             'my_status': my_entry.status if my_entry else None,
         })
@@ -438,11 +435,10 @@ class GuestBookingView(APIView):
             doctor_name=doctor.name,
             doctor_specialty=doctor.specialty,
             department_name=doctor.department.name if doctor.department else '',
-            location='',
+            location=doctor.department.name if doctor.department else '',
             appointment_date=data['appointment_date'],
             appointment_time=data['appointment_time'],
             token=token,
-            fee=0,
             status=Appointment.Status.PENDING,
             notes=data.get('notes', ''),
         )
@@ -457,7 +453,6 @@ class GuestBookingView(APIView):
             'doctor_name': doctor.name,
             'appointment_date': data['appointment_date'],
             'appointment_time': data['appointment_time'],
-            'fee': 0,
             'status': appointment.status,
         }, status=201)
 
