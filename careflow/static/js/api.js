@@ -135,6 +135,7 @@ const API = {
   // Patient APIs
   patient: {
     register(data) { return API.post('/api/patient/register/', data); },
+    guestBooking(data) { return API.post('/api/patient/guest-booking/', data); },
     profile() { return API.get('/api/patient/profile/'); },
     updateProfile(data) { return API.patch('/api/patient/profile/', data); },
     family() { return API.get('/api/patient/family/'); },
@@ -143,15 +144,17 @@ const API = {
     departments() { return API.get('/api/patient/departments/'); },
     doctors(params = '') { return API.get('/api/patient/doctors/' + params); },
     doctorDetail(id) { return API.get(`/api/patient/doctors/${id}/`); },
+    doctorReviews(id) { return API.get(`/api/patient/doctors/${id}/reviews/`); },
     doctorSlots(params) { return API.get('/api/patient/doctors/slots/?' + params); },
     appointments(params = '') { return API.get('/api/patient/appointments/' + params); },
     createAppointment(data) { return API.post('/api/patient/appointments/', data); },
     cancelAppointment(id) { return API.del(`/api/patient/appointments/${id}/`); },
-    rescheduleAppointment(id, data) { return API.patch(`/api/patient/appointments/${id}/reschedule/`, data); },
+    createReview(data) { return API.post('/api/patient/reviews/', data); },
+    notifications() { return API.get('/api/patient/notifications/'); },
+    markNotificationRead(id) { return API.patch(`/api/patient/notifications/${id}/read/`); },
     queueStatus(params) { return API.get('/api/patient/queue/status/?' + params); },
-    doctorQueue(params) { return API.get('/api/patient/queue/doctor-list/?' + params); },
+    queueQR(params) { return API.get('/api/patient/queue/qr/?' + params); },
     myBookings(params = '') { return API.get('/api/patient/my-bookings/' + params); },
-    activity() { return API.get('/api/patient/activity/'); },
   },
 
   // Admin APIs

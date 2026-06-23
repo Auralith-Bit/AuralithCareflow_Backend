@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import PatientProfile, FamilyMember, Appointment
+from .models import PatientProfile, FamilyMember, Appointment, DoctorReview, NotificationLog
 
 
 class FamilyMemberSerializer(serializers.ModelSerializer):
@@ -18,14 +18,14 @@ class PatientProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatientProfile
         fields = ['id', 'first_name', 'last_name', 'phone', 'email', 'date_of_birth',
-                  'blood_group', 'address', 'emergency_contact', 'family_members',
+                  'blood_group', 'address', 'family_members',
                   'created_at', 'updated_at']
 
 
 class PatientProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatientProfile
-        fields = ['date_of_birth', 'blood_group', 'address', 'emergency_contact']
+        fields = ['date_of_birth', 'blood_group', 'address']
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
@@ -48,3 +48,36 @@ class AppointmentCreateSerializer(serializers.Serializer):
     patient_name = serializers.CharField(required=False, allow_blank=True, default='')
     patient_phone = serializers.CharField(required=False, allow_blank=True, default='')
     payment_method = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class DoctorReviewSerializer(serializers.ModelSerializer):
+    patient_name = serializers.CharField(source='patient.user.get_full_name', read_only=True)
+
+    class Meta:
+        model = DoctorReview
+        fields = ['id', 'doctor', 'appointment', 'rating', 'comment', 'patient_name', 'created_at']
+        read_only_fields = ['patient', 'created_at']
+
+
+class DoctorReviewCreateSerializer(serializers.Serializer):
+    appointment_id = serializers.IntegerField()
+    rating = serializers.ChoiceField(choices=[1, 2, 3, 4, 5])
+    comment = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class NotificationLogSerializer(serializers.ModelSerializer):
+    type_display = serializers.CharField(source='get_type_display', read_only=True)
+
+    class Meta:
+        model = NotificationLog
+        fields = ['id', 'type', 'type_display', 'title', 'message', 'is_read', 'created_at']
+        read_only_fields = ['patient', 'created_at']
+
+
+class GuestBookingSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
+    doctor_id = serializers.IntegerField()
+    appointment_date = serializers.DateField()
+    appointment_time = serializers.TimeField()
+    patient_name = serializers.CharField(required=False, allow_blank=True, default='')
+    notes = serializers.CharField(required=False, allow_blank=True, default='')
