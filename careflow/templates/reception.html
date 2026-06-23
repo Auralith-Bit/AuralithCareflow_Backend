@@ -767,6 +767,7 @@ async function markArrived(id) {
     renderQueueTable();
     renderCheckInTable();
     addActivity(`${entry.token} — ${entry.patient_name} marked as Arrived`, 'reception');
+    loadAllData();
   } catch (e) { showToast(e.message, 'error'); }
 }
 
@@ -778,6 +779,7 @@ async function markWaiting(id) {
     showToast(`⏮ ${entry.patient_name} moved back to Waiting (${entry.token})`);
     renderQueueTable();
     renderCheckInTable();
+    loadAllData();
   } catch (e) { showToast(e.message, 'error'); }
 }
 
