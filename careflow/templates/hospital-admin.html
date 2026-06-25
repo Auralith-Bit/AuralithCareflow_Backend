@@ -2392,7 +2392,7 @@ function renderDashboard() {
   // Hero stats
   document.getElementById('hero-patients').textContent = s.patients_today || 0;
   document.getElementById('hero-duty').textContent = s.doctors_on_duty ? s.doctors_on_duty.length : 0;
-  document.getElementById('hero-wait').textContent = s.avg_wait_time ? `${s.avg_wait_time}m` : '—';
+  document.getElementById('hero-wait').textContent = s.avg_wait_time !== undefined && s.avg_wait_time !== null ? `${s.avg_wait_time}m` : '—';
   // Hero welcome message
   const heroTitle = document.querySelector('.dash-hero h1');
   if (heroTitle) heroTitle.textContent = `Welcome back, Admin 👋`;
