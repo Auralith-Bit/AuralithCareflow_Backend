@@ -6,14 +6,14 @@ from django.contrib.auth.models import Group, Permission
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone', 'avatar_color', 'is_active', 'gender', 'date_of_birth', 'address']
+        fields = ['id', 'name', 'email', 'role', 'phone', 'avatar_color', 'is_active', 'gender', 'date_of_birth', 'address']
         read_only_fields = ['id']
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'last_name', 'role', 'phone', 'gender', 'date_of_birth', 'address']
+        fields = ['name', 'email', 'role', 'phone', 'gender', 'date_of_birth', 'address']
 
 
 class PermissionSerializer(serializers.ModelSerializer):

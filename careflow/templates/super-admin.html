@@ -222,9 +222,9 @@
   <div class="nav-item" onclick="setNav(this, 'groups')"><span class="icon">👥</span> Groups</div>
   <div class="sidebar-bottom">
     <div class="user-card">
-      <div class="user-avatar">{{ user.first_name|first|default:'S' }}{{ user.last_name|first|default:'A' }}</div>
+      <div class="user-avatar">{{ user.name|first|default:'S' }}</div>
       <div class="user-info">
-        <div class="user-name">{{ user.first_name }} {{ user.last_name }}</div>
+        <div class="user-name">{{ user.name }}</div>
         <div class="user-role">System Admin</div>
       </div>
     </div>
@@ -490,12 +490,12 @@ function renderStaffList(role) {
   const roleLabels = { hospital_admin: 'Hospital Admin', doctor: 'Doctor', receptionist: 'Receptionist' };
   const roleBadge = { hospital_admin: 'badge-purple', doctor: 'badge-blue', receptionist: 'badge-green' };
   tbody.innerHTML = list.map(u => `<tr>
-    <td><div class="staff-cell"><div class="staff-avatar av-1">${(u.first_name||'')[0]||''}${(u.last_name||'')[0]||''}</div><div><div class="staff-name">${u.first_name||''} ${u.last_name||''}</div></div></div></td>
+    <td><div class="staff-cell"><div class="staff-avatar av-1">${(u.name||'')[0]||''}</div><div><div class="staff-name">${u.name||''}</div></div></div></td>
     <td>${u.phone||''}</td>
     <td><span class="badge ${roleBadge[u.role]||'badge-gray'}">${roleLabels[u.role]||u.role||''}</span></td>
     <td style="color:var(--gray-500);font-size:13px;">${u.email||'-'}</td>
     <td><span class="badge ${u.is_active ? 'badge-green' : 'badge-gray'}">${u.is_active ? '✅ Active' : '❌ Inactive'}</span></td>
-    <td><button class="btn btn-sm btn-outline" onclick="openEditModal(${u.id}, '${(u.first_name||'').replace(/'/g, "\\'")}', '${(u.last_name||'').replace(/'/g, "\\'")}', '${(u.phone||'').replace(/'/g, "\\'")}', '${(u.email||'').replace(/'/g, "\\'")}')">✏️ Edit</button></td>
+    <td><button class="btn btn-sm btn-outline" onclick="openEditModal(${u.id}, '${(u.name||'').replace(/'/g, "\\'")}', '${(u.phone||'').replace(/'/g, "\\'")}', '${(u.email||'').replace(/'/g, "\\'")}')">✏️ Edit</button></td>
   </tr>`).join('');
   document.getElementById('admins-count').textContent = `${list.length} staff member${list.length !== 1 ? 's' : ''}`;
 }
@@ -507,7 +507,7 @@ function renderStaff(filter) {
   if (role) list = list.filter(u => u.role === role);
   if (filter) {
     const q = filter.toLowerCase();
-    list = list.filter(u => (u.first_name||'').toLowerCase().includes(q) || (u.last_name||'').toLowerCase().includes(q) || (u.phone||'').includes(q));
+    list = list.filter(u => (u.name||'').toLowerCase().includes(q) || (u.phone||'').includes(q));
   }
   const roleLabels = { hospital_admin: 'Hospital Admin', doctor: 'Doctor', receptionist: 'Receptionist', patient: 'Patient', super_admin: 'Super Admin' };
   const roleBadge = { hospital_admin: 'badge-purple', doctor: 'badge-blue', receptionist: 'badge-green', patient: 'badge-gold', super_admin: 'badge-purple' };
@@ -515,13 +515,13 @@ function renderStaff(filter) {
     const ug = allUserGroups[u.id] || [];
     const groupBadges = ug.length ? ug.map(g => `<span class="group-badge">${g.name}</span>`).join('') : '<span style="color:var(--gray-400);font-size:12px;">—</span>';
     return `<tr>
-    <td><div class="staff-cell"><div class="staff-avatar av-1">${(u.first_name||'')[0]||''}${(u.last_name||'')[0]||''}</div><div><div class="staff-name">${u.first_name||''} ${u.last_name||''}</div></div></div></td>
+    <td><div class="staff-cell"><div class="staff-avatar av-1">${(u.name||'')[0]||''}</div><div><div class="staff-name">${u.name||''}</div></div></div></td>
     <td>${u.phone||''}</td>
     <td><span class="badge ${roleBadge[u.role]||'badge-gray'}">${roleLabels[u.role]||u.role||''}</span></td>
     <td><div class="groups-list">${groupBadges}</div></td>
     <td style="color:var(--gray-500);font-size:13px;">${u.email||'-'}</td>
     <td><span class="badge ${u.is_active ? 'badge-green' : 'badge-gray'}">${u.is_active ? '✅ Active' : '❌ Inactive'}</span></td>
-    <td style="white-space:nowrap;"><button class="btn btn-sm btn-outline" onclick="openEditModal(${u.id}, '${(u.first_name||'').replace(/'/g, "\\'")}', '${(u.last_name||'').replace(/'/g, "\\'")}', '${(u.phone||'').replace(/'/g, "\\'")}', '${(u.email||'').replace(/'/g, "\\'")}')">✏️ Edit</button> <button class="btn btn-sm ${u.is_active ? 'btn-ghost' : 'btn-primary'}" onclick="toggleUserStatus(${u.id}, '${(u.first_name||'').replace(/'/g, "\\'")} ${(u.last_name||'').replace(/'/g, "\\'")}')">${u.is_active ? '❌ Deactivate' : '✅ Activate'}</button></td>
+    <td style="white-space:nowrap;"><button class="btn btn-sm btn-outline" onclick="openEditModal(${u.id}, '${(u.name||'').replace(/'/g, "\\'")}', '${(u.phone||'').replace(/'/g, "\\'")}', '${(u.email||'').replace(/'/g, "\\'")}')">✏️ Edit</button> <button class="btn btn-sm ${u.is_active ? 'btn-ghost' : 'btn-primary'}" onclick="toggleUserStatus(${u.id}, '${(u.name||'').replace(/'/g, "\\'")}')">${u.is_active ? '❌ Deactivate' : '✅ Activate'}</button></td>
   </tr>`}).join('');
   document.getElementById('staff-count').textContent = `${list.length} user${list.length !== 1 ? 's' : ''}`;
 }
@@ -542,8 +542,7 @@ async function saveStaff() {
   const phone = document.getElementById('staff-phone').value.trim();
   const role = document.getElementById('staff-role').value;
   if (!name || !phone) { showToast('Name and phone are required', 'error'); return; }
-  const parts = name.split(' ');
-  const data = { first_name: parts[0], last_name: parts.slice(1).join(' '), phone, role };
+  const data = { name, phone, role };
   try {
     await API.admin.createStaff(data);
     showToast(`${name} created as ${role.replace('_', ' ')} ✅`);
@@ -560,9 +559,9 @@ async function toggleUserStatus(id, name) {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-function openEditModal(id, firstName, lastName, phone, email) {
+function openEditModal(id, name, phone, email) {
   document.getElementById('edit-user-id').value = id;
-  document.getElementById('edit-name').value = (firstName + ' ' + lastName).trim();
+  document.getElementById('edit-name').value = name;
   document.getElementById('edit-phone').value = phone;
   document.getElementById('edit-email').value = email;
   openModal('modal-edit');
@@ -574,8 +573,7 @@ async function saveEdit() {
   const phone = document.getElementById('edit-phone').value.trim();
   const email = document.getElementById('edit-email').value.trim();
   if (!name || !phone) { showToast('Name and phone are required', 'error'); return; }
-  const parts = name.split(' ');
-  const data = { first_name: parts[0], last_name: parts.slice(1).join(' '), phone, email };
+  const data = { name, phone, email };
   try {
     await API.admin.updateUser(id, data);
     showToast(`User updated ✅`);
@@ -706,8 +704,7 @@ async function saveEdit() {
   const phone = document.getElementById('edit-phone').value.trim();
   const email = document.getElementById('edit-email').value.trim();
   if (!name || !phone) { showToast('Name and phone are required', 'error'); return; }
-  const parts = name.split(' ');
-  const data = { first_name: parts[0], last_name: parts.slice(1).join(' '), phone, email };
+  const data = { name, phone, email };
   try {
     await API.admin.updateUser(id, data);
     const groupChecks = document.querySelectorAll('#edit-groups-tree input[type="checkbox"]:checked');

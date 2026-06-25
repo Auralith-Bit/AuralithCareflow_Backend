@@ -84,11 +84,11 @@ const API = {
     return data;
   },
 
-  async register(phone, first_name, last_name, email = '', role = 'patient') {
+  async register(phone, name, email = '', role = 'patient') {
     const res = await fetch('/api/auth/register/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrfToken() },
-      body: JSON.stringify({ phone, first_name, last_name, email, role }),
+      body: JSON.stringify({ phone, name, email, role }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

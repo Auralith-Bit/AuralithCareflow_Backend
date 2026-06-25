@@ -354,9 +354,9 @@
   <div class="nav-item" onclick="setNav(this, 'schedule')"><span class="icon">⊟</span> OPD Flow</div>
   <div class="sidebar-bottom">
     <div class="receptionist-card">
-      <div class="rec-avatar">{{ user.first_name|first|default:'R' }}{{ user.last_name|first|default:'D' }}</div>
+      <div class="rec-avatar">{{ user.name|first|default:'R' }}</div>
       <div class="rec-info">
-        <div class="rec-name">{{ user.first_name }} {{ user.last_name }}</div>
+        <div class="rec-name">{{ user.name }}</div>
         <div class="rec-role">Front Desk · OPD</div>
       </div>
     </div>

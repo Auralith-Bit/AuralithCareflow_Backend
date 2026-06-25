@@ -942,9 +942,9 @@
 
   <div class="sidebar-bottom">
     <div class="receptionist-card">
-      <div class="rec-avatar">{{ user.first_name|first|default:'A' }}{{ user.last_name|first|default:'D' }}</div>
+      <div class="rec-avatar">{{ user.name|first|default:'A' }}</div>
       <div class="rec-info">
-        <div class="rec-name">{{ user.first_name }} {{ user.last_name }}</div>
+        <div class="rec-name">{{ user.name }}</div>
         <div class="rec-role">Hospital Admin</div>
       </div>
     </div>
@@ -1731,7 +1731,7 @@ async function loadStaff() {
     const users = await API.admin.users();
     staffList = users.map(u => ({
       id: u.id,
-      name: `${u.first_name} ${u.last_name}`.trim() || u.username,
+      name: u.name || u.phone,
       role: roleDisplay(u.role),
       dept: '—',
       email: u.email || '',
@@ -2218,10 +2218,8 @@ async function saveStaff() {
   if (!name) { showToast('Name is required','error'); return; }
   const roleDisplay = document.getElementById('staff-role').value;
   const roleMap = { 'Admin': 'hospital_admin', 'Doctor': 'doctor', 'Receptionist': 'receptionist', 'View-Only': 'receptionist' };
-  const nameParts = name.split(' ');
   const payload = {
-    first_name: nameParts[0] || name,
-    last_name: nameParts.slice(1).join(' ') || '',
+    name: name,
     email: document.getElementById('staff-email').value,
     role: roleMap[roleDisplay] || 'receptionist',
     phone: document.getElementById('staff-phone').value,
