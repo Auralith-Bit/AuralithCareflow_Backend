@@ -1162,7 +1162,7 @@
               <div class="metric-trend trend-up" id="qm-wait-trend"></div>
             </div>
             <div class="metric-row" style="flex-direction:column;align-items:flex-start;padding:14px 20px;border-left:1px solid var(--gray-100);">
-              <div class="metric-label">No-Show Rate</div>
+              <div class="metric-label">Cancellation Rate</div>
               <div class="metric-value" style="font-size:22px;margin:4px 0;" id="qm-noshow-val">—</div>
               <div class="metric-trend trend-down" id="qm-noshow-trend"></div>
             </div>
@@ -1385,7 +1385,7 @@
       <div class="stats-row" style="grid-template-columns:repeat(4,1fr);">
         <div class="stat-card green"><div class="stat-label">Total OPD (Week)</div><div class="stat-value" id="report-total-opd">—</div><div class="stat-sub">This week</div><div class="stat-icon">📊</div></div>
         <div class="stat-card orange"><div class="stat-label">Avg Wait Time</div><div class="stat-value" id="report-avg-wait">—</div><div class="stat-sub">Today</div><div class="stat-icon">⏱</div></div>
-        <div class="stat-card red"><div class="stat-label">No-Show Rate</div><div class="stat-value" id="report-noshow">—</div><div class="stat-sub">Today</div><div class="stat-icon">⚠️</div></div>
+        <div class="stat-card red"><div class="stat-label">Cancellation Rate</div><div class="stat-value" id="report-noshow">—</div><div class="stat-sub">Today</div><div class="stat-icon">⚠️</div></div>
         <div class="stat-card blue"><div class="stat-label">Busiest Day</div><div class="stat-value" id="report-peak-day">—</div><div class="stat-sub" id="report-peak-sub">This week</div><div class="stat-icon">📈</div></div>
       </div>
 
@@ -2454,7 +2454,7 @@ function renderDashboard() {
 
   // Quick metrics
   document.getElementById('qm-wait-val').textContent = s.avg_wait_time !== undefined ? `${s.avg_wait_time} min` : '—';
-  document.getElementById('qm-noshow-val').textContent = s.no_show_rate !== undefined ? `${s.no_show_rate}%` : '—';
+  document.getElementById('qm-noshow-val').textContent = s.cancellation_rate !== undefined ? `${s.cancellation_rate}%` : '—';
   document.getElementById('qm-cancel-val').textContent = s.cancelled_today !== undefined ? String(s.cancelled_today) : '—';
   document.getElementById('qm-peakday-val').textContent = s.weekly_opd?.peak_value ? s.weekly_opd.peak_day : '—';
 
@@ -2475,7 +2475,7 @@ function renderDashboard() {
   if (s.weekly_opd) {
     document.getElementById('report-total-opd').textContent = s.weekly_opd.total || 0;
     document.getElementById('report-avg-wait').textContent = s.avg_wait_time ? `${s.avg_wait_time}m` : '—';
-    document.getElementById('report-noshow').textContent = `${s.no_show_rate || 0}%`;
+    document.getElementById('report-noshow').textContent = `${s.cancellation_rate || 0}%`;
   }
 
   // Wait time trend
