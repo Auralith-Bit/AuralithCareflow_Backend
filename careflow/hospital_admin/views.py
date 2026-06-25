@@ -150,9 +150,13 @@ class DashboardStatsView(generics.GenericAPIView):
     permission_classes = [IsHospitalAdmin]
 
     def get(self, request):
-        today = timezone.now().date()
         now = timezone.now()
-        week_start = today - timedelta(days=today.weekday())
+        today_date = now.date()
+        today_start = timezone.make_aware(datetime.combine(today_date, datetime.min.time()))
+        today_end = today_start + timedelta(days=1)
+        week_start_date = today_date - timedelta(days=today_date.weekday())
+        week_start = timezone.make_aware(datetime.combine(week_start_date, datetime.min.time()))
+        week_end = week_start + timedelta(days=7)
 
         # ── Totals ──
         total_doctors = Doctor.objects.filter(is_active=True).count()
@@ -160,7 +164,7 @@ class DashboardStatsView(generics.GenericAPIView):
         total_staff = User.objects.exclude(role__in=['patient', 'super_admin']).count()
 
         # ── Queue today ──
-        today_qs = QueueEntry.objects.filter(created_at__date=today)
+        today_qs = QueueEntry.objects.filter(created_at__gte=today_start, created_at__lt=today_end)
         patients_today = today_qs.count()
 
         # ── Avg wait time (today) ──
@@ -174,7 +178,7 @@ class DashboardStatsView(generics.GenericAPIView):
             avg_wait_min = 0
 
         # ── Weekly OPD ──
-        week_qs = QueueEntry.objects.filter(created_at__date__gte=week_start)
+        week_qs = QueueEntry.objects.filter(created_at__gte=week_start, created_at__lt=week_end)
         weekday_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         weekly_raw = defaultdict(int)
         for entry in week_qs:
@@ -279,8 +283,8 @@ class DashboardStatsView(generics.GenericAPIView):
             w_start = week_start - timedelta(weeks=3 - w)
             w_end = w_start + timedelta(days=7)
             qs = QueueEntry.objects.filter(
-                created_at__date__gte=w_start,
-                created_at__date__lt=w_end,
+                created_at__gte=w_start,
+                created_at__lt=w_end,
                 status__in=['done', 'serving'],
             )
             avg_secs = qs.aggregate(
@@ -295,8 +299,9 @@ class DashboardStatsView(generics.GenericAPIView):
         }
 
         # ── Heatmap data (last 4 weeks) ──
-        four_weeks_ago = today - timedelta(days=28)
-        heat_qs = QueueEntry.objects.filter(created_at__date__gte=four_weeks_ago)
+        four_weeks_ago = today_date - timedelta(days=28)
+        four_weeks_ago_dt = timezone.make_aware(datetime.combine(four_weeks_ago, datetime.min.time()))
+        heat_qs = QueueEntry.objects.filter(created_at__gte=four_weeks_ago_dt)
         hours = ['8 AM', '9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM']
         days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         heat = [[0] * 7 for _ in range(10)]
@@ -334,7 +339,10 @@ class DashboardStatsView(generics.GenericAPIView):
 
         # ── Quick metrics ──
         cancelled_today = today_qs.filter(status='cancelled').count()
-        no_show_rate = round(cancelled_today / patients_today * 100, 1) if patients_today else 0
+        cancellation_rate = round(cancelled_today / patients_today * 100, 1) if patients_today else 0
+        yesterday_start = today_start - timedelta(days=1)
+        yesterday_count = QueueEntry.objects.filter(created_at__gte=yesterday_start, created_at__lt=today_start).count()
+        daily_change_val = round((patients_today - yesterday_count) / (yesterday_count or 1) * 100, 1)
 
         return Response({
             'total_doctors': total_doctors,
@@ -350,7 +358,7 @@ class DashboardStatsView(generics.GenericAPIView):
             'opd_share': opd_share,
             'wait_time_trend': wait_time_trend,
             'heatmap_data': heatmap_data,
-            'no_show_rate': no_show_rate,
+            'cancellation_rate': cancellation_rate,
             'cancelled_today': cancelled_today,
-            'daily_change': round((patients_today - weekly_avg) / (weekly_avg or 1) * 100, 1),
+            'daily_change': daily_change_val,
         })
