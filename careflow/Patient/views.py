@@ -180,7 +180,9 @@ class DoctorPublicDetailView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, pk):
-        d = Doctor.objects.get(pk=pk, is_active=True)
+        d = Doctor.objects.filter(pk=pk, is_active=True).first()
+        if not d:
+            return Response({'error': 'Doctor not found'}, status=status.HTTP_404_NOT_FOUND)
         waiting = QueueEntry.objects.filter(doctor=d, status='waiting').count()
         avg_rating = DoctorReview.objects.filter(doctor=d).aggregate(db_models.Avg('rating'))['rating__avg']
         reviews = DoctorReview.objects.filter(doctor=d).order_by('-created_at')[:10]
@@ -278,6 +280,15 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
         prefix = doctor.prefix if doctor else 'X'
         token = TokenCounter.get_next_token(prefix)
         serializer.save(patient=profile, token=token)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        # Return the created appointment using AppointmentSerializer for proper representation
+        response_serializer = AppointmentSerializer(serializer.instance)
+        from rest_framework import status as drf_status
+        return Response(response_serializer.data, status=drf_status.HTTP_201_CREATED)
 
 
 class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -476,4 +487,4 @@ class QueueQRView(APIView):
             b64 = base64.b64encode(buf.getvalue()).decode()
             return Response({'qr_base64': b64, 'token': token, 'doctor_name': doctor_name})
         except ImportError:
-            return Response({'qr_base64': None, 'error': 'QR library not installed'})
+            return Response({'qr_base64': None, 'token': token, 'doctor_name': doctor_name, 'error': 'QR library not installed'})
