@@ -245,7 +245,7 @@
             btn.innerHTML = 'Creating Account...';
 
             try {
-                const res = await fetch('/api/auth/register/', {
+                const res = await fetch('/api/patient/register/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
                     body: JSON.stringify({ phone: currentPhone, name, email, gender, date_of_birth, address }),
@@ -254,9 +254,12 @@
                     const errData = await res.json().catch(() => ({}));
                     throw new Error(errData.error || 'Registration failed');
                 }
-                const data = await res.json();
-                localStorage.setItem('careflow_token', data.access);
-                redirectAfterLogin(data.user);
+                switchView('otp-view');
+                showOTPDisplay();
+                showError('otp-error', '');
+                document.getElementById('otp-error').textContent = '✅ Account created! Enter the OTP sent to your phone.';
+                document.getElementById('otp-error').style.color = '#2d6a4f';
+                document.getElementById('otp-error').classList.remove('hidden');
             } catch (err) {
                 showError('register-error', err.message || 'Registration failed. Please try again.');
             } finally {
