@@ -140,7 +140,7 @@ careflow/
 
 | Model | Fields | Notes |
 |---|---|---|
-| User | `phone` (unique), `role`, `avatar_color`, `gender`, `date_of_birth`, `address` | Extends Django's `AbstractUser` |
+| User | `name`, `phone` (unique), `email`, `role`, `avatar_color`, `gender`, `date_of_birth`, `address` | Extends Django's `AbstractBaseUser` + `PermissionsMixin` |
 
 **Roles:** `patient`, `doctor`, `receptionist`, `hospital_admin`, `super_admin`
 

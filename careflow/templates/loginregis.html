@@ -240,9 +240,6 @@
             const date_of_birth = document.getElementById('reg-dob').value;
             const address = document.getElementById('reg-address').value.trim();
             if (!name) { showError('register-error', 'Name is required'); return; }
-            const parts = name.split(' ');
-            const first_name = parts[0];
-            const last_name = parts.slice(1).join(' ');
             const btn = document.getElementById('register-submit-btn');
             btn.disabled = true;
             btn.innerHTML = 'Creating Account...';
@@ -251,7 +248,7 @@
                 const res = await fetch('/api/auth/register/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
-                    body: JSON.stringify({ phone: currentPhone, first_name, last_name, email, gender, date_of_birth, address }),
+                    body: JSON.stringify({ phone: currentPhone, name, email, gender, date_of_birth, address }),
                 });
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));

@@ -2372,7 +2372,7 @@
         try {
             const p = await API.patient.profile();
             selectedPatient = {
-                name: [p.first_name, p.last_name].filter(Boolean).join(' ') || p.phone,
+                name: p.name || p.phone,
                 phone: p.phone, email: p.email, address: p.address,
                 blood: p.blood_group, date_of_birth: p.date_of_birth,
             };
@@ -2382,7 +2382,7 @@
 
     function updateProfileDisplay(p) {
         if (!p) return;
-        const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.phone;
+        const name = p.name || p.phone;
         setText('disp-name', name);
         setText('disp-phone', p.phone);
         setText('disp-email', p.email || '');
@@ -3028,12 +3028,9 @@
         const address = document.getElementById('edit-address').value.trim();
         if (!name) { alert('Full name is required.'); return; }
 
-        const [firstName, ...rest] = name.split(' ');
-        const lastName = rest.join(' ');
         try {
             await API.patient.updateProfile({
-                first_name: firstName,
-                last_name: lastName,
+                name: name,
                 email: email,
                 date_of_birth: dob || null,
                 blood_group: blood,

@@ -115,38 +115,27 @@ class RegisterView(APIView):
 
     def post(self, request):
         phone = request.data.get('phone', '').strip()
-        first_name = request.data.get('first_name', '').strip()
-        last_name = request.data.get('last_name', '').strip()
+        name = request.data.get('name', '').strip()
         email = request.data.get('email', '').strip()
         role = request.data.get('role', 'patient')
         gender = request.data.get('gender', '').strip()
         date_of_birth = request.data.get('date_of_birth', None)
         address = request.data.get('address', '').strip()
 
-        if not phone or not first_name:
+        if not phone or not name:
             return Response({'error': 'Phone and name are required'}, status=400)
         if User.objects.filter(phone=phone).exists():
             return Response({'error': 'Phone already registered'}, status=400)
 
-        username = f"user_{phone[-10:]}"
-        base_username = username
-        suffix = 1
-        while User.objects.filter(username=username).exists():
-            username = f"{base_username}_{suffix}"
-            suffix += 1
-
         user = User(
-            username=username,
             phone=phone,
-            first_name=first_name,
-            last_name=last_name,
+            name=name,
             email=email,
             role=role,
             gender=gender,
             date_of_birth=date_of_birth if date_of_birth else None,
             address=address,
         )
-        user.set_unusable_password()
         user.save()
 
         refresh = RefreshToken.for_user(user)
@@ -177,30 +166,19 @@ class CreateStaffView(APIView):
 
     def post(self, request):
         phone = request.data.get('phone', '').strip()
-        first_name = request.data.get('first_name', '').strip()
-        last_name = request.data.get('last_name', '').strip()
+        name = request.data.get('name', '').strip()
         role = request.data.get('role', '').strip().lower()
 
-        if not phone or not first_name or role not in ('receptionist', 'doctor', 'hospital_admin'):
+        if not phone or not name or role not in ('receptionist', 'doctor', 'hospital_admin'):
             return Response({'error': 'Valid phone, name, and role are required'}, status=400)
         if User.objects.filter(phone=phone).exists():
             return Response({'error': 'Phone already registered'}, status=400)
 
-        username = f"staff_{phone[-10:]}"
-        base = username
-        suffix = 1
-        while User.objects.filter(username=username).exists():
-            username = f"{base}_{suffix}"
-            suffix += 1
-
         user = User(
-            username=username,
             phone=phone,
-            first_name=first_name,
-            last_name=last_name,
+            name=name,
             role=role,
         )
-        user.set_unusable_password()
         user.save()
 
         if role == 'doctor':
@@ -208,7 +186,7 @@ class CreateStaffView(APIView):
             prefix = next((l for l in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' if l not in used), f'D{Doctor.objects.count() + 1}')
             Doctor.objects.create(
                 user=user,
-                name=f"{first_name} {last_name}".strip(),
+                name=name,
                 phone=phone,
                 prefix=prefix,
             )
@@ -231,19 +209,17 @@ class UpdateUserView(APIView):
 
     def patch(self, request, pk):
         user = get_object_or_404(User, pk=pk)
-        first_name = request.data.get('first_name', '').strip()
-        last_name = request.data.get('last_name', '').strip()
+        name = request.data.get('name', '').strip()
         phone = request.data.get('phone', '').strip()
         email = request.data.get('email', '').strip()
 
         if phone and phone != user.phone:
             if User.objects.filter(phone=phone).exclude(pk=user.pk).exists():
                 return Response({'error': 'Phone already in use'}, status=400)
-        if not first_name:
+        if not name:
             return Response({'error': 'Name is required'}, status=400)
 
-        user.first_name = first_name
-        user.last_name = last_name
+        user.name = name
         user.phone = phone
         user.email = email
         user.save()

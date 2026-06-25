@@ -1,8 +1,23 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
 
 
-class User(AbstractUser):
+class UserManager(BaseUserManager):
+    def create_user(self, phone, name, password=None, **extra_fields):
+        if not phone:
+            raise ValueError('Phone is required')
+        user = self.model(phone=phone, name=name, **extra_fields)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, phone, name, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(phone, name, password, **extra_fields)
+
+
+class User(AbstractBaseUser, PermissionsMixin):
     class Role(models.TextChoices):
         PATIENT = 'patient', 'Patient'
         DOCTOR = 'doctor', 'Doctor'
@@ -15,12 +30,22 @@ class User(AbstractUser):
         FEMALE = 'female', 'Female'
         OTHER = 'other', 'Other'
 
-    role = models.CharField(max_length=20, choices=Role.choices, default=Role.PATIENT)
+    name = models.CharField(max_length=300)
     phone = models.CharField(max_length=20, unique=True, blank=True, null=True)
+    email = models.EmailField(blank=True, default='')
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.PATIENT)
     avatar_color = models.CharField(max_length=20, blank=True, default='av-1')
     gender = models.CharField(max_length=10, choices=Gender.choices, blank=True, default='')
     date_of_birth = models.DateField(null=True, blank=True)
     address = models.TextField(blank=True, default='')
+    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = 'phone'
+    REQUIRED_FIELDS = ['name']
 
     def __str__(self):
-        return f"{self.username} ({self.get_role_display()})"
+        return f"{self.name} ({self.get_role_display()})"

@@ -30,34 +30,23 @@ class PatientRegisterView(APIView):
 
     def post(self, request):
         phone = request.data.get('phone', '').strip()
-        first_name = request.data.get('first_name', '').strip()
-        last_name = request.data.get('last_name', '').strip()
+        name = request.data.get('name', '').strip()
         email = request.data.get('email', '').strip()
         date_of_birth = request.data.get('date_of_birth')
         blood_group = request.data.get('blood_group', '')
         address = request.data.get('address', '')
 
-        if not phone or not first_name:
+        if not phone or not name:
             return Response({'error': 'Phone and name are required'}, status=400)
         if User.objects.filter(phone=phone).exists():
             return Response({'error': 'Phone already registered'}, status=400)
 
-        username = f"pat_{phone[-10:]}"
-        base_username = username
-        suffix = 1
-        while User.objects.filter(username=username).exists():
-            username = f"{base_username}_{suffix}"
-            suffix += 1
-
         user = User(
-            username=username,
             phone=phone,
-            first_name=first_name,
-            last_name=last_name,
+            name=name,
             email=email,
             role=User.Role.PATIENT,
         )
-        user.set_unusable_password()
         user.save()
 
         profile = PatientProfile.objects.create(
@@ -74,8 +63,7 @@ class PatientRegisterView(APIView):
             'refresh': str(refresh),
             'user': {
                 'id': user.id,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
+                'name': user.name,
                 'phone': user.phone,
                 'email': user.email,
                 'role': user.role,
@@ -100,7 +88,7 @@ class PatientProfileView(APIView):
             p_serializer.is_valid(raise_exception=True)
             p_serializer.save()
 
-        user_fields = ['first_name', 'last_name', 'email']
+        user_fields = ['name', 'email']
         changed = False
         for field in user_fields:
             if field in request.data:
@@ -429,12 +417,10 @@ class GuestBookingView(APIView):
         if data['appointment_date'] < date.today():
             return Response({'error': 'Cannot book for past date'}, status=400)
         guest_name = data.get('patient_name', '') or f'Guest_{data["phone"][-6:]}'
-        username = f"guest_{data['phone'][-10:]}"
         user, _ = User.objects.get_or_create(
-            username=username,
+            phone=data['phone'],
             defaults={
-                'phone': data['phone'],
-                'first_name': guest_name,
+                'name': guest_name,
                 'role': User.Role.PATIENT,
             }
         )
