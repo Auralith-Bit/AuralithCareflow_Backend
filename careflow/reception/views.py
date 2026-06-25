@@ -270,13 +270,16 @@ class DoctorListView(generics.ListAPIView):
         doctors = Doctor.objects.filter(is_active=True)
         data = []
         for d in doctors:
-            waiting = QueueEntry.objects.filter(doctor=d, status='waiting').count()
+            active_count = QueueEntry.objects.filter(
+                doctor=d,
+                status__in=['waiting', 'arrived', 'serving'],
+            ).count()
             data.append({
                 'id': d.id,
                 'name': d.name,
                 'dept': d.department.name if d.department else '',
                 'room': '',
                 'prefix': d.prefix,
-                'waiting_count': waiting,
+                'waiting_count': active_count,
             })
         return Response(data)
