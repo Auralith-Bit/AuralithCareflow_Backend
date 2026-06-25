@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="{% static 'js/api.js' %}"></script>
 
     <style>
         /* ==========================================================================
@@ -1199,7 +1200,7 @@
 <div class="sidebar">
     <div>
         <div class="logo-section">
-            <img src="logo.jpeg" alt="CareFlow Logo" class="logo-img">
+            <img src="{% static 'images/Careflow_LOGO.png' %}" alt="CareFlow Logo" class="logo-img">
             <div class="tagline">CARE FLOW</div>
         </div>
 
@@ -1297,8 +1298,8 @@
             <div class="welcome-hero">
                 <div class="hero-text-block">
                     <small id="greeting-time">Good morning,</small>
-                    <h2>—</h2>
-                    <p>You have an active queue token. Track your position in real time.</p>
+                    <h2 id="welcome-name">—</h2>
+                    <p id="hero-subtext">Book your appointment and track your queue position in real time.</p>
                 </div>
                 <div class="hero-buttons-block">
                     <button class="track-btn" onclick="navigateTo('live-queue')">
@@ -1336,34 +1337,34 @@
                 <div class="right-col">
                     <div class="token-hero-banner">
                         <div class="hero-label">My Token</div>
-                        <div class="hero-token-id" id="my-token-display">A-47</div>
-                        <div class="hero-doc-details" id="my-token-details">Dr. Ramesh KC · General OPD</div>
+                        <div class="hero-token-id" id="my-token-display">—</div>
+                        <div class="hero-doc-details" id="my-token-details">—</div>
                         <div class="hero-metrics-row">
                             <div class="metric-box">
-                                <h4 id="serving-token-display">A-44</h4>
+                                <h4 id="serving-token-display">—</h4>
                                 <p>Now Serving</p>
                             </div>
                             <div class="metric-box">
-                                <h4 id="tokens-ahead-display">3</h4>
+                                <h4 id="tokens-ahead-display">—</h4>
                                 <p>Ahead</p>
                             </div>
                             <div class="metric-box">
-                                <h4>~30</h4>
+                                <h4 id="eta-display">—</h4>
                                 <p>Min ETA</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="tracker-card">
-                        <div class="tracker-timeline-labels">
-                            <span>Token A-1</span>
-                            <span class="highlight-user">A-47 (You)</span>
-                            <span>A-60</span>
+                        <div class="tracker-timeline-labels" id="tracker-timeline-labels">
+                            <span>—</span>
+                            <span class="highlight-user">—</span>
+                            <span>—</span>
                         </div>
                         <div class="tracker-bar-bg">
-                            <div class="tracker-bar-fill" id="tracker-progress-bar"></div>
+                            <div class="tracker-bar-fill" id="tracker-progress-bar" style="width:0%"></div>
                         </div>
-                        <div class="tracker-footer" id="tracker-completion-text">73% of queue completed today</div>
+                        <div class="tracker-footer" id="tracker-completion-text">—</div>
                     </div>
 
                     <div class="sms-alert-banner">
@@ -1378,10 +1379,10 @@
                         <h3>Live Queue <span class="live-indicator">Live</span></h3>
                         <div class="live-status-container">
                             <div class="live-status-left">
-                                <div class="current-token-id" id="live-box-token">A-44</div>
-                                <div class="serving-details">
-                                    <h5>Now Serving</h5>
-                                    <p id="live-box-time">Since 10:42 AM</p>
+                            <div class="current-token-id" id="live-box-token">—</div>
+                            <div class="serving-details">
+                                <h5>Now Serving</h5>
+                                <p id="live-box-time">—</p>
                                 </div>
                             </div>
                             <div class="status-tag">Active</div>
@@ -1420,20 +1421,20 @@
             <div class="token-banner-card">
                 <div class="banner-section">
                     <span class="label">Your Token</span>
-                    <div class="token-display">A-47</div>
-                    <span class="subtext">General OPD</span>
+                    <div class="token-display" id="lq-my-token">—</div>
+                    <span class="subtext" id="lq-my-dept">—</span>
                 </div>
                 <div class="banner-section">
                     <span class="label">Physician Assignment</span>
-                    <div class="token-display" style="font-size:18px;font-weight:700;margin:4px 0;">Dr. Ramesh KC</div>
-                    <span class="subtext">MBBS, MD &bull; Room 3</span>
+                    <div class="token-display" style="font-size:18px;font-weight:700;margin:4px 0;" id="lq-my-doctor">—</div>
+                    <span class="subtext" id="lq-my-doctor-detail">—</span>
                 </div>
                 <div class="banner-section">
                     <span class="label">Now Serving</span>
-                    <div class="token-display" style="font-size:30px;color:#a7f3d0;" id="lq-now-serving">A-44</div>
+                    <div class="token-display" style="font-size:30px;color:#a7f3d0;" id="lq-now-serving">—</div>
                     <div class="wait-time-badge">
-                        <span class="wait-time-value">~30</span>
-                        <span class="wait-time-label">min wait &bull; <b>11:12 AM</b></span>
+                        <span class="wait-time-value" id="lq-wait-time">—</span>
+                        <span class="wait-time-label">min wait</span>
                     </div>
                 </div>
             </div>
@@ -1443,33 +1444,33 @@
                     <div class="status-card card-teal">
                         <div class="card-icon-wrapper"><i class="fa-solid fa-users"></i></div>
                         <span class="meta-title">In Queue</span>
-                        <div class="main-value">16</div>
+                        <div class="main-value" id="lq-in-queue">—</div>
                         <span class="status-subtext">Active tokens</span>
                     </div>
                     <div class="status-card card-orange">
                         <div class="card-icon-wrapper"><i class="fa-regular fa-clock"></i></div>
                         <span class="meta-title">Avg Consult</span>
-                        <div class="main-value">8 min</div>
+                        <div class="main-value" id="lq-avg-consult">—</div>
                         <span class="status-subtext">Per patient</span>
                     </div>
                     <div class="status-card card-blue">
                         <div class="card-icon-wrapper"><i class="fa-solid fa-check"></i></div>
                         <span class="meta-title">Completed</span>
-                        <div class="main-value" id="lq-completed">43</div>
+                        <div class="main-value" id="lq-completed">—</div>
                         <span class="status-subtext">Tokens served</span>
                     </div>
                 </div>
 
                 <div class="progress-panel">
                     <div class="progress-meta">
-                        <span>A-1 &bull; Start</span>
-                        <span class="current-serving" id="lq-progress-label">A-44 Serving Now</span>
-                        <span>A-60 &bull; End</span>
+                        <span id="lq-progress-start">—</span>
+                        <span class="current-serving" id="lq-progress-label">—</span>
+                        <span id="lq-progress-end">—</span>
                     </div>
                     <div class="progress-track">
-                        <div class="progress-fill" id="lq-progress-fill"></div>
+                        <div class="progress-fill" id="lq-progress-fill" style="width:0%"></div>
                     </div>
-                    <div class="progress-summary">You are token <strong style="color:#097958;">A-47</strong> &mdash; <span id="lq-ahead-count">3</span> tokens ahead.</div>
+                    <div class="progress-summary" id="lq-progress-summary">—</div>
                 </div>
             </div>
 
@@ -1485,48 +1486,9 @@
                     <h2>Full Queue Sequence Records</h2>
                     <div class="live-indicator">Updating live</div>
                 </div>
-                <table class="queue-table">
-                    <thead>
-                        <tr>
-                            <th style="width:15%;">Token</th>
-                            <th style="width:45%;">Patient Name</th>
-                            <th style="width:20%;">Est. Time</th>
-                            <th style="width:20%;">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="row-active">
-                            <td class="col-token">A-44</td>
-                            <td class="col-name">Patient (Now Serving)</td>
-                            <td>10:42 AM</td>
-                            <td><span class="status-badge">Active</span></td>
-                        </tr>
-                        <tr>
-                            <td><span class="token-pill-static">A-45</span></td>
-                            <td style="color:#718096;font-weight:400;">Patient</td>
-                            <td>10:52 AM</td>
-                            <td><span class="status-badge">Waiting</span></td>
-                        </tr>
-                        <tr>
-                            <td><span class="token-pill-static">A-46</span></td>
-                            <td style="color:#718096;font-weight:400;">Patient</td>
-                            <td>11:02 AM</td>
-                            <td><span class="status-badge">Waiting</span></td>
-                        </tr>
-                        <tr class="row-user-target">
-                            <td class="col-token">A-47</td>
-                            <td class="col-name">You</td>
-                            <td>11:12 AM</td>
-                            <td><span class="status-badge">Your Turn Soon</span></td>
-                        </tr>
-                        <tr>
-                            <td><span class="token-pill-static">A-48</span></td>
-                            <td style="color:#718096;font-weight:400;">Patient</td>
-                            <td>11:22 AM</td>
-                            <td><span class="status-badge">Waiting</span></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div id="queue-table-container">
+                    <p style="color:var(--text-muted);text-align:center;padding:40px 20px;font-size:14px;">Queue data will appear here once your appointment is active.</p>
+                </div>
             </div>
 
         </div>
@@ -1843,7 +1805,7 @@
                             </div>
                             <div class="input-group">
                                 <label>Cardholder Name</label>
-                                <input type="text" placeholder="SUSHIL THAPA">
+                                <input type="text" placeholder="YOUR NAME">
                             </div>
                             <div class="input-row">
                                 <div class="input-group">
@@ -2025,7 +1987,7 @@
                 <div class="top-actions">
                     <div class="search-box">
                         <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" value="sushil@email.com" readonly>
+                        <input type="text" value="—" readonly>
                     </div>
                     <button class="icon-btn theme-toggle-btn" title="Toggle Theme"><i class="fa-solid fa-moon"></i></button>
                     <button class="icon-btn"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
@@ -2037,7 +1999,7 @@
                 <div class="left-menu-column">
                     <div class="gradient-profile-card">
                         <div class="profile-badge-avatar">—</div>
-                        <h2>—</h2>
+                    <h2 id="welcome-name">—</h2>
                         <div class="phone-sub">—</div>
                         <div class="tag-pills-row">
                             <div class="tag-pill">Patient</div>
@@ -2080,10 +2042,10 @@
                         <div class="info-pill-fields-grid">
                             <div class="info-field-pill"><div class="field-pill-left"><i class="fa-regular fa-user"></i> Full Name</div><div class="field-pill-value" id="disp-name">—</div></div>
                             <div class="info-field-pill"><div class="field-pill-left"><i class="fa-solid fa-phone"></i> Phone</div><div class="field-pill-value" id="disp-phone">—</div></div>
-                            <div class="info-field-pill"><div class="field-pill-left"><i class="fa-regular fa-calendar"></i> Date of Birth</div><div class="field-pill-value" id="disp-dob">15 Mar 1990</div></div>
-                            <div class="info-field-pill"><div class="field-pill-left"><i class="fa-solid fa-droplet"></i> Blood Group</div><div class="field-pill-value" id="disp-blood">B+</div></div>
+                            <div class="info-field-pill"><div class="field-pill-left"><i class="fa-regular fa-calendar"></i> Date of Birth</div><div class="field-pill-value" id="disp-dob">—</div></div>
+                            <div class="info-field-pill"><div class="field-pill-left"><i class="fa-solid fa-droplet"></i> Blood Group</div><div class="field-pill-value" id="disp-blood">—</div></div>
                             <div class="info-field-pill"><div class="field-pill-left"><i class="fa-solid fa-location-dot"></i> Address</div><div class="field-pill-value" id="disp-address">—</div></div>
-                            <div class="info-field-pill"><div class="field-pill-left"><i class="fa-regular fa-envelope"></i> Email</div><div class="field-pill-value" id="disp-email">sushil@email.com</div></div>
+                            <div class="info-field-pill"><div class="field-pill-left"><i class="fa-regular fa-envelope"></i> Email</div><div class="field-pill-value" id="disp-email">—</div></div>
                         </div>
                     </div>
 
@@ -2102,27 +2064,7 @@
                             <h3>Recent Activity</h3>
                         </div>
                         <div class="activity-log-timeline">
-                            <div class="activity-item-row">
-                                <div class="activity-left-block">
-                                    <span class="activity-status-tag booked">Booked</span>
-                                    <span class="activity-details-desc">Appointment with Dr. Ramesh KC — Jun 3</span>
-                                </div>
-                                <span class="activity-time-stamp">Today</span>
-                            </div>
-                            <div class="activity-item-row">
-                                <div class="activity-left-block">
-                                    <span class="activity-status-tag completed">Completed</span>
-                                    <span class="activity-details-desc">Visit with Dr. Pawan Joshi — May 11</span>
-                                </div>
-                                <span class="activity-time-stamp">9 days ago</span>
-                            </div>
-                            <div class="activity-item-row">
-                                <div class="activity-left-block">
-                                    <span class="activity-status-tag missed">Missed</span>
-                                    <span class="activity-details-desc">Appointment with Dr. Ramesh KC — Apr 30</span>
-                                </div>
-                                <span class="activity-time-stamp">20 days ago</span>
-                            </div>
+                            <p style="color:var(--text-muted);text-align:center;padding:30px 20px;font-size:13px;">No recent activity</p>
                         </div>
                     </div>
                 </div>
@@ -2188,11 +2130,11 @@
                 </div>
                 <div class="input-group">
                     <label>Email Address</label>
-                    <input type="email" id="edit-email" value="sushil@email.com" placeholder="email@example.com">
+                    <input type="email" id="edit-email" value="—" placeholder="email@example.com">
                 </div>
                 <div class="input-group">
                     <label>Date of Birth</label>
-                    <input type="date" id="edit-dob" value="1990-03-15">
+                    <input type="date" id="edit-dob" value="">
                 </div>
                 <div class="input-group">
                     <label>Blood Group</label>
@@ -2388,6 +2330,13 @@
         setText('disp-email', p.email || '');
         setText('disp-blood', p.blood_group || '');
         setText('disp-address', p.address || '');
+        if (p.date_of_birth) {
+            const d = new Date(p.date_of_birth + 'T00:00:00');
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            setText('disp-dob', d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear());
+        } else {
+            setText('disp-dob', '—');
+        }
         const initials = getInitials(name);
         document.querySelectorAll('.sidebar .avatar').forEach(el => el.textContent = initials);
         document.querySelectorAll('.sidebar .user-info h3').forEach(el => el.textContent = name);
@@ -2395,6 +2344,7 @@
         document.querySelectorAll('.profile-badge-avatar').forEach(el => el.textContent = initials);
         document.querySelectorAll('.gradient-profile-card h2').forEach(el => el.textContent = name);
         document.querySelectorAll('.gradient-profile-card .phone-sub').forEach(el => el.textContent = p.phone);
+        document.querySelectorAll('#welcome-name').forEach(el => el.textContent = name);
     }
 
     async function loadMyBookings() {
@@ -2441,8 +2391,10 @@
         renderDoctorsList();
         renderBookDoctorList();
         renderMyBookings();
+        updateDashboardTokenInfo();
         updateBookingSummaryFields();
         navigateTo('dashboard');
+        updateQueueMetrics();
     }
 
     /* Theme Controller */
@@ -2519,22 +2471,50 @@
         el.textContent = hour < 12 ? 'Good morning,' : hour < 18 ? 'Good afternoon,' : 'Good evening,';
     }
 
+    /* Dashboard Token Hero */
+    function updateDashboardTokenInfo() {
+        if (myBookingsData.length > 0) {
+            const b = myBookingsData[0];
+            setText('my-token-display', b.token || '—');
+            setText('my-token-details', [b.doctor_name, b.department_name].filter(Boolean).join(' · ') || '—');
+            setText('hero-subtext', 'You have an active token. Track your position in real time.');
+            setText('lq-my-token', b.token || '—');
+            setText('lq-my-dept', b.department_name || '—');
+            setText('lq-my-doctor', b.doctor_name || '—');
+            setText('lq-my-doctor-detail', [b.doctor_specialty, b.location].filter(Boolean).join(' • ') || '—');
+        } else {
+            setText('my-token-display', '—');
+            setText('my-token-details', '—');
+            setText('hero-subtext', 'Book your appointment and track your queue position in real time.');
+            setText('lq-my-token', '—');
+            setText('lq-my-dept', '—');
+            setText('lq-my-doctor', '—');
+            setText('lq-my-doctor-detail', '—');
+        }
+    }
+
     /* Queue Metrics */
     function updateQueueMetrics() {
         const nowServing = liveQueueState.now_serving;
-        const ahead = liveQueueState.tokens_ahead || 0;
-        const totalWaiting = liveQueueState.total_waiting || 0;
-        const tokenLabel = nowServing || '--';
+        const ahead = liveQueueState.tokens_ahead;
+        const totalWaiting = liveQueueState.total_waiting;
+        const hasQueue = nowServing != null;
 
-        setText('serving-token-display', tokenLabel);
-        setText('live-box-token', tokenLabel);
-        setText('tokens-ahead-display', ahead);
-        setText('tracker-completion-text', `${totalWaiting} waiting in queue`);
-        setText('sidebar-queue-badge', `${ahead} Ahead`);
+        setText('serving-token-display', hasQueue ? nowServing : '—');
+        setText('live-box-token', hasQueue ? nowServing : '—');
+        setText('tokens-ahead-display', hasQueue ? (ahead ?? 0) : '—');
+        setText('tracker-completion-text', hasQueue ? `${totalWaiting ?? 0} waiting in queue` : '—');
+        setText('sidebar-queue-badge', hasQueue ? `${ahead ?? 0} Ahead` : '—');
 
-        setText('lq-now-serving', tokenLabel);
-        setText('lq-progress-label', tokenLabel + ' Serving Now');
-        setText('lq-ahead-count', ahead);
+        setText('lq-now-serving', hasQueue ? nowServing : '—');
+        setText('lq-progress-label', hasQueue ? nowServing + ' Serving Now' : '—');
+        setText('lq-ahead-count', hasQueue ? (ahead ?? 0) : '—');
+        setText('lq-in-queue', hasQueue ? (totalWaiting ?? 0) : '—');
+        setText('lq-progress-start', hasQueue ? `Start` : '—');
+        setText('lq-progress-end', hasQueue ? 'End' : '—');
+        setText('lq-progress-summary', hasQueue && myBookingsData.length > 0
+            ? `You are token ${myBookingsData[0].token} — ${ahead ?? 0} tokens ahead.`
+            : '—');
     }
 
     function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
@@ -2566,10 +2546,10 @@
         const time = getSelectedAppointmentTime();
         setText('dt-date', date);
         setText('dt-time', time);
-        setText('dt-patient', selectedPatient.name);
+        setText('dt-patient', selectedPatient?.name || '—');
         setText('pay-date', date);
         setText('pay-time', time);
-        setText('pay-patient', selectedPatient.name);
+        setText('pay-patient', selectedPatient?.name || '—');
     }
 
     function escapeHtml(value) {
@@ -2941,9 +2921,9 @@
     });
 
     window.preparePaymentAndNavigate = () => {
-        if (!selectedDoctor) {
-            alert('Please select a doctor first.');
-            navigateTo('book-appointment');
+        if (!selectedDoctor || !selectedPatient) {
+            alert(selectedDoctor ? 'Please complete your profile first.' : 'Please select a doctor first.');
+            navigateTo(selectedDoctor ? 'dashboard' : 'book-appointment');
             return;
         }
         updateBookingSummaryFields();
@@ -3007,6 +2987,7 @@
         document.getElementById('edit-phone').value   = document.getElementById('disp-phone').textContent;
         document.getElementById('edit-email').value   = document.getElementById('disp-email').textContent;
         document.getElementById('edit-address').value = document.getElementById('disp-address').textContent;
+        document.getElementById('edit-dob').value      = (selectedPatient && selectedPatient.date_of_birth) || '';
         const blood = document.getElementById('disp-blood').textContent.trim();
         const sel = document.getElementById('edit-blood');
         for (let o of sel.options) { o.selected = (o.value === blood); }
@@ -3432,7 +3413,7 @@
                     <i class="fa-solid fa-right-from-bracket" style="font-size:48px;color:#045743;margin-bottom:16px;display:block;"></i>
                     <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Signed Out Successfully</h2>
                     <p style="color:#64748b;font-size:14px;margin-bottom:24px;">You have been securely signed out from CareFlow.</p>
-                    <a href="careflowpp.html" style="display:inline-block;background:#045743;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
+                    <a href="/login/" style="display:inline-block;background:#045743;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
                         Sign In Again
                     </a>
                 </div>
@@ -3449,6 +3430,7 @@
             const b = myBookingsData[0];
             await loadQueueStatus(b.token, b.doctor_name);
             updateQueueMetrics();
+            updateDashboardTokenInfo();
         }
     }, 30000);
     
