@@ -800,13 +800,12 @@ async function issueWalkInToken() {
       notes: document.getElementById('wk-notes').value,
       reuse_slot_id: reuseSlotVal ? parseInt(reuseSlotVal) : null,
     });
-    queueData.push(entry);
     showToast(`🎫 Token ${entry.token} issued to ${name}`);
     addActivity(`Walk-in token ${entry.token} issued to ${name}`, 'issue');
     loadAllData();
     openPrintSlipDirect(entry.token, name, entry.doctor_name, entry.department_name, entry.room, entry.time);
     resetWalkInForm();
-  } catch (e) { showToast(e.message, 'error'); }
+  } catch (e) { console.error('issueWalkInToken error:', e); showToast(e.message, 'error'); }
 }
 
 async function issueWalkInFromModal() {

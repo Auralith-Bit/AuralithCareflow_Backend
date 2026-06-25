@@ -9,6 +9,9 @@ class PatientSerializer(serializers.ModelSerializer):
 
 
 class QueueEntrySerializer(serializers.ModelSerializer):
+    time = serializers.TimeField(format='%I:%M %p')
+    cancelled_at = serializers.TimeField(format='%I:%M %p', allow_null=True, required=False)
+
     class Meta:
         model = QueueEntry
         fields = '__all__'
