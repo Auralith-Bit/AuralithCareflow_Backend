@@ -172,10 +172,10 @@ class DashboardStatsView(generics.GenericAPIView):
         avg_wait_seconds = done_today.aggregate(
             avg=Avg(ExpressionWrapper(F('updated_at') - F('created_at'), output_field=DurationField()))
         )['avg']
-        if avg_wait_seconds:
+        if avg_wait_seconds is not None:
             avg_wait_min = int(avg_wait_seconds.total_seconds() // 60)
         else:
-            avg_wait_min = 0
+            avg_wait_min = None
 
         # ── Weekly OPD ──
         week_qs = QueueEntry.objects.filter(created_at__gte=week_start, created_at__lt=week_end)
