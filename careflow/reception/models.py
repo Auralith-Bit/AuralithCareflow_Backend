@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import F
 from django.utils import timezone
 from accounts.models import User
 from hospital_admin.models import Doctor
@@ -34,7 +35,7 @@ class QueueEntry(models.Model):
         PATIENT_APP = 'patient-app', 'Cancelled by Patient (App)'
         RECEPTIONIST = 'receptionist', 'Cancelled by Receptionist'
 
-    token = models.CharField(max_length=20, db_index=True)
+    token = models.CharField(max_length=20, unique=True, db_index=True)
     patient = models.ForeignKey(Patient, on_delete=models.SET_NULL, null=True, blank=True, related_name='queue_entries')
     patient_name = models.CharField(max_length=200)
     patient_phone = models.CharField(max_length=20)
@@ -96,6 +97,6 @@ class TokenCounter(models.Model):
     def get_next_token(cls, prefix):
         today = timezone.now().date()
         counter, _ = cls.objects.get_or_create(doctor_prefix=prefix, date=today)
-        counter.counter_value += 1
-        counter.save()
+        cls.objects.filter(pk=counter.pk).update(counter_value=F('counter_value') + 1)
+        counter.refresh_from_db()
         return f"{prefix}-{counter.counter_value}"

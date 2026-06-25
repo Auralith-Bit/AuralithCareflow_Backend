@@ -242,8 +242,10 @@ class NextTokenView(APIView):
         if not doctor_id:
             return Response({'error': 'doctor_id required'}, status=400)
         doctor = Doctor.objects.get(id=doctor_id)
-        token = TokenCounter.get_next_token(doctor.prefix)
-        return Response({'token': token, 'prefix': doctor.prefix})
+        today = timezone.now().date()
+        counter, _ = TokenCounter.objects.get_or_create(doctor_prefix=doctor.prefix, date=today)
+        next_num = counter.counter_value + 1
+        return Response({'token': f"{doctor.prefix}-{next_num}", 'prefix': doctor.prefix})
 
 
 class ActivityLogListView(generics.ListCreateAPIView):
