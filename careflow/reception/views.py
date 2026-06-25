@@ -1,7 +1,7 @@
 from datetime import date, time, datetime
 from django.db.models import Q, Count
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from rest_framework import generics, status, permissions
 from rest_framework.decorators import api_view, permission_classes
@@ -77,12 +77,15 @@ class CreateQueueEntryView(APIView):
         serializer = QueueEntryCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-
-        doctor = Doctor.objects.get(id=data['doctor_id'])
         reuse_slot_id = data.get('reuse_slot_id')
 
         if reuse_slot_id:
-            entry = QueueEntry.objects.get(id=reuse_slot_id)
+            entry = get_object_or_404(QueueEntry, id=reuse_slot_id)
+            if entry.status != 'cancelled' or entry.reassigned:
+                return Response(
+                    {'error': 'This slot is no longer available for reassignment.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             entry.patient_name = data['patient_name']
             entry.patient_phone = data['patient_phone']
             entry.visit_type = data['visit_type']
@@ -98,6 +101,7 @@ class CreateQueueEntryView(APIView):
             )
             return Response(QueueEntrySerializer(entry).data)
 
+        doctor = get_object_or_404(Doctor, id=data['doctor_id'])
         token = TokenCounter.get_next_token(doctor.prefix)
         now = timezone.now()
 
