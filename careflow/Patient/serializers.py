@@ -49,6 +49,15 @@ class AppointmentCreateSerializer(serializers.Serializer):
     patient_phone = serializers.CharField(required=False, allow_blank=True, default='')
     payment_method = serializers.CharField(required=False, allow_blank=True, default='')
 
+    def create(self, validated_data):
+        from .models import Appointment
+        # Remove fields not on the Appointment model
+        validated_data.pop('doctor_id', None)
+        validated_data.pop('patient_name', None)
+        validated_data.pop('patient_phone', None)
+        validated_data.pop('payment_method', None)
+        return Appointment.objects.create(**validated_data)
+
 
 class DoctorReviewSerializer(serializers.ModelSerializer):
     patient_name = serializers.CharField(source='patient.user.get_full_name', read_only=True)
