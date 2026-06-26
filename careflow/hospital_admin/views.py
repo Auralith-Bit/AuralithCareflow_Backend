@@ -158,6 +158,20 @@ class DashboardStatsView(generics.GenericAPIView):
         week_start = timezone.make_aware(datetime.combine(week_start_date, datetime.min.time()))
         week_end = week_start + timedelta(days=7)
 
+        # ── Range parameter (for Reports & Analytics filtering) ──
+        range_param = request.query_params.get('range', 'weekly')
+        if range_param == 'daily':
+            period_start = today_start
+            period_end = today_end
+        elif range_param == 'monthly':
+            month_start_date = today_date.replace(day=1)
+            next_month_date = (month_start_date.replace(day=28) + timedelta(days=4)).replace(day=1)
+            period_start = timezone.make_aware(datetime.combine(month_start_date, datetime.min.time()))
+            period_end = timezone.make_aware(datetime.combine(next_month_date, datetime.min.time()))
+        else:
+            period_start = week_start
+            period_end = week_end
+
         # ── Totals ──
         total_doctors = Doctor.objects.filter(is_active=True).count()
         total_departments = Department.objects.filter(is_active=True).count()
@@ -228,9 +242,51 @@ class DashboardStatsView(generics.GenericAPIView):
                 'department': doc.department.name if doc.department else '',
             })
 
-        # ── OPD by doctor (this week) ──
+        # ── Range-aware period queryset (for Reports & Analytics) ──
+        range_qs = QueueEntry.objects.filter(created_at__gte=period_start, created_at__lt=period_end)
+
+        # ── Range OPD grouping ──
+        if range_param == 'daily':
+            range_labels = ['8 AM', '9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM']
+            range_raw = defaultdict(int)
+            for entry in range_qs:
+                local_time = entry.created_at.astimezone(timezone.get_current_timezone())
+                h = local_time.hour
+                if 8 <= h <= 17:
+                    range_raw[h] += 1
+            range_values = [range_raw.get(h, 0) for h in range(8, 18)]
+            range_total = sum(range_values)
+            range_avg = round(range_total / (len([v for v in range_values if v > 0]) or 1), 1) if range_total else 0
+        elif range_param == 'monthly':
+            range_labels = ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4', 'Wk 5']
+            range_raw = defaultdict(int)
+            for entry in range_qs:
+                local_time = entry.created_at.astimezone(timezone.get_current_timezone())
+                wk = (local_time.day - 1) // 7 + 1
+                range_raw[wk] += 1
+            range_values = [range_raw.get(i, 0) for i in range(1, 6)]
+            range_total = sum(range_values)
+            weeks_with_data = len([v for v in range_values if v > 0]) or 1
+            range_avg = round(range_total / weeks_with_data, 1) if range_total else 0
+        else:
+            range_labels = weekday_names
+            range_values = weekly_values
+            range_total = weekly_total
+            range_avg = weekly_avg
+
+        range_peak_idx = range_values.index(max(range_values)) if range_values else 0
+        range_opd = {
+            'labels': range_labels,
+            'values': range_values,
+            'total': range_total,
+            'average': range_avg,
+            'peak_day': range_labels[range_peak_idx] if range_values else '',
+            'peak_value': max(range_values) if range_values else 0,
+        }
+
+        # ── OPD by doctor (range period) ──
         doc_raw = defaultdict(int)
-        for entry in week_qs:
+        for entry in range_qs:
             doc_raw[entry.doctor_id] += 1
         opd_by_doctor = []
         doc_ids_in_data = set(doc_raw.keys())
@@ -257,9 +313,9 @@ class DashboardStatsView(generics.GenericAPIView):
                     'percentage': round(count / max_doc_count * 100),
                 })
 
-        # ── Department OPD share ──
+        # ── Department OPD share (range period) ──
         dept_share_raw = defaultdict(int)
-        for entry in week_qs:
+        for entry in range_qs:
             dept_share_raw[entry.department_name] += 1
         total_share = sum(dept_share_raw.values()) or 1
         dept_share_colors = ['#52b788', '#4361ee', '#f4a261', '#7209b7', '#e63946', '#e9c46a']
@@ -275,6 +331,16 @@ class DashboardStatsView(generics.GenericAPIView):
             'total': total_share,
             'departments': dept_shares,
         }
+
+        # ── Range stats (for Reports & Analytics cards) ──
+        range_patients = range_qs.count()
+        range_done = range_qs.filter(status__in=['done', 'serving'])
+        range_avg_wait_secs = range_done.aggregate(
+            avg=Avg(ExpressionWrapper(F('updated_at') - F('created_at'), output_field=DurationField()))
+        )['avg']
+        range_avg_wait = int(range_avg_wait_secs.total_seconds() // 60) if range_avg_wait_secs else None
+        range_cancelled = range_qs.filter(status='cancelled').count()
+        range_cancellation_rate = round(range_cancelled / range_patients * 100, 1) if range_patients else 0
 
         # ── Wait time trend (last 4 weeks) ──
         wait_labels = []
@@ -362,4 +428,9 @@ class DashboardStatsView(generics.GenericAPIView):
             'cancellation_rate': cancellation_rate,
             'cancelled_today': cancelled_today,
             'daily_change': daily_change_val,
+            # Range-aware fields (for Reports & Analytics filtering)
+            'range_opd': range_opd,
+            'range_patients': range_patients,
+            'range_avg_wait': range_avg_wait,
+            'range_cancellation_rate': range_cancellation_rate,
         })
