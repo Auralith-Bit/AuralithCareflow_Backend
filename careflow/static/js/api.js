@@ -188,5 +188,6 @@ const API = {
     createGroup(data) { return API.post('/api/auth/groups/', data); },
     updateGroup(id, data) { return API.put(`/api/auth/groups/${id}/`, data); },
     deleteGroup(id) { return API.del(`/api/auth/groups/${id}/`); },
+    roles() { return API.get('/api/auth/roles/'); },
   },
 };

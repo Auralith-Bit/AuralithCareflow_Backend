@@ -20,4 +20,5 @@ urlpatterns = [
     path('permissions/', views.PermissionListView.as_view(), name='permissions'),
     path('groups/', views.GroupListCreateView.as_view(), name='groups'),
     path('groups/<int:pk>/', views.GroupDetailView.as_view(), name='group-detail'),
+    path('roles/', views.RoleSummaryView.as_view(), name='role-summary'),
 ]

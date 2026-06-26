@@ -9,7 +9,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 from .serializers import UserSerializer, PermissionSerializer, GroupSerializer, UserDetailSerializer
-from .permissions import IsHospitalAdmin
+from .permissions import IsHospitalAdmin, IsSuperAdmin
 from django.contrib.auth.models import Group, Permission
 from hospital_admin.models import Doctor
 
@@ -288,3 +288,44 @@ class UserGroupMappingsView(APIView):
         for u in users:
             data[u.id] = [{'id': g.id, 'name': g.name} for g in u.groups.all()]
         return Response(data)
+
+
+class RoleSummaryView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsSuperAdmin]
+
+    def get(self, request):
+        roles = ['super_admin', 'hospital_admin', 'doctor', 'receptionist', 'patient']
+        labels = {
+            'super_admin': 'Super Admin',
+            'hospital_admin': 'Hospital Admin',
+            'doctor': 'Doctor',
+            'receptionist': 'Receptionist',
+            'patient': 'Patient',
+        }
+        icons = {
+            'super_admin': '👑',
+            'hospital_admin': '🏥',
+            'doctor': '👨‍⚕️',
+            'receptionist': '📋',
+            'patient': '🙋',
+        }
+        descriptions = {
+            'super_admin': 'Full system-wide access including all admin modules, user management, and role configuration.',
+            'hospital_admin': 'Manages hospital operations — departments, doctors, slots, staff accounts, and reports.',
+            'doctor': 'Access to own OPD queue, patient records, and appointment schedule. No admin access.',
+            'receptionist': 'Manages OPD queue, check-in patients, issues tokens, and views doctor schedules.',
+            'patient': 'Access to self-service portal for appointments, prescriptions, and medical history.',
+        }
+
+        data = []
+        for role in roles:
+            users_qs = User.objects.filter(role=role)
+            data.append({
+                'name': role,
+                'label': labels.get(role, role),
+                'icon': icons.get(role, '❓'),
+                'description': descriptions.get(role, ''),
+                'user_count': users_qs.count(),
+                'is_active': users_qs.filter(is_active=True).count(),
+            })
+        return Response({'roles': data})
