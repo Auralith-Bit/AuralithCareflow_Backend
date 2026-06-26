@@ -1372,7 +1372,7 @@
       </div>
       <div class="section-header">
         <div class="export-row" style="flex:1;">
-          <select class="form-select" style="max-width:140px;" id="analytics-range">
+          <select class="form-select" style="max-width:140px;" id="analytics-range" onchange="onAnalyticsRangeChange(this.value)">
             <option value="daily">Daily</option>
             <option value="weekly" selected>Weekly</option>
             <option value="monthly">Monthly</option>
@@ -1383,15 +1383,15 @@
       </div>
 
       <div class="stats-row" style="grid-template-columns:repeat(4,1fr);">
-        <div class="stat-card green"><div class="stat-label">Total OPD (Week)</div><div class="stat-value" id="report-total-opd">—</div><div class="stat-sub">This week</div><div class="stat-icon">📊</div></div>
-        <div class="stat-card orange"><div class="stat-label">Avg Wait Time</div><div class="stat-value" id="report-avg-wait">—</div><div class="stat-sub">Today</div><div class="stat-icon">⏱</div></div>
-        <div class="stat-card red"><div class="stat-label">Cancellation Rate</div><div class="stat-value" id="report-noshow">—</div><div class="stat-sub">Today</div><div class="stat-icon">⚠️</div></div>
-        <div class="stat-card blue"><div class="stat-label">Busiest Day</div><div class="stat-value" id="report-peak-day">—</div><div class="stat-sub" id="report-peak-sub">This week</div><div class="stat-icon">📈</div></div>
+        <div class="stat-card green"><div class="stat-label">Total <span id="report-opd-label">OPD (Week)</span></div><div class="stat-value" id="report-total-opd">—</div><div class="stat-sub" id="report-opd-sub">This week</div><div class="stat-icon">📊</div></div>
+        <div class="stat-card orange"><div class="stat-label">Avg Wait Time</div><div class="stat-value" id="report-avg-wait">—</div><div class="stat-sub" id="report-wait-sub">Today</div><div class="stat-icon">⏱</div></div>
+        <div class="stat-card red"><div class="stat-label">Cancellation Rate</div><div class="stat-value" id="report-noshow">—</div><div class="stat-sub" id="report-cancel-sub">Today</div><div class="stat-icon">⚠️</div></div>
+        <div class="stat-card blue"><div class="stat-label">Busiest <span id="report-peak-label">Day</span></div><div class="stat-value" id="report-peak-day">—</div><div class="stat-sub" id="report-peak-sub">This week</div><div class="stat-icon">📈</div></div>
       </div>
 
       <div class="analytics-grid">
         <div class="panel">
-          <div class="panel-header"><h3>📊 OPD by Doctor (This Week)</h3></div>
+          <div class="panel-header"><h3>📊 OPD by Doctor <span id="report-doctor-period">(This Week)</span></h3></div>
           <div class="panel-body" id="opd-by-doctor">
             <div class="empty-state"><div class="empty-icon">📊</div><p>Loading data...</p></div>
           </div>
@@ -1691,6 +1691,9 @@ let staffList = [];
 let holidays = [];
 let dashboardStats = null;
 let hospitalProfile = null;
+let currentAnalyticsRange = 'weekly';
+let _statsFetchId = 0;
+let analyticsRangeChanged = false;
 
 /*  LOADERS  */
 async function loadAll() {
@@ -1699,7 +1702,7 @@ async function loadAll() {
     loadDoctors(),
     loadStaff(),
     loadHolidays(),
-    loadDashboardStats(),
+    loadDashboardStats(currentAnalyticsRange),
     loadHospitalProfile(),
   ]);
 }
@@ -1751,8 +1754,44 @@ async function loadHolidays() {
   try { holidays = await API.admin.holidays(); renderHolidays(); } catch (e) { showToast('Failed to load holidays','error'); }
 }
 
-async function loadDashboardStats() {
-  try { dashboardStats = await API.admin.dashboardStats(); } catch (e) { /* non-critical */ }
+async function loadDashboardStats(range) {
+  const fetchId = ++_statsFetchId;
+  const url = range ? `/api/admin/dashboard-stats/?range=${range}` : '/api/admin/dashboard-stats/';
+  try {
+    const data = await API.get(url);
+    if (fetchId === _statsFetchId) dashboardStats = data;
+    return true;
+  } catch (e) {
+    console.error('loadDashboardStats error (range=' + range + '):', e);
+    return false;
+  }
+}
+
+async function onAnalyticsRangeChange(range) {
+  currentAnalyticsRange = range;
+  analyticsRangeChanged = true;
+  const ok = await loadDashboardStats(range);
+  if (ok) {
+    renderDashboard();
+    updateAnalyticsLabels(range);
+  }
+}
+
+function updateAnalyticsLabels(range) {
+  const labels = {
+    daily:   ['OPD (Today)',   'Today',      'Today',      'Today',      'Hour', '(Today)'],
+    weekly:  ['OPD (Week)',    'This week',  'Today',      'Today',      'Day',  '(This Week)'],
+    monthly: ['OPD (Month)',   'This month', 'This month', 'This month', 'Week', '(This Month)'],
+  };
+  const [opdLabel, opdSub, waitSub, cancelSub, peakLabel, doctorPeriod] = labels[range] || labels.weekly;
+  const el = (id) => document.getElementById(id);
+  if (el('report-opd-label')) el('report-opd-label').textContent = opdLabel;
+  if (el('report-opd-sub')) el('report-opd-sub').textContent = opdSub;
+  if (el('report-wait-sub')) el('report-wait-sub').textContent = waitSub;
+  if (el('report-cancel-sub')) el('report-cancel-sub').textContent = cancelSub;
+  if (el('report-peak-label')) el('report-peak-label').textContent = peakLabel;
+  if (el('report-peak-sub')) el('report-peak-sub').textContent = opdSub;
+  if (el('report-doctor-period')) el('report-doctor-period').textContent = doctorPeriod;
 }
 
 async function loadHospitalProfile() {
@@ -1809,14 +1848,23 @@ function setNav(el, view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
   document.getElementById('topbar-title').innerHTML = viewTitles[view] || view;
-  if (view === 'dashboard') renderDashboard();
+  if (view === 'dashboard') {
+    if (analyticsRangeChanged) {
+      loadDashboardStats().then(() => renderDashboard());
+      analyticsRangeChanged = false;
+    } else {
+      setTimeout(renderDashboard, 50);
+    }
+  }
   if (view === 'departments') renderDepts();
   if (view === 'doctors') renderDoctors();
   if (view === 'staff') renderStaff();
   if (view === 'holidays') renderHolidays();
   if (view === 'slots') populateSlotDoctors();
   if (view === 'roles') renderRoles();
-  if (view === 'analytics') setTimeout(renderDashboard, 50);
+  if (view === 'analytics') {
+    setTimeout(() => { renderDashboard(); updateAnalyticsLabels(currentAnalyticsRange); }, 50);
+  }
   if (view === 'heatmap') renderHeatmap();
 }
 
@@ -2458,24 +2506,27 @@ function renderDashboard() {
   document.getElementById('qm-cancel-val').textContent = s.cancelled_today !== undefined ? String(s.cancelled_today) : '—';
   document.getElementById('qm-peakday-val').textContent = s.weekly_opd?.peak_value ? s.weekly_opd.peak_day : '—';
 
-  // Weekly OPD SVG chart
-  renderWeeklyOPDChart(s.weekly_opd);
+  // Reports stat cards (use range data if available, fallback to weekly)
+  const inAnalytics = document.getElementById('view-analytics').classList.contains('active');
+  const useRange = s.range_opd && inAnalytics;
+  const opdData = useRange ? s.range_opd : s.weekly_opd;
+  const waitTime = useRange ? (s.range_avg_wait ?? s.avg_wait_time) : s.avg_wait_time;
+  const cancelRate = useRange ? (s.range_cancellation_rate ?? s.cancellation_rate) : s.cancellation_rate;
 
-  // OPD by doctor (reports)
-  if (s.opd_by_doctor && s.opd_by_doctor.length) {
-    renderOPDByDoctor(s.opd_by_doctor);
-  }
+  // Weekly/range OPD SVG chart
+  renderWeeklyOPDChart(opdData);
 
-  // Dept share donut
-  if (s.opd_share && s.opd_share.departments && s.opd_share.departments.length) {
-    renderDeptShareDonut(s.opd_share);
-  }
+  // OPD by doctor (already range-aware from backend)
+  renderOPDByDoctor(s.opd_by_doctor || []);
 
-  // Reports stat cards
-  if (s.weekly_opd) {
-    document.getElementById('report-total-opd').textContent = s.weekly_opd.total || 0;
-    document.getElementById('report-avg-wait').textContent = s.avg_wait_time ? `${s.avg_wait_time}m` : '—';
-    document.getElementById('report-noshow').textContent = `${s.cancellation_rate || 0}%`;
+  // Dept share donut (already range-aware from backend)
+  renderDeptShareDonut(s.opd_share || { total: 0, departments: [] });
+
+  if (opdData) {
+    document.getElementById('report-total-opd').textContent = opdData.total || 0;
+    document.getElementById('report-avg-wait').textContent = waitTime !== null && waitTime !== undefined ? `${waitTime}m` : '—';
+    document.getElementById('report-noshow').textContent = `${cancelRate || 0}%`;
+    document.getElementById('report-peak-day').textContent = opdData.peak_day || '—';
   }
 
   // Wait time trend
@@ -2495,7 +2546,6 @@ function renderWeeklyOPDChart(data) {
   const footer = document.querySelector('.opd-chart-footer');
 
   if (!data || !data.values || !data.values.length || data.values.every(v => v === 0)) {
-    // Show empty state inside the SVG area (using HTML overlay)
     const wrap = svg.closest('.opd-chart-wrap');
     if (wrap) {
       let emptyEl = wrap.querySelector('.opd-empty');
@@ -2511,15 +2561,17 @@ function renderWeeklyOPDChart(data) {
     return;
   }
 
-  // Remove empty state if present
   const wrap = svg.closest('.opd-chart-wrap');
   if (wrap) {
     const emptyEl = wrap.querySelector('.opd-empty');
     if (emptyEl) emptyEl.remove();
   }
 
-  const barW = 44, gap = 24;
+  const n = data.values.length;
   const startX = 72;
+  const availWidth = 560 - startX - 20;
+  const gap = n <= 7 ? 24 : 12;
+  const barW = Math.max(20, Math.min(44, (availWidth - (n - 1) * gap) / n));
   const maxVal = Math.max(...data.values, 1);
   const chartArea = { top: 10, bottom: 175 };
 
@@ -2528,7 +2580,7 @@ function renderWeeklyOPDChart(data) {
     const barH = (v / maxVal) * (chartArea.bottom - chartArea.top);
     const y = chartArea.bottom - barH;
     const isPeak = v === maxVal;
-    const gradId = isPeak ? 'url(#barGradO)' : (i >= 5 ? 'url(#barGradB)' : 'url(#barGradG)');
+    const gradId = isPeak ? 'url(#barGradO)' : 'url(#barGradG)';
 
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     rect.setAttribute('x', x);
@@ -2564,7 +2616,7 @@ function renderWeeklyOPDChart(data) {
     svg.appendChild(dayText);
   });
 
-  // Polyline (single, outside loop)
+  // Polyline
   const points = data.values.map((v, i) => {
     const px = startX + i * (barW + gap) + barW / 2;
     const py = chartArea.bottom - (v / maxVal) * (chartArea.bottom - chartArea.top);
@@ -2584,8 +2636,8 @@ function renderWeeklyOPDChart(data) {
 
   if (footer) {
     footer.innerHTML = `
-      <div class="opd-summary-pill" style="font-size:12px;color:var(--gray-600);background:var(--gray-100);padding:6px 12px;border-radius:6px;"><span>📅 Week Total:</span> <strong>${data.total} patients</strong></div>
-      <div class="opd-summary-pill" style="font-size:12px;color:var(--gray-600);background:var(--gray-100);padding:6px 12px;border-radius:6px;"><span>📈 Avg / Day:</span> <strong>${data.average}</strong></div>
+      <div class="opd-summary-pill" style="font-size:12px;color:var(--gray-600);background:var(--gray-100);padding:6px 12px;border-radius:6px;"><span>📅 Total:</span> <strong>${data.total} patients</strong></div>
+      <div class="opd-summary-pill" style="font-size:12px;color:var(--gray-600);background:var(--gray-100);padding:6px 12px;border-radius:6px;"><span>📈 Avg:</span> <strong>${data.average}</strong></div>
       <div class="opd-summary-pill" style="font-size:12px;color:var(--gray-600);background:var(--gray-100);padding:6px 12px;border-radius:6px;"><span>🔥 Peak:</span> <strong>${data.peak_day} · ${data.peak_value}</strong></div>
     `;
   }
@@ -2594,6 +2646,10 @@ function renderWeeklyOPDChart(data) {
 function renderOPDByDoctor(data) {
   const cont = document.getElementById('opd-by-doctor');
   if (!cont) return;
+  if (!data || !data.length) {
+    cont.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><p>No data for this period</p></div>';
+    return;
+  }
   const maxCount = Math.max(...data.map(d => d.count), 1);
   cont.innerHTML = data.map(d => {
     const pct = Math.round(d.count / maxCount * 100);
@@ -2612,8 +2668,12 @@ function renderOPDByDoctor(data) {
 function renderDeptShareDonut(data) {
   const cont = document.getElementById('dept-share-donut');
   if (!cont) return;
+  const depts = (data && data.departments) || [];
+  if (!depts.length) {
+    cont.innerHTML = '<div class="empty-state"><p>No data for this period</p></div>';
+    return;
+  }
   const total = data.total || 1;
-  const depts = data.departments || [];
   const maxDepts = Math.min(depts.length, 4);
   let donutSlices = '';
   let cumOffset = 0;
