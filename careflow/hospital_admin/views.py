@@ -182,7 +182,7 @@ class DashboardStatsView(generics.GenericAPIView):
         weekday_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         weekly_raw = defaultdict(int)
         for entry in week_qs:
-            wd = entry.created_at.weekday()
+            wd = entry.created_at.astimezone(timezone.get_current_timezone()).weekday()
             weekly_raw[wd] += 1
         weekly_values = [weekly_raw.get(i, 0) for i in range(7)]
         weekly_total = sum(weekly_values)
@@ -306,8 +306,9 @@ class DashboardStatsView(generics.GenericAPIView):
         days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         heat = [[0] * 7 for _ in range(10)]
         for entry in heat_qs:
-            wd = entry.created_at.weekday()
-            h = entry.created_at.hour
+            local_time = entry.created_at.astimezone(timezone.get_current_timezone())
+            wd = local_time.weekday()
+            h = local_time.hour
             if 8 <= h <= 17:
                 heat[h - 8][wd] += 1
         heatmap_data = {'hours': hours, 'days': days, 'data': heat}
