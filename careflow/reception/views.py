@@ -1,4 +1,4 @@
-from datetime import date, time, datetime
+from datetime import date, time, datetime, timedelta
 from django.db.models import Q, Count
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
@@ -29,7 +29,15 @@ class QueueListView(generics.ListAPIView):
     permission_classes = [IsReceptionist]
 
     def get_queryset(self):
-        qs = QueueEntry.objects.all()
+        today = timezone.now().date()
+        today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+        today_end = today_start + timedelta(days=1)
+
+        qs = QueueEntry.objects.filter(
+            Q(created_at__gte=today_start, created_at__lt=today_end) |
+            Q(status__in=['waiting', 'arrived', 'serving']) |
+            Q(status='cancelled', reassigned=False)
+        )
         status_filter = self.request.query_params.get('status')
         visit_type = self.request.query_params.get('type')
         reassigned = self.request.query_params.get('reassigned')
@@ -52,7 +60,15 @@ class QueueStatsView(APIView):
     permission_classes = [IsReceptionist]
 
     def get(self, request):
-        qs = QueueEntry.objects.all()
+        today = timezone.now().date()
+        today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+        today_end = today_start + timedelta(days=1)
+
+        qs = QueueEntry.objects.filter(
+            Q(created_at__gte=today_start, created_at__lt=today_end) |
+            Q(status__in=['waiting', 'arrived', 'serving']) |
+            Q(status='cancelled', reassigned=False)
+        )
         return Response({
             'total': qs.count(),
             'waiting': qs.filter(status='waiting').count(),
