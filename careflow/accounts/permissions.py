@@ -14,3 +14,8 @@ class IsHospitalAdmin(BasePermission):
 class IsAdminOrReceptionist(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in ('hospital_admin', 'super_admin', 'receptionist')
+
+
+class IsSuperAdmin(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'super_admin'

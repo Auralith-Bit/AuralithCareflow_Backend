@@ -219,6 +219,7 @@
   <div class="nav-item active" onclick="setNav(this, 'dashboard')"><span class="icon">⊞</span> Dashboard</div>
   <div class="nav-item" onclick="setNav(this, 'create')"><span class="icon">👑</span> Create Staff</div>
   <div class="nav-item" onclick="setNav(this, 'staff')"><span class="icon">👥</span> All Staff</div>
+  <div class="nav-item" onclick="setNav(this, 'roles')"><span class="icon">🔐</span> Roles & Access</div>
   <div class="nav-item" onclick="setNav(this, 'groups')"><span class="icon">👥</span> Groups</div>
   <div class="sidebar-bottom">
     <div class="user-card">
@@ -321,6 +322,15 @@
           <thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Groups</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="staff-tbody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <div id="view-roles" class="view">
+      <div class="section-header">
+        <div class="section-title">🔐 Roles &amp; Access Control</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;" id="roles-grid">
+        <!-- populated by JS -->
       </div>
     </div>
 
@@ -428,10 +438,11 @@ function setNav(el, view) {
   el.classList.add('active');
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
-  const titles = { dashboard: 'Super Admin <span>Dashboard</span>', create: 'Create <span>Staff</span>', staff: 'All <span>Staff</span>', groups: 'User <span>Groups</span>' };
+  const titles = { dashboard: 'Super Admin <span>Dashboard</span>', create: 'Create <span>Staff</span>', staff: 'All <span>Staff</span>', roles: 'Roles & <span>Access</span>', groups: 'User <span>Groups</span>' };
   document.getElementById('topbar-title').innerHTML = titles[view] || 'Super Admin';
   if (view === 'staff') renderStaff();
   if (view === 'create') renderStaffList();
+  if (view === 'roles') renderRoles();
   if (view === 'groups') renderGroups();
 }
 
@@ -471,6 +482,7 @@ async function loadData() {
     document.getElementById('stat-patients').textContent = patients.length;
     renderStaffList();
     renderStaff();
+    renderRoles();
     const [perms, groups, mappings] = await Promise.all([
       API.admin.permissions(),
       API.admin.groups(),
@@ -579,6 +591,32 @@ async function saveEdit() {
     showToast(`User updated ✅`);
     closeModal('modal-edit');
     loadData();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function renderRoles() {
+  try {
+    const data = await API.admin.roles();
+    const roles = data.roles || [];
+    const g = document.getElementById('roles-grid');
+    const roleBadge = { super_admin: 'badge-purple', hospital_admin: 'badge-blue', doctor: 'badge-green', receptionist: 'badge-gold', patient: 'badge-gray' };
+    g.innerHTML = roles.map(r => `
+      <div class="role-card">
+        <div class="role-card-header">
+          <div class="role-icon ${roleBadge[r.name] || 'badge-gray'}">${r.icon}</div>
+          <h3>${r.label}</h3>
+          <span class="badge badge-green">${r.user_count} users</span>
+        </div>
+        <div class="panel-body">
+          <div style="font-size:13px;color:var(--gray-600);margin-bottom:12px;">${r.description}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Details</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <span class="badge ${r.is_active ? 'badge-green' : 'badge-gray'}">${r.is_active} active</span>
+            <span class="badge badge-blue">${r.user_count - r.is_active} inactive</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
   } catch (e) { showToast(e.message, 'error'); }
 }
 

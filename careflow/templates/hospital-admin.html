@@ -934,7 +934,6 @@
 
   <div class="nav-section">Staff</div>
   <div class="nav-item" onclick="setNav(this,'staff')"><span class="icon">👥</span> Staff Accounts</div>
-  <div class="nav-item" onclick="setNav(this,'roles')"><span class="icon">🔐</span> Roles & Access</div>
 
   <div class="nav-section">Analytics</div>
   <div class="nav-item" onclick="setNav(this,'analytics')"><span class="icon">📈</span> Reports</div>
@@ -1348,19 +1347,6 @@
     </div>
 
     <!-- ROLES -->
-    <div id="view-roles" class="view">
-      <div class="page-banner">
-        <div class="page-banner-icon">🔐</div>
-        <div class="page-banner-text">
-          <h2>Roles &amp; Access Control</h2>
-          <p>Define what each role can see and do across the admin module.</p>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;" id="roles-grid">
-        <!-- populated by JS -->
-      </div>
-    </div>
-
     <!--  ANALYTICS  -->
     <div id="view-analytics" class="view">
       <div class="page-banner">
@@ -1861,7 +1847,6 @@ function setNav(el, view) {
   if (view === 'staff') renderStaff();
   if (view === 'holidays') renderHolidays();
   if (view === 'slots') populateSlotDoctors();
-  if (view === 'roles') renderRoles();
   if (view === 'analytics') {
     setTimeout(() => { renderDashboard(); updateAnalyticsLabels(currentAnalyticsRange); }, 50);
   }
@@ -2285,35 +2270,6 @@ async function saveStaff() {
     clearForm(['staff-name','staff-email','staff-phone','staff-pass']);
     await loadStaff();
   } catch (e) { showToast(e.message || 'Error saving staff','error'); }
-}
-
-/*  ROLES s */
-const rolesData = [
-  { name:'Admin', icon:'👑', color:'av-2', desc:'Full access to all modules including hospital setup, staff management, billing, and reports.', perms:['Hospital Profile','Departments','Doctors','Staff Accounts','All Reports','Role Management','System Settings'], count: 1 },
-  { name:'Doctor', icon:'👨‍⚕️', color:'av-1', desc:'Access to their own OPD queue, patient records, and appointment schedule. No admin access.', perms:['Own Queue','Patient Records','Appointment Schedule','Prescription'], count: 8 },
-  { name:'Receptionist', icon:'📋', color:'av-4', desc:'Can manage OPD queue, check-in patients, issue tokens, and view doctor schedules.', perms:['Queue Management','Walk-In Tokens','Check-In','Doctor Schedule View','Patient Search'], count: 5 },
-  { name:'View-Only', icon:'👁️', color:'av-6', desc:'Read-only access to dashboards and reports. Cannot modify any data.', perms:['Dashboard View','Reports View'], count: 2 },
-];
-
-function renderRoles() {
-  const g = document.getElementById('roles-grid');
-  g.innerHTML = rolesData.map(r => `
-    <div class="panel" style="margin-bottom:0;">
-      <div class="panel-header">
-        <div class="doc-avatar-lg ${r.color}" style="width:38px;height:38px;font-size:16px;">${r.icon}</div>
-        <h3>${r.name}</h3>
-        <span class="badge badge-green">${r.count} user${r.count!==1?'s':''}</span>
-        <button class="btn btn-outline btn-sm" onclick="showToast('Role editing coming soon','warning')">✏️ Edit</button>
-      </div>
-      <div class="panel-body">
-        <div style="font-size:13px;color:var(--gray-600);margin-bottom:12px;">${r.desc}</div>
-        <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Permissions</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          ${r.perms.map(p => `<span class="badge badge-green" style="font-size:11px;">✅ ${p}</span>`).join('')}
-        </div>
-      </div>
-    </div>
-  `).join('');
 }
 
 /*  HEATMAP  */
