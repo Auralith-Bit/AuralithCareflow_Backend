@@ -97,6 +97,13 @@ class TokenCounter(models.Model):
     def get_next_token(cls, prefix):
         today = timezone.now().date()
         counter, _ = cls.objects.get_or_create(doctor_prefix=prefix, date=today)
+
         cls.objects.filter(pk=counter.pk).update(counter_value=F('counter_value') + 1)
         counter.refresh_from_db()
-        return f"{prefix}-{counter.counter_value}"
+        token = f"{prefix}-{counter.counter_value}"
+        while QueueEntry.objects.filter(token=token).exists():
+            cls.objects.filter(pk=counter.pk).update(counter_value=F('counter_value') + 1)
+            counter.refresh_from_db()
+            token = f"{prefix}-{counter.counter_value}"
+
+        return token
