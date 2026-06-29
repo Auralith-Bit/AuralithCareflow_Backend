@@ -1242,7 +1242,7 @@
           <p>Manage doctor profiles, specialities, schedules, and availability.</p>
         </div>
         <div class="page-banner-actions">
-          <button class="btn btn-primary" style="background:white;color:var(--green-dark);" onclick="editingDoctorId=null;document.getElementById('doctor-modal-title').textContent='👨‍⚕️ Add Doctor';document.getElementById('doctor-save-btn').textContent='+ Add Doctor';openModal('modal-doctor')">+ Add Doctor</button>
+          <button class="btn btn-primary" style="background:white;color:var(--green-dark);" onclick="editingDoctorId=null;document.getElementById('doctor-modal-title').textContent='👨‍⚕️ Add Doctor';document.getElementById('doctor-save-btn').textContent='+ Add Doctor';document.getElementById('doc-fee').value='';openModal('modal-doctor')">+ Add Doctor</button>
         </div>
       </div>
       <div class="section-header">
@@ -1518,6 +1518,9 @@
       <div class="form-row">
         <div class="form-group"><label>Phone</label><input class="form-input" id="doc-phone" placeholder="+977 ..." /></div>
         <div class="form-group"><label>Email</label><input class="form-input" id="doc-email" placeholder="doctor@hospital.com" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Consultation Fee (Rs.)</label><input class="form-input" id="doc-fee" type="number" step="0.01" min="0" placeholder="e.g. 800" /></div>
       </div>
       <div class="form-group"><label>Availability Days</label>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;" id="avail-days">
@@ -1941,6 +1944,7 @@ function renderDoctors(filter='') {
       </div>
       <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">🏢 ${deptName}</div>
       <div style="font-size:12px;color:var(--gray-500);">📅 ${days}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--primary);margin-top:4px;">💰 Rs. ${parseFloat(d.consultation_fee || 0).toFixed(2)}</div>
       <div class="slot-pills">
         ${mor ? `<span class="slot-pill">🌅 ${mor}</span>` : ''}
         ${eve ? `<span class="slot-pill">🌆 ${eve}</span>` : ''}
@@ -1971,6 +1975,7 @@ function editDoctor(id) {
   document.getElementById('doc-qual').value = d.qualification || '';
   document.getElementById('doc-phone').value = d.phone || '';
   document.getElementById('doc-email').value = d.email || '';
+  document.getElementById('doc-fee').value = d.consultation_fee || '';
   document.getElementById('doc-morning').value = d.morning_slots || '';
   document.getElementById('doc-evening').value = d.evening_slots || '';
   selectedAvColor = d.avatar_color || 'av-1';
@@ -1991,6 +1996,7 @@ async function saveDoctor() {
     email: document.getElementById('doc-email').value || '',
     morning_slots: document.getElementById('doc-morning').value || '',
     evening_slots: document.getElementById('doc-evening').value || '',
+    consultation_fee: parseFloat(document.getElementById('doc-fee').value) || 0,
     avatar_color: selectedAvColor,
     days_available: 'Mon–Fri',
     slots_per_day: 20,

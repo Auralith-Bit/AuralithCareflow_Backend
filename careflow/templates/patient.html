@@ -2550,6 +2550,21 @@
         setText('pay-date', date);
         setText('pay-time', time);
         setText('pay-patient', selectedPatient?.name || '—');
+        const fee = parseFloat(selectedDoctor?.consultation_fee) || 0;
+        document.getElementById('prev-price').textContent = fee ? fee.toFixed(2) : '--';
+        if (fee) {
+            const charge = fee * 0.025;
+            const total = fee + charge;
+            document.getElementById('pay-fee').textContent = 'Rs. ' + fee.toFixed(2);
+            document.getElementById('pay-charge').textContent = 'Rs. ' + charge.toFixed(2);
+            document.getElementById('pay-total').textContent = total.toFixed(2);
+            document.getElementById('pay-amount').textContent = total.toFixed(2);
+        } else {
+            document.getElementById('pay-fee').textContent = '--';
+            document.getElementById('pay-charge').textContent = 'Rs. 0';
+            document.getElementById('pay-total').textContent = 0;
+            document.getElementById('pay-amount').textContent = 0;
+        }
     }
 
     function escapeHtml(value) {
@@ -2903,7 +2918,8 @@
         document.getElementById('dt-doc-spec').textContent      = (selectedDoctor.qualification || selectedDoctor.specialty) + ' — ' + selectedDoctor.department;
         document.getElementById('dt-doc-rating').textContent    = '★ ' + rating;
         document.getElementById('dt-room').textContent          = 'OPD Block';
-        document.getElementById('dt-fee').textContent           = '--';
+        const fee = parseFloat(selectedDoctor.consultation_fee) || 0;
+        document.getElementById('dt-fee').textContent           = fee ? 'Rs. ' + fee.toFixed(2) : '--';
         document.getElementById('pay-doc-avatar').textContent   = initials;
         document.getElementById('pay-doc-name').textContent     = selectedDoctor.name;
         document.getElementById('pay-doc-spec').textContent     = (selectedDoctor.qualification || selectedDoctor.specialty) + ' • ' + selectedDoctor.department;
@@ -2945,11 +2961,14 @@
             alert('Missing doctor or patient information.');
             return;
         }
+        const selectedMethod = document.querySelector('.payment-option.selected');
+        const paymentMethod = selectedMethod ? selectedMethod.dataset.method : '';
         try {
             const slot = document.querySelector('.slots-grid .slot-btn.selected');
             const time = slot ? slot.textContent.trim().split('\n')[0].trim() : '09:00';
             const day = document.querySelector('.calendar-grid .day.available.selected');
             const dateStr = day ? day.dataset.date : new Date().toISOString().split('T')[0];
+            const fee = parseFloat(selectedDoctor.consultation_fee) || 0;
             const appointment = await API.patient.createAppointment({
                 doctor_id: selectedDoctor.id,
                 doctor_name: selectedDoctor.name,
@@ -2957,6 +2976,8 @@
                 department_name: selectedDoctor.department || '',
                 appointment_date: dateStr,
                 appointment_time: time,
+                fee: fee || undefined,
+                payment_method: paymentMethod,
                 notes: selectedPatient.reason || '',
                 patient_name: selectedPatient.name,
                 patient_phone: selectedPatient.phone,
