@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'hospital_admin',
     'super_admin',
     'Patient',
+    'doctor',
 ]
 
 MIDDLEWARE = [
@@ -60,7 +61,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'careflow_db',
         'USER': 'root',
-        'PASSWORD': '@naumaya5903',
+        'PASSWORD': '123456',
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {

@@ -1,0 +1,498 @@
+NoWait Smart Hospital System
+Smart OPD + Queue Booking System
+"No Line. Just Time. Better Care."
+Document Type   :   Software Requirements Specification (SRS)
+Product Name    :   NoWait Smart Hospital System
+Version             :   1.0.0
+Organization     :   Auralith Bit
+Prepared By      :   Auralith Bit — Product Team
+Date                  :   May 2026
+Status               :   Draft — For Review
+CONFIDENTIAL — FOR INTERNAL USE ONLY
+1. Introduction
+1.1 Purpose
+This Software Requirements Specification (SRS) defines the complete functional and non-functional requirements for the NoWait Smart Hospital System developed by Auralith Bit. The document serves as the authoritative reference for developers, designers, testers, project managers, and hospital stakeholders.
+1.2 Scope
+NoWait is a lightweight, web/mobile-based Smart OPD (Outpatient Department) Booking and Queue Management System designed specifically for hospitals, clinics, and health centers in Nepal. The system aims to:
+Eliminate 2–5 hour physical queues in hospital OPDs
+Digitize appointment booking via web, mobile, and WhatsApp
+Provide real-time token/queue tracking to patients
+Improve hospital staff workflow and doctor scheduling
+Deliver analytics to hospital administrators
+1.3 Definitions, Acronyms & Abbreviations
+Term / Acronym
+Definition
+OPD
+Outpatient Department — walk-in consultation section of a hospital
+SRS
+Software Requirements Specification
+MVP
+Minimum Viable Product
+Token
+A unique queue number assigned to a patient for a session
+ETA
+Estimated Time of Arrival / Estimated Time to be called
+Admin
+Hospital administrator who manages the system
+HMIS
+Hospital Management Information System
+SMS / OTP
+Short Message Service / One-Time Password
+PWA
+Progressive Web App — works on mobile without app store download
+CRUD
+Create, Read, Update, Delete — basic database operations
+1.4 Overview of Document
+Section 2 — Overall System Description
+Section 3 — Functional Requirements
+Section 4 — Non-Functional Requirements
+Section 5 — System Architecture
+Section 6 — Data Requirements
+Section 7 — UI/UX Requirements
+Section 8 — External Interfaces
+Section 9 — Constraints & Assumptions
+Section 10 — Use Cases
+Section 11 — MVP Roadmap
+Section 12 — Risks & Mitigation
+2. Overall System Description
+2.1 Product Perspective
+NoWait is a standalone, cloud-hosted SaaS platform. It can optionally integrate with existing Hospital Management Information Systems (HMIS) via REST API. Initially, it operates independently using a browser/mobile interface and requires no existing IT infrastructure at the hospital.
+2.2 Problem Statement
+PROBLEM: Nepali hospitals face severe OPD congestion. Patients wait 2–5 hours in physical queues.
+IMPACT:  Patient dissatisfaction, staff overwhelm, revenue loss from no-shows.
+SOLUTION: A digital queue + booking system that gives patients a virtual token and notifies them when their turn is near.
+2.3 User Classes & Characteristics
+User Type
+Description
+Technical Skill Level
+Patient
+Books appointments or gets OPD token
+Low — basic smartphone user
+Doctor
+Views their daily schedule, marks consultations done
+Medium — desktop/tablet
+Receptionist
+Manages check-ins, token issuing, walk-ins
+Medium — uses browser daily
+Hospital Admin
+Full system access, analytics, config
+Medium-High
+Super Admin (Auralith)
+Platform-level configuration, multi-hospital
+High — technical team
+2.4 Operating Environment
+Frontend: Progressive Web App (PWA) — runs on Android, iOS, and Desktop browsers
+Backend: Cloud-hosted (AWS / GCP / DigitalOcean) — Node.js or Python
+Database: PostgreSQL (primary) + Redis (queue/real-time state)
+SMS Gateway: Sparrow SMS (Nepal) or InfoBip
+Internet: 2G/3G/4G compatible; designed for low-bandwidth environments
+Languages: Nepali + English (bilingual interface)
+2.5 Design & Implementation Constraints
+Must work offline partially (token info accessible without internet after booking)
+No native app required at MVP — PWA only
+Must support WhatsApp notification (phase 2) for non-smartphone users
+Low-cost initial infrastructure — can start with Google Sheets + simple backend
+Patient data privacy as per Nepal's Electronic Transaction Act (ETA) 2063
+3. Functional Requirements
+3.1 Patient Module
+3.1.1 Registration & Login
+Patient can register using mobile number + OTP
+Optional: name, date of birth, gender, blood group
+Login via OTP (no password required — phone-number first)
+Guest booking allowed without registration (phone number required)
+3.1.2 OPD Appointment Booking
+Patient selects: Hospital → Department → Doctor → Date → Time Slot
+System shows available slots in real time
+Patient receives a unique Token Number upon booking
+Confirmation sent via SMS with token, doctor name, time, and location
+Patient can book on behalf of family member (dependent profile)
+Booking cancellation allowed up to 1 hour before slot
+3.1.3 Walk-in Token (Physical Queue)
+Patients who arrive without booking get a walk-in token at reception
+Walk-in tokens are interleaved with pre-booked appointments
+Patient can scan a QR code at hospital to check their queue position
+3.1.4 Real-Time Queue Tracking
+Patient sees: Current Token Being Served | Tokens Ahead | Estimated Wait Time
+Automatic SMS notification when patient is 3 tokens away
+Patient can wait anywhere in hospital (no need to stand in line)
+Live updates every 30 seconds via polling or WebSocket
+3.1.5 Appointment History
+Patient can view all past and upcoming appointments
+Download/share appointment slip as PDF or image
+Rate their experience after visit (optional 1–5 star + comment)
+3.2 Doctor Module
+3.2.1 Daily Schedule View
+Doctor sees their token list for the day, sorted by queue order
+Each entry shows: Token No. | Patient Name | Age | Chief Complaint (optional)
+Doctor can mark consultation as: In Progress | Done | Skip | No Show
+3.2.2 Queue Control
+Doctor or assistant can: Call Next | Hold | Skip Token | Add Emergency
+Estimated per-consultation time is configurable (default: 10 minutes)
+Doctor can set status: Available | On Break | Unavailable
+3.2.3 Patient Quick Notes
+Doctor can add brief consultation note (text only — not a full EMR)
+Notes visible to patient in history (optional, doctor configures)
+3.3 Receptionist Module
+Issue walk-in tokens manually
+Check in pre-booked patients (mark as Arrived)
+Search patient by phone number or token number
+Cancel or reschedule an appointment
+View today's complete OPD flow for all doctors
+Print token slip (thermal printer support via browser print)
+3.4 Hospital Admin Module
+3.4.1 Hospital Setup
+Add/edit hospital profile: name, address, logo, departments
+Create departments (Cardiology, General OPD, Pediatrics, etc.)
+Add/edit doctors: name, specialty, availability schedule, avatar
+Define time slots per doctor per day (e.g. 09:00–13:00, 20 slots)
+Configure holidays, emergency closures
+3.4.2 Staff Management
+Create receptionist accounts, assign to departments
+Role-based access control: Admin, Doctor, Receptionist, View-Only
+3.4.3 Reports & Analytics Dashboard
+Daily/weekly/monthly OPD count per doctor and department
+Average waiting time trend
+No-show rate, cancellation rate
+Busiest days/hours heatmap
+Export reports to Excel/PDF
+3.5 Notification System
+Trigger Event
+Channel
+Message Content
+Booking Confirmed
+SMS
+Token no., doctor, date, time, hospital address
+3 Tokens Away
+SMS
+Queue alert — proceed to waiting area
+Your Turn
+SMS
+Please go to Room No. X
+Appointment Tomorrow
+SMS
+Reminder 24 hrs before
+Cancellation
+SMS
+Cancellation confirmed, refund info if applicable
+Doctor Delayed
+SMS
+Doctor running late — updated ETA
+4. Non-Functional Requirements
+4.1 Performance
+Metric
+Target
+Page Load Time (3G)
+< 3 seconds
+Queue Status Refresh
+Every 30 seconds (polling) or real-time (WebSocket)
+Booking API Response
+< 500ms for slot availability check
+SMS Delivery
+< 30 seconds from trigger
+Concurrent Users Supported
+500+ simultaneous users per hospital
+System Uptime SLA
+99.5% monthly (≤ 3.6 hrs downtime/month)
+4.2 Scalability
+Multi-hospital SaaS architecture — each hospital is isolated tenant
+Horizontal scaling via container orchestration (Docker + Kubernetes)
+Database sharding ready for 50,000+ daily OPD events
+4.3 Security
+All data in transit encrypted via TLS 1.3
+Patient data encrypted at rest (AES-256)
+OTP expiry: 5 minutes, 3 attempts maximum
+Role-based access control (RBAC) on all API endpoints
+GDPR-like data protection aligned with Nepal's ETA 2063
+No storage of sensitive medical data (system is scheduling-only)
+4.4 Usability
+UI language: Nepali + English toggle
+Font size: minimum 14px — accessible for older patients
+Color contrast ratio: minimum 4.5:1 (WCAG AA)
+Maximum 3 taps to complete a booking on mobile
+Offline fallback: show last-known queue status when internet drops
+4.5 Reliability & Availability
+Automatic database backup every 6 hours
+Disaster recovery target: < 1 hour RTO (Recovery Time Objective)
+Queue state persisted in Redis — no queue loss on server restart
+4.6 Maintainability
+RESTful API with full OpenAPI 3.0 documentation
+Modular codebase — each module (patient, doctor, admin) independently deployable
+Centralized logging (ELK Stack or equivalent)
+CI/CD pipeline with automated testing (Jest + Cypress)
+5. System Architecture
+5.1 Architecture Overview
+NoWait follows a three-tier web architecture with a decoupled frontend and backend, enabling independent scaling and future mobile app development.
+LAYER 1 — PRESENTATION     :  React.js PWA (Patient) + React Admin Dashboard (Hospital)
+LAYER 2 — APPLICATION       :  Node.js / Express REST API + WebSocket Server
+LAYER 3 — DATA                    :  PostgreSQL (persistent) + Redis (queue/sessions)
+5.2 Technology Stack
+Layer
+Technology
+Justification
+Frontend
+React.js + TailwindCSS
+Fast, PWA-compatible, responsive
+Mobile (Phase 2)
+React Native
+Code sharing with web frontend
+Backend API
+Node.js + Express.js
+Lightweight, async, popular in Nepal dev ecosystem
+Real-time
+Socket.io (WebSocket)
+Live queue updates without constant polling
+Database
+PostgreSQL
+ACID-compliant, relational, free
+Cache / Queue State
+Redis
+Sub-millisecond queue reads, session store
+SMS
+Sparrow SMS (Nepal)
+Local provider, reliable, supports Nepali
+File Storage
+AWS S3 / DigitalOcean Spaces
+Profile images, reports, PDFs
+Hosting
+DigitalOcean / AWS EC2
+Cost-effective, scalable
+CI/CD
+GitHub Actions
+Free tier for small teams
+5.3 Deployment Topology
+Development: Docker Compose (local)
+Staging: Single VPS (DigitalOcean Droplet, 2 vCPU / 4GB RAM)
+Production: Load-balanced instances behind NGINX reverse proxy
+Domain: nowait.com.np (example) with HTTPS enforced
+6. Data Requirements
+6.1 Core Data Entities
+Entity
+Key Attributes
+Relationships
+Hospital
+id, name, address, phone, logo, timezone
+Has many Departments, Doctors, Staff
+Department
+id, hospital_id, name, description
+Belongs to Hospital; has many Doctors
+Doctor
+id, hospital_id, dept_id, name, specialty, photo, bio
+Belongs to Department; has Schedules
+Schedule
+id, doctor_id, day_of_week, start_time, end_time, slot_duration, max_slots
+Belongs to Doctor
+Patient
+id, phone, name, dob, gender, blood_group
+Has many Appointments
+Appointment
+id, patient_id, doctor_id, date, slot_time, token_no, status
+Belongs to Patient and Doctor
+Queue
+id, doctor_id, date, current_token, state
+Real-time; managed in Redis
+Notification Log
+id, patient_id, type, message, sent_at, status
+Belongs to Patient
+Review
+id, patient_id, doctor_id, rating, comment, created_at
+Belongs to Appointment
+6.2 Appointment Status Flow
+PENDING  →  CONFIRMED  →  ARRIVED  →  IN_PROGRESS  →  COMPLETED
+                                    ↘  NO_SHOW
+CONFIRMED  →  CANCELLED (by patient or hospital)
+7. UI/UX Requirements
+7.1 Patient App Screens
+Home Screen — Hospital search, Department list, Quick Book CTA
+Doctor List Screen — Filter by department, rating, availability
+Slot Picker Screen — Calendar + time grid, available slots highlighted
+Booking Confirmation Screen — Token card with QR code
+Queue Tracker Screen — Live position display, ETA, progress bar
+My Appointments Screen — Upcoming and history list
+Profile Screen — Personal info, dependents, notifications settings
+7.2 Receptionist Screen
+Today's Queue Board — Full list of all tokens, sortable, color-coded by status
+Walk-In Issue Screen — One-tap token generation for walk-in patients
+Patient Search — Look up by phone, name, or token number
+7.3 Doctor Screen
+Today's List — Compact token queue with patient info
+Call Next Token Button — Large, prominent CTA
+Patient Notes Popup — Quick text entry per consultation
+7.4 Admin Dashboard
+Overview Card — Today's OPD count, avg wait, no-shows
+Department Management — CRUD for departments and doctors
+Schedule Builder — Drag-and-drop or form-based slot configuration
+Analytics Page — Charts: daily trend, heatmap, no-show funnel
+Staff Accounts — Create/suspend receptionist logins
+7.5 Design Principles
+Mobile-first: all screens designed for 360px width first, then desktop
+Color coding: Green = Done, Orange = In Progress, Blue = Pending, Red = No Show
+Loading states: skeleton screens instead of spinners for perceived performance
+Error messages: in Nepali with English below; actionable, not technical
+8. External Interface Requirements
+8.1 SMS Gateway (Sparrow SMS)
+Integration: REST API with API key authentication
+Message types: OTP, Booking Confirmation, Queue Alert, Reminder, Cancellation
+Character limit: 160 chars per SMS; longer messages split automatically
+Failure handling: retry 3x with exponential backoff; log failed sends
+8.2 WhatsApp Business API (Phase 2)
+Provider: Twilio or Meta Business API
+Use case: Rich notifications with token card image for feature-phone WhatsApp users
+Template messages pre-approved by Meta
+8.3 Payment Gateway (Phase 2)
+Provider: eSewa or Khalti (Nepal local wallets)
+Use case: Optional consultation fee payment at booking
+Refund flow for cancellations automated
+8.4 HMIS Integration (Phase 3)
+REST API connector to existing HMIS (AbhiHMS, MocDoc, etc.)
+Bidirectional sync: appointments, patient records (read-only from HMIS)
+HL7 FHIR R4 compatibility planned for future
+9. Constraints & Assumptions
+9.1 Constraints
+System does NOT store clinical/medical records (prescriptions, diagnoses) — out of scope for v1
+System does NOT manage billing, pharmacy, or laboratory workflows in v1
+SMS delivery success depends on network provider — no guaranteed delivery
+Initial target: Nepal market only; multi-language beyond Nepali/English is future scope
+Browser compatibility: Chrome 90+, Firefox 88+, Safari 14+ (IE not supported)
+9.2 Assumptions
+Hospital has at least 1 staff member who can manage the admin dashboard
+Patients have access to SMS-capable mobile phone (smartphone not required for basics)
+Hospitals have a working internet connection (minimum 2 Mbps)
+Initial pilot hospitals will provide 1–2 receptionists as system champions during rollout
+Auralith Bit will provide onboarding training and 30-day support post-launch
+10. Key Use Cases
+UC-01: Patient Books Online Appointment
+Field
+Details
+Use Case ID
+UC-01
+Name
+Book OPD Appointment Online
+Actor
+Patient
+Precondition
+Patient is registered (or uses guest mode with phone number)
+Main Flow
+1. Open app → 2. Select hospital & department → 3. Choose doctor → 4. Pick date & slot → 5. Confirm booking → 6. Receive SMS with token
+Alternate Flow
+If selected slot is full: system shows next available slots
+Exception Flow
+If SMS fails: token shown on screen with option to screenshot
+Postcondition
+Appointment record created; token assigned; SMS sent
+UC-02: Walk-In Token Issuance
+Field
+Details
+Use Case ID
+UC-02
+Name
+Issue Walk-In Token
+Actor
+Receptionist
+Precondition
+Receptionist is logged in; OPD session is active for the day
+Main Flow
+1. Patient arrives at reception → 2. Receptionist opens Walk-In screen → 3. Enters patient phone (optional) → 4. Taps Issue Token → 5. Token slip printed / shown on screen
+Alternate Flow
+Doctor queue is full: system warns receptionist; admin can increase limit
+Postcondition
+Walk-in token created and interleaved in doctor's queue
+UC-03: Doctor Calls Next Patient
+Field
+Details
+Use Case ID
+UC-03
+Name
+Call Next Patient from Queue
+Actor
+Doctor / Doctor's Assistant
+Precondition
+Doctor is marked Available; OPD session is active
+Main Flow
+1. Doctor taps Call Next → 2. System marks current token In Progress → 3. Patient 3 tokens away receives SMS alert → 4. Doctor marks consultation Done → 5. Next token auto-highlighted
+Exception Flow
+Patient doesn't appear: Doctor taps No Show → token marked, next called
+Postcondition
+Queue advances; all patient screens update within 30 seconds
+11. MVP Roadmap & Phased Delivery
+Phase
+Timeline
+Features
+Status
+Phase 0
+Days 1–7
+Google Sheets + WhatsApp prototype (zero-code MVP)
+Proof of Concept
+Phase 1
+Weeks 2–4
+Core booking + token system + SMS + basic admin dashboard
+MVP
+Phase 2
+Month 2–3
+Analytics, ratings, WhatsApp API, doctor app, print slips
+Beta
+Phase 3
+Month 4–6
+Multi-hospital SaaS, payment gateway, HMIS connector
+Scale
+Phase 4
+Month 7+
+AI-based slot prediction, mobile apps (Android/iOS), teleconsult
+Growth
+11.1 Phase 1 MVP — Minimum Feature Set
+Patient: Register via OTP → Book appointment → View token & queue position → Receive SMS
+Receptionist: Issue walk-in token → Check in patients → View today's queue
+Doctor: View today list → Call next → Mark done / no-show
+Admin: Add hospital profile + doctors + schedule → View basic daily report
+Infra: Single-server deployment on DigitalOcean, PostgreSQL + Redis, Sparrow SMS
+12. Risks & Mitigation
+Risk ID
+Risk
+Probability
+Mitigation
+R-01
+Hospital staff resist adopting system
+Medium
+Free 30-day onboarding + designated hospital champion + Nepali UI
+R-02
+SMS delivery failure in rural Nepal
+Medium
+Fallback: QR code on screen; token visible in app without SMS
+R-03
+Low smartphone penetration among elderly patients
+High
+Walk-in token at reception remains; SMS works on feature phones
+R-04
+Competition from larger HMIS vendors
+Low
+NoWait is lightweight, affordable, Nepal-specific — HMIS is overkill for small hospitals
+R-05
+Data breach / patient privacy issue
+Low
+No sensitive medical data stored; TLS + encryption; ETA 2063 compliant
+R-06
+Server downtime during peak OPD hours
+Low
+99.5% SLA; offline fallback for last-known queue state; monitoring alerts
+R-07
+Doctor doesn't use the app consistently
+Medium
+Receptionist can operate queue on doctor's behalf; auto-advance option
+Appendix A — Revision History
+Version
+Date
+Author
+Changes
+0.1
+May 2026
+Auralith Bit
+Initial draft created
+1.0
+May 2026
+Auralith Bit
+Complete SRS — all sections finalized for review
+Appendix B — Contact
+Organization  :  Auralith Bit
+Product         :  NoWait Smart Hospital System
+Document       :  Software Requirements Specification v1.0
+For questions regarding this document, contact the Auralith Bit Product Team.
+— End of Document —

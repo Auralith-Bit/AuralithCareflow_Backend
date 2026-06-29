@@ -23,6 +23,10 @@ urlpatterns = [
     path('admin-panel/', include('hospital_admin.urls_page')),
     path('super-admin/', include('super_admin.urls_page')),
     path('patient/', include('Patient.urls_page')),
+    path('doctor/', include('doctor.urls_page')),
+
+    # Doctor API
+    path('api/doctor/', include('doctor.urls')),
 
     # Patient API
     path('api/patient/', include('Patient.urls')),
