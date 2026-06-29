@@ -37,6 +37,7 @@ class Doctor(models.Model):
     morning_slots = models.CharField(max_length=100, blank=True, help_text="e.g. 09:00–13:00")
     evening_slots = models.CharField(max_length=100, blank=True, help_text="e.g. 17:00–19:00")
     slots_per_day = models.IntegerField(default=20)
+    consultation_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     prefix = models.CharField(max_length=5, unique=True, help_text="Token prefix e.g. A, B, C")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     is_active = models.BooleanField(default=True)

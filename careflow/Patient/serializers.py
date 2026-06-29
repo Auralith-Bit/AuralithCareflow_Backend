@@ -50,11 +50,16 @@ class AppointmentCreateSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         from .models import Appointment
-        # Remove fields not on the Appointment model
-        validated_data.pop('doctor_id', None)
+        from hospital_admin.models import Doctor
+        doctor_id = validated_data.pop('doctor_id', None)
         validated_data.pop('patient_name', None)
         validated_data.pop('patient_phone', None)
-        validated_data.pop('payment_method', None)
+        payment_method = validated_data.pop('payment_method', '')
+        if doctor_id and not validated_data.get('fee'):
+            doctor = Doctor.objects.filter(id=doctor_id).first()
+            if doctor and doctor.consultation_fee:
+                validated_data['fee'] = doctor.consultation_fee
+        validated_data['payment_method'] = payment_method
         return Appointment.objects.create(**validated_data)
 
 

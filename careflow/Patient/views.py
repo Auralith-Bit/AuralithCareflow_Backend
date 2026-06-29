@@ -160,6 +160,7 @@ class DoctorPublicListView(APIView):
                 'waiting_count': waiting,
                 'slots_left': max(0, d.slots_per_day - waiting),
                 'status': d.status,
+                'consultation_fee': float(d.consultation_fee) if d.consultation_fee else 0,
             })
         return Response(data)
 
@@ -191,6 +192,7 @@ class DoctorPublicDetailView(APIView):
             'waiting_count': waiting,
             'slots_left': max(0, d.slots_per_day - waiting),
             'status': d.status,
+            'consultation_fee': float(d.consultation_fee) if d.consultation_fee else 0,
         }
         return Response(data)
 
@@ -436,6 +438,7 @@ class GuestBookingView(APIView):
             appointment_date=data['appointment_date'],
             appointment_time=data['appointment_time'],
             token=token,
+            fee=doctor.consultation_fee if doctor.consultation_fee else None,
             status=Appointment.Status.PENDING,
             notes=data.get('notes', ''),
         )
