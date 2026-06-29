@@ -138,6 +138,10 @@ class RegisterView(APIView):
         )
         user.save()
 
+        if role == 'patient':
+            from Patient.models import PatientProfile
+            PatientProfile.objects.get_or_create(user=user)
+
         refresh = RefreshToken.for_user(user)
         auth_login(request, user)
         return Response({

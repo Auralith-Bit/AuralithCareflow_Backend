@@ -45,6 +45,7 @@ class Appointment(models.Model):
         MISSED = 'missed', 'Missed'
 
     patient = models.ForeignKey(PatientProfile, on_delete=models.CASCADE, related_name='appointments')
+    doctor = models.ForeignKey('hospital_admin.Doctor', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     doctor_name = models.CharField(max_length=200)
     doctor_specialty = models.CharField(max_length=200, blank=True)
     department_name = models.CharField(max_length=100)

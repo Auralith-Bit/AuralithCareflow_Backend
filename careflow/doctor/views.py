@@ -67,8 +67,6 @@ def _get_doctor_for_user(user):
         doctor = getattr(user, 'doctor_profile', None)
         if doctor and doctor.is_active:
             return doctor
-    if user.role in ('hospital_admin', 'super_admin'):
-        return Doctor.objects.filter(is_active=True).first()
     return None
 
 
@@ -79,8 +77,8 @@ def _today_queue_qs(doctor):
     return QueueEntry.objects.filter(
         doctor=doctor,
     ).filter(
-        Q(created_at__gte=today_start, created_at__lt=today_end) |
-        Q(status__in=['waiting', 'serving'])
+        Q(created_at__gte=today_start, created_at__lt=today_end, scheduled_date__isnull=True) |
+        Q(scheduled_date=today)
     )
 
 
@@ -114,13 +112,13 @@ class DoctorQueueStatsView(APIView):
             return Response({'error': 'Doctor not found'}, status=404)
         qs = _today_queue_qs(doctor)
         total = qs.count()
-        waiting = qs.filter(status='waiting').count()
-        serving = qs.filter(status='serving').count()
-        done = qs.filter(status='done').count()
-        cancelled = qs.filter(status='cancelled').count()
-        all_entries = qs.all()
+        all_entries = list(qs.all())
+        waiting = sum(1 for e in all_entries if _get_extended_status(e) == 'waiting')
+        serving = sum(1 for e in all_entries if _get_extended_status(e) == 'serving')
+        done = sum(1 for e in all_entries if _get_extended_status(e) == 'done')
         skipped = sum(1 for e in all_entries if _get_extended_status(e) == 'skipped')
         noshow_count = sum(1 for e in all_entries if _get_extended_status(e) == 'noshow')
+        cancelled = sum(1 for e in all_entries if _get_extended_status(e) == 'cancelled')
         est_min = waiting * 10 if waiting > 0 else 0
         return Response({
             'total': total,
@@ -338,8 +336,11 @@ class VitalsView(APIView):
         })
 
     def post(self, request):
+        doctor = _get_doctor_for_user(request.user)
+        if not doctor:
+            return Response({'error': 'Doctor not found'}, status=404)
         queue_entry_id = request.data.get('queue_entry')
-        entry = get_object_or_404(QueueEntry, pk=queue_entry_id)
+        entry = get_object_or_404(QueueEntry, pk=queue_entry_id, doctor=doctor)
         vr, created = VitalRecord.objects.update_or_create(
             queue_entry=entry,
             defaults={
@@ -371,8 +372,11 @@ class ConsultationNoteView(APIView):
             })
 
     def post(self, request):
+        doctor = _get_doctor_for_user(request.user)
+        if not doctor:
+            return Response({'error': 'Doctor not found'}, status=404)
         queue_entry_id = request.data.get('queue_entry')
-        entry = get_object_or_404(QueueEntry, pk=queue_entry_id)
+        entry = get_object_or_404(QueueEntry, pk=queue_entry_id, doctor=doctor)
         diag = request.data.get('diagnosis', '')
         prx = request.data.get('prescription', '')
         is_visible = request.data.get('is_visible_to_patient', True)

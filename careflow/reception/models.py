@@ -50,6 +50,7 @@ class QueueEntry(models.Model):
     cancelled_at = models.TimeField(null=True, blank=True)
     cancel_source = models.CharField(max_length=20, choices=CancelSource.choices, null=True, blank=True)
     reassigned = models.BooleanField(default=False)
+    scheduled_date = models.DateField(null=True, blank=True, help_text="For Booking type: the appointment date")
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -95,13 +96,23 @@ class TokenCounter(models.Model):
 
     @classmethod
     def get_next_token(cls, prefix):
+        from Patient.models import Appointment
         today = timezone.now().date()
         counter, _ = cls.objects.get_or_create(doctor_prefix=prefix, date=today)
+
+        max_iterations = 1000
+        iteration = 0
 
         cls.objects.filter(pk=counter.pk).update(counter_value=F('counter_value') + 1)
         counter.refresh_from_db()
         token = f"{prefix}-{counter.counter_value}"
-        while QueueEntry.objects.filter(token=token).exists():
+        while (
+            QueueEntry.objects.filter(token=token).exists()
+            or Appointment.objects.filter(token=token).exists()
+        ):
+            iteration += 1
+            if iteration > max_iterations:
+                raise RuntimeError(f'TokenCounter exceeded max iterations for prefix {prefix}')
             cls.objects.filter(pk=counter.pk).update(counter_value=F('counter_value') + 1)
             counter.refresh_from_db()
             token = f"{prefix}-{counter.counter_value}"

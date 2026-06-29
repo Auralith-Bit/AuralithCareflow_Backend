@@ -34,8 +34,9 @@ class QueueListView(generics.ListAPIView):
         today_end = today_start + timedelta(days=1)
 
         qs = QueueEntry.objects.filter(
-            Q(created_at__gte=today_start, created_at__lt=today_end) |
-            Q(status__in=['waiting', 'arrived', 'serving']) |
+            Q(created_at__gte=today_start, created_at__lt=today_end, scheduled_date__isnull=True) |
+            Q(status__in=['waiting', 'arrived', 'serving'], scheduled_date__isnull=True) |
+            Q(scheduled_date=today, status__in=['waiting', 'arrived', 'serving']) |
             Q(status='cancelled', reassigned=False)
         )
         status_filter = self.request.query_params.get('status')
@@ -65,8 +66,9 @@ class QueueStatsView(APIView):
         today_end = today_start + timedelta(days=1)
 
         qs = QueueEntry.objects.filter(
-            Q(created_at__gte=today_start, created_at__lt=today_end) |
-            Q(status__in=['waiting', 'arrived', 'serving']) |
+            Q(created_at__gte=today_start, created_at__lt=today_end, scheduled_date__isnull=True) |
+            Q(status__in=['waiting', 'arrived', 'serving'], scheduled_date__isnull=True) |
+            Q(scheduled_date=today, status__in=['waiting', 'arrived', 'serving']) |
             Q(status='cancelled', reassigned=False)
         )
         return Response({
@@ -192,8 +194,9 @@ class RescheduleQueueEntryView(APIView):
         serializer = QueueEntryRescheduleSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        entry.status = 'done'
         entry.notes = f"Rescheduled to {data['new_date']}. {data.get('reason', '')}"
+        entry.status = 'waiting'
+        entry.scheduled_date = data['new_date']
         entry.save()
         ActivityLog.objects.create(
             user=request.user,
@@ -283,12 +286,18 @@ class DoctorListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
+        today = timezone.now().date()
+        today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+        today_end = today_start + timedelta(days=1)
         doctors = Doctor.objects.filter(is_active=True)
         data = []
         for d in doctors:
             active_count = QueueEntry.objects.filter(
                 doctor=d,
-                status__in=['waiting', 'arrived', 'serving'],
+            ).filter(
+                Q(created_at__gte=today_start, created_at__lt=today_end, scheduled_date__isnull=True) |
+                Q(status__in=['waiting', 'arrived', 'serving'], scheduled_date__isnull=True) |
+                Q(scheduled_date=today, status__in=['waiting', 'arrived', 'serving'])
             ).count()
             data.append({
                 'id': d.id,

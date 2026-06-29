@@ -1,3 +1,4 @@
+import logging
 from django.db import models as db_models
 from rest_framework import generics, permissions, status, serializers
 from rest_framework.views import APIView
@@ -7,6 +8,9 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import User
+from datetime import date, datetime, timedelta
+from django.utils import timezone
+from django.db.models import Q
 
 from hospital_admin.models import Doctor, Department
 from reception.models import QueueEntry
@@ -17,6 +21,8 @@ from .serializers import (
     DoctorReviewSerializer, DoctorReviewCreateSerializer,
     NotificationLogSerializer, GuestBookingSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -88,7 +94,7 @@ class PatientProfileView(APIView):
             p_serializer.is_valid(raise_exception=True)
             p_serializer.save()
 
-        user_fields = ['name', 'email']
+        user_fields = ['name', 'email', 'phone']
         changed = False
         for field in user_fields:
             if field in request.data:
@@ -135,6 +141,9 @@ class DoctorPublicListView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
+        today = timezone.now().date()
+        today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+        today_end = today_start + timedelta(days=1)
         dept_filter = request.query_params.get('department')
         doctors = Doctor.objects.filter(is_active=True, status='active')
         if dept_filter:
@@ -142,7 +151,13 @@ class DoctorPublicListView(APIView):
 
         data = []
         for d in doctors:
-            waiting = QueueEntry.objects.filter(doctor=d, status='waiting').count()
+            waiting = QueueEntry.objects.filter(
+                doctor=d,
+            ).filter(
+                Q(created_at__gte=today_start, created_at__lt=today_end, scheduled_date__isnull=True) |
+                Q(status='waiting', scheduled_date__isnull=True) |
+                Q(scheduled_date=today, status='waiting')
+            ).count()
             avg_rating = DoctorReview.objects.filter(doctor=d).aggregate(db_models.Avg('rating'))['rating__avg']
             data.append({
                 'id': d.id,
@@ -172,7 +187,16 @@ class DoctorPublicDetailView(APIView):
         d = Doctor.objects.filter(pk=pk, is_active=True).first()
         if not d:
             return Response({'error': 'Doctor not found'}, status=status.HTTP_404_NOT_FOUND)
-        waiting = QueueEntry.objects.filter(doctor=d, status='waiting').count()
+        today = timezone.now().date()
+        today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+        today_end = today_start + timedelta(days=1)
+        waiting = QueueEntry.objects.filter(
+            doctor=d,
+        ).filter(
+            Q(created_at__gte=today_start, created_at__lt=today_end, scheduled_date__isnull=True) |
+            Q(status='waiting', scheduled_date__isnull=True) |
+            Q(scheduled_date=today, status='waiting')
+        ).count()
         avg_rating = DoctorReview.objects.filter(doctor=d).aggregate(db_models.Avg('rating'))['rating__avg']
         reviews = DoctorReview.objects.filter(doctor=d).order_by('-created_at')[:10]
         data = {
@@ -207,35 +231,70 @@ class AvailableSlotsView(APIView):
         if not doctor_id or not date_str:
             return Response({'error': 'doctor_id and date are required'}, status=400)
 
-        from datetime import datetime, date
         try:
             selected_date = date.fromisoformat(date_str)
         except ValueError:
             return Response({'error': 'Invalid date format. Use YYYY-MM-DD'}, status=400)
+
+        if selected_date < date.today():
+            return Response({'error': 'Cannot fetch slots for a past date'}, status=400)
 
         day_of_week = selected_date.weekday()
         doctor = Doctor.objects.filter(id=doctor_id, is_active=True).first()
         if not doctor:
             return Response({'error': 'Doctor not found'}, status=404)
 
-        slots = list(doctor.time_slots.filter(day_of_week=day_of_week))
+        time_slots_qs = doctor.time_slots.filter(day_of_week=day_of_week)
+        if time_slots_qs.exists():
+            slot_times = [s.start_time.strftime('%H:%M') for s in time_slots_qs]
+        else:
+            slot_times = []
+            for range_str in [doctor.morning_slots, doctor.evening_slots]:
+                if not range_str:
+                    continue
+                for sep in ['–', '-']:
+                    if sep in range_str:
+                        parts = range_str.split(sep)
+                        if len(parts) == 2:
+                            try:
+                                start_hour = datetime.strptime(parts[0].strip(), '%H:%M').hour
+                                end_hour = datetime.strptime(parts[1].strip(), '%H:%M').hour
+                            except ValueError:
+                                continue
+                            for hour in range(start_hour, end_hour):
+                                slot_times.append(f'{hour:02d}:00')
+                        break
+            if not slot_times:
+                slot_times = [f'{h:02d}:00' for h in range(9, 17)]
+
         existing_appointments = Appointment.objects.filter(
             doctor_name=doctor.name,
             appointment_date=selected_date,
-            status__in=['confirmed', 'scheduled'],
+            status__in=['confirmed', 'scheduled', 'pending'],
+        )
+
+        existing_queue = QueueEntry.objects.filter(
+            doctor=doctor,
+            scheduled_date=selected_date,
+            status__in=['waiting'],
         )
 
         booked_times = set()
         for apt in existing_appointments:
             booked_times.add(apt.appointment_time.strftime('%H:%M'))
+        for entry in existing_queue:
+            booked_times.add(entry.time.strftime('%H:%M'))
 
         available = []
-        for slot in slots:
-            time_key = slot.start_time.strftime('%H:%M')
+        for time_key in slot_times:
             if time_key not in booked_times:
+                from datetime import datetime as dt
+                hour = int(time_key.split(':')[0])
+                period = 'PM' if hour >= 12 else 'AM'
+                disp_hour = hour % 12 or 12
                 available.append({
                     'time': time_key,
-                    'label': slot.start_time.strftime('%I:%M %p').lstrip('0'),
+                    'label': f'{disp_hour}:{time_key.split(":")[1]} {period}',
                 })
 
         return Response({
@@ -266,19 +325,57 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
         profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
         from reception.models import TokenCounter
         from hospital_admin.models import Doctor
-        doctor = Doctor.objects.filter(name=serializer.validated_data['doctor_name']).first()
+        doctor_id = serializer.validated_data.get('doctor_id')
+        doctor = None
+        if doctor_id:
+            doctor = Doctor.objects.filter(id=doctor_id, is_active=True).first()
+        if not doctor:
+            doctor = Doctor.objects.filter(name=serializer.validated_data.get('doctor_name', ''), is_active=True).first()
+        doctor_name = doctor.name if doctor else serializer.validated_data.get('doctor_name', '')
         prefix = doctor.prefix if doctor else 'X'
         token = TokenCounter.get_next_token(prefix)
-        serializer.save(patient=profile, token=token)
+        serializer.save(patient=profile, token=token, doctor=doctor, doctor_name=doctor_name)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        # Return the created appointment using AppointmentSerializer for proper representation
-        response_serializer = AppointmentSerializer(serializer.instance)
-        from rest_framework import status as drf_status
-        return Response(response_serializer.data, status=drf_status.HTTP_201_CREATED)
+        appointment = serializer.instance
+
+        doctor = appointment.doctor
+        if not doctor and appointment.doctor_name:
+            doctor = Doctor.objects.filter(name=appointment.doctor_name, is_active=True).first()
+
+        try:
+            if doctor:
+                QueueEntry.objects.create(
+                    token=appointment.token,
+                    patient_name=appointment.patient.user.name,
+                    patient_phone=appointment.patient.user.phone or '',
+                    doctor=doctor,
+                    doctor_name=doctor.name,
+                    department_name=doctor.department.name if doctor.department else '',
+                    visit_type='Booking',
+                    time=appointment.appointment_time,
+                    status='waiting',
+                    scheduled_date=appointment.appointment_date,
+                    notes=f"Appointment id: {appointment.id}",
+                )
+        except Exception as e:
+            logger.exception('Failed to create QueueEntry for appointment %s: %s', appointment.id, e)
+
+        try:
+            NotificationLog.objects.create(
+                patient=appointment.patient,
+                type=NotificationLog.Type.BOOKING_CONFIRMED,
+                title='Appointment Booked',
+                message=f'Your appointment with {appointment.doctor_name} on {appointment.appointment_date} at {appointment.appointment_time} Token: {appointment.token}',
+            )
+        except Exception as e:
+            logger.exception('Failed to create NotificationLog for appointment %s: %s', appointment.id, e)
+
+        response_serializer = AppointmentSerializer(appointment)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -288,25 +385,115 @@ class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
         profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
         return Appointment.objects.filter(patient=profile)
 
-    def perform_destroy(self, instance):
-        from datetime import datetime, timedelta
-        slot_datetime = datetime.combine(instance.appointment_date, instance.appointment_time)
-        if slot_datetime - datetime.now() < timedelta(hours=1):
+    def destroy(self, request, *args, **kwargs):
+        from reception.models import QueueEntry
+        instance = self.get_object()
+        slot_datetime = timezone.make_aware(datetime.combine(instance.appointment_date, instance.appointment_time))
+        if slot_datetime - timezone.now() < timedelta(hours=1):
             raise serializers.ValidationError('Cancellation not allowed within 1 hour of appointment')
         instance.status = Appointment.Status.CANCELLED
         instance.save()
+        QueueEntry.objects.filter(token=instance.token, doctor_name=instance.doctor_name).update(
+            status='cancelled', cancel_source='patient-app',
+        )
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+class AppointmentRescheduleView(APIView):
+    def patch(self, request, pk):
+        from reception.models import QueueEntry, TokenCounter
+        from hospital_admin.models import Doctor
+        profile, _ = PatientProfile.objects.get_or_create(user=request.user)
+        appointment = Appointment.objects.filter(pk=pk, patient=profile).first()
+        if not appointment:
+            return Response({'error': 'Appointment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        new_date = request.data.get('appointment_date')
+        new_time_raw = request.data.get('appointment_time')
+        if not new_date or not new_time_raw:
+            return Response({'error': 'appointment_date and appointment_time are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            new_time = datetime.strptime(new_time_raw, '%H:%M').time() if isinstance(new_time_raw, str) else new_time_raw
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid time format. Use HH:MM'}, status=status.HTTP_400_BAD_REQUEST)
+
+        slot_datetime = timezone.make_aware(datetime.combine(appointment.appointment_date, appointment.appointment_time))
+        if slot_datetime - timezone.now() < timedelta(hours=1):
+            return Response({'error': 'Rescheduling not allowed within 1 hour of appointment'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            parsed_date = date.fromisoformat(new_date) if isinstance(new_date, str) else new_date
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if parsed_date < date.today():
+            return Response({'error': 'Cannot reschedule to a past date'}, status=status.HTTP_400_BAD_REQUEST)
+
+        doctor = appointment.doctor
+        if not doctor and appointment.doctor_name:
+            doctor = Doctor.objects.filter(name=appointment.doctor_name, is_active=True).first()
+        prefix = doctor.prefix if doctor else 'X'
+        new_token = TokenCounter.get_next_token(prefix)
+
+        QueueEntry.objects.filter(token=appointment.token, doctor_name=appointment.doctor_name).update(
+            status='cancelled',
+            notes=f"Cancelled on reschedule to {parsed_date}. Previous token: {appointment.token}",
+        )
+
+        appointment.appointment_date = parsed_date
+        appointment.appointment_time = new_time
+        appointment.token = new_token
+        appointment.status = Appointment.Status.RESCHEDULED
+        appointment.save()
+
+        if doctor:
+            QueueEntry.objects.create(
+                token=new_token,
+                patient_name=appointment.patient.user.name,
+                patient_phone=appointment.patient.user.phone or '',
+                doctor=doctor,
+                doctor_name=doctor.name,
+                department_name=doctor.department.name if doctor.department else '',
+                visit_type='Booking',
+                time=new_time,
+                status='waiting',
+                scheduled_date=parsed_date,
+                notes=f"Appointment id: {appointment.id}",
+            )
+
+        NotificationLog.objects.create(
+            patient=profile,
+            type=NotificationLog.Type.BOOKING_CONFIRMED,
+            title='Appointment Rescheduled',
+            message=f'Your appointment has been rescheduled to {parsed_date} at {new_time}',
+        )
+
+        return Response(AppointmentSerializer(appointment).data)
 
 
 class QueueStatusView(APIView):
     def get(self, request):
         doctor_name = request.query_params.get('doctor')
+        doctor_id = request.query_params.get('doctor_id')
         token = request.query_params.get('token')
-        if not doctor_name or not token:
-            return Response({'error': 'doctor and token params required'}, status=400)
-        entries = QueueEntry.objects.filter(
-            doctor_name__icontains=doctor_name
-        ).exclude(status__in=['done', 'cancelled']).order_by('time')
+        if not token:
+            return Response({'error': 'token param required'}, status=400)
+        if not doctor_name and not doctor_id:
+            return Response({'error': 'doctor or doctor_id param required'}, status=400)
+
+        if doctor_id:
+            entries = QueueEntry.objects.filter(
+                doctor_id=doctor_id
+            ).exclude(status__in=['done', 'cancelled']).order_by('time')
+        elif doctor_name:
+            entries = QueueEntry.objects.filter(
+                doctor_name=doctor_name
+            ).exclude(status__in=['done', 'cancelled']).order_by('time')
+        else:
+            entries = QueueEntry.objects.none()
+
         now_serving = entries.filter(status='serving').first()
         ahead = 0
         my_entry = entries.filter(token=token).first()
@@ -409,6 +596,7 @@ class GuestBookingView(APIView):
     authentication_classes = []
 
     def post(self, request):
+        from reception.models import TokenCounter, QueueEntry
         serializer = GuestBookingSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -419,6 +607,12 @@ class GuestBookingView(APIView):
         if data['appointment_date'] < date.today():
             return Response({'error': 'Cannot book for past date'}, status=400)
         guest_name = data.get('patient_name', '') or f'Guest_{data["phone"][-6:]}'
+        existing_user = User.objects.filter(phone=data['phone']).first()
+        if existing_user and existing_user.role != User.Role.PATIENT:
+            return Response(
+                {'error': 'Phone number is already registered as a staff member. Please use a different contact.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         user, _ = User.objects.get_or_create(
             phone=data['phone'],
             defaults={
@@ -427,10 +621,10 @@ class GuestBookingView(APIView):
             }
         )
         profile, _ = PatientProfile.objects.get_or_create(user=user)
-        from reception.models import TokenCounter
         token = TokenCounter.get_next_token(doctor.prefix)
         appointment = Appointment.objects.create(
             patient=profile,
+            doctor=doctor,
             doctor_name=doctor.name,
             doctor_specialty=doctor.specialty,
             department_name=doctor.department.name if doctor.department else '',
@@ -442,6 +636,21 @@ class GuestBookingView(APIView):
             status=Appointment.Status.PENDING,
             notes=data.get('notes', ''),
         )
+
+        QueueEntry.objects.create(
+            token=token,
+            patient_name=user.name,
+            patient_phone=user.phone or '',
+            doctor=doctor,
+            doctor_name=doctor.name,
+            department_name=doctor.department.name if doctor.department else '',
+            visit_type='Booking',
+            time=data['appointment_time'],
+            status='waiting',
+            scheduled_date=data['appointment_date'],
+            notes=f"Appointment id: {appointment.id}",
+        )
+
         NotificationLog.objects.create(
             patient=profile,
             type=NotificationLog.Type.BOOKING_CONFIRMED,
