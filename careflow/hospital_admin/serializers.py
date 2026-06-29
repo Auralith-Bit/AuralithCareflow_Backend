@@ -33,7 +33,8 @@ class DoctorListSerializer(serializers.ModelSerializer):
         model = Doctor
         fields = ['id', 'name', 'specialty', 'department_name', 'qualification', 'prefix',
                   'status', 'slots_per_day', 'avatar_color', 'days_available',
-                  'morning_slots', 'evening_slots', 'consultation_fee']
+                  'morning_slots', 'evening_slots', 'consultation_fee',
+                  'phone', 'email', 'department']
 
 
 class HospitalProfileSerializer(serializers.ModelSerializer):
