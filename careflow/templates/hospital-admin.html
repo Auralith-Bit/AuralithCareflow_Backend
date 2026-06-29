@@ -909,6 +909,8 @@
 
   @media(max-width:900px){ .doctor-grid{ grid-template-columns: repeat(2,1fr); } .dept-grid{ grid-template-columns: repeat(2,1fr); } .stats-row{ grid-template-columns: repeat(2,1fr); } }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -2726,8 +2728,181 @@ function renderWaitTimeTrend(data) {
 
 /*  EXPORT  */
 function exportReport(type) {
-  showToast(`📥 Exporting report as ${type.toUpperCase()}...`,'warning');
-  setTimeout(() => showToast(`✅ ${type.toUpperCase()} report downloaded successfully`), 1500);
+  const s = dashboardStats;
+  if (!s) { showToast('No report data loaded','error'); return; }
+  const useRange = document.getElementById('view-analytics')?.classList.contains('active');
+  const opdData = useRange ? (s.range_opd || s.weekly_opd) : s.weekly_opd;
+  const waitTime = useRange ? (s.range_avg_wait ?? s.avg_wait_time) : s.avg_wait_time;
+  const cancelRate = useRange ? (s.range_cancellation_rate ?? s.cancellation_rate) : s.cancellation_rate;
+  const rangeType = document.getElementById('analytics-range')?.value || 'weekly';
+  const labelName = rangeType === 'daily' ? 'Hour' : rangeType === 'monthly' ? 'Week' : 'Day';
+
+  if (type === 'excel') {
+    if (typeof XLSX === 'undefined') { showToast('Excel library not loaded','error'); return; }
+    try {
+      const wb = XLSX.utils.book_new();
+      const dateStr = new Date().toISOString().split('T')[0];
+
+      const summaryData = [['CareFlow - OPD Report', dateStr], [],
+        ['Metric', 'Value'],
+        ['Total OPD', opdData?.total || 0],
+        ['Avg Wait Time', waitTime != null ? waitTime + ' min' : '—'],
+        ['Cancellation Rate', (cancelRate || 0) + '%'],
+        ['Busiest Day', opdData?.peak_day || '—'],
+        ['Peak Value', opdData?.peak_value || 0],
+      ];
+      if (opdData?.labels?.length) {
+        summaryData.push([], [labelName, 'Patients']);
+        opdData.labels.forEach((l, i) => summaryData.push([l, opdData.values[i]]));
+      }
+      const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
+      ws1['!cols'] = [{ wch: 22 }, { wch: 14 }];
+      XLSX.utils.book_append_sheet(wb, ws1, 'OPD Summary');
+
+      if (s.opd_by_doctor?.length) {
+        const docData = [['Doctor', 'Patients', 'Share'],
+          ...s.opd_by_doctor.map(d => [d.name, d.count, d.percentage + '%'])];
+        const ws2 = XLSX.utils.aoa_to_sheet(docData);
+        ws2['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws2, 'OPD by Doctor');
+      }
+
+      if (s.opd_share?.departments?.length) {
+        const deptData = [['Department', 'Patients', 'Share'],
+          ...s.opd_share.departments.map(d => [d.name, d.count, d.percentage + '%'])];
+        const ws3 = XLSX.utils.aoa_to_sheet(deptData);
+        ws3['!cols'] = [{ wch: 24 }, { wch: 10 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws3, 'Department Share');
+      }
+
+      if (s.wait_time_trend?.values?.length) {
+        const waitData = [['Period', 'Avg Wait (min)'],
+          ...s.wait_time_trend.labels.map((l, i) => [l, s.wait_time_trend.values[i]])];
+        const ws4 = XLSX.utils.aoa_to_sheet(waitData);
+        ws4['!cols'] = [{ wch: 14 }, { wch: 18 }];
+        XLSX.utils.book_append_sheet(wb, ws4, 'Wait Time Trend');
+      }
+
+      XLSX.writeFile(wb, 'CareFlow_Report_' + dateStr + '.xlsx');
+      showToast('✅ Excel report downloaded');
+    } catch (e) { showToast('Excel export: ' + e.message, 'error'); }
+    return;
+  }
+
+  if (type === 'pdf') {
+    if (!window.jspdf) { showToast('PDF library not loaded','error'); return; }
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageW = 210;
+      const margin = 14;
+      const dateStr = new Date().toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+
+      function header() {
+        doc.setFontSize(18);
+        doc.setTextColor(4, 87, 67);
+        doc.text('CareFlow - OPD Report', margin, 20);
+        doc.setFontSize(9);
+        doc.setTextColor(130);
+        doc.text(dateStr, margin, 27);
+        doc.setDrawColor(4, 87, 67);
+        doc.line(margin, 30, pageW - margin, 30);
+      }
+      function footer(y) {
+        if (y > 275) { doc.addPage(); y = 20; header(); return y; }
+        return y;
+      }
+      function tableHead(y, cols, xOffsets, widths) {
+        doc.setFillColor(4, 87, 67);
+        doc.setTextColor(255);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        cols.forEach((c, i) => {
+          doc.rect(xOffsets[i], y - 4, widths[i], 6, 'F');
+          doc.text(c, xOffsets[i] + 2, y + 1);
+        });
+        doc.setTextColor(60);
+        doc.setFont('helvetica', 'normal');
+        return y + 6;
+      }
+      function tableRow(y, cells, xOffsets, alt) {
+        if (alt) { doc.setFillColor(245, 247, 246); doc.rect(xOffsets[0], y - 3, xOffsets[xOffsets.length - 1] + 50 - xOffsets[0], 6, 'F'); }
+        cells.forEach((c, i) => doc.text(String(c), xOffsets[i] + 2, y + 1));
+        return y + 6;
+      }
+
+      header();
+      let y = 40;
+
+      doc.setFontSize(12);
+      doc.setTextColor(4, 87, 67);
+      doc.setFont('helvetica', 'bold');
+      doc.text('OPD Summary', margin, y);
+      y += 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      [
+        ['Total OPD', String(opdData?.total || 0)],
+        ['Avg Wait Time', waitTime != null ? waitTime + ' min' : '—'],
+        ['Cancellation Rate', (cancelRate || 0) + '%'],
+        ['Busiest Day', (opdData?.peak_day || '—') + ' (' + (opdData?.peak_value || 0) + ')'],
+      ].forEach(([l, v]) => { doc.setFont('helvetica', 'bold'); doc.text(l, margin + 4, y); doc.setFont('helvetica', 'normal'); doc.text(':  ' + v, 60, y); y += 7; });
+      y += 4;
+
+      if (opdData?.labels?.length) {
+        y = footer(y + 2);
+        doc.setFontSize(11);
+        doc.setTextColor(4, 87, 67);
+        doc.setFont('helvetica', 'bold');
+        doc.text('OPD Breakdown', margin, y);
+        y += 7;
+        y = tableHead(y, [labelName, 'Patients'], [margin + 2, 60], [40, 30]);
+        opdData.labels.forEach((l, i) => { y = footer(y); y = tableRow(y, [l, opdData.values[i]], [margin + 2, 60], i % 2 === 1); });
+        y += 4;
+      }
+
+      if (s.opd_by_doctor?.length) {
+        y = footer(y + 2);
+        doc.setFontSize(11);
+        doc.setTextColor(4, 87, 67);
+        doc.setFont('helvetica', 'bold');
+        doc.text('OPD by Doctor', margin, y);
+        y += 7;
+        y = tableHead(y, ['Doctor', 'Patients', 'Share'], [margin + 2, 85, 105], [68, 20, 20]);
+        s.opd_by_doctor.forEach((d, i) => { y = footer(y); y = tableRow(y, [d.name, d.count, d.percentage + '%'], [margin + 2, 85, 105], i % 2 === 1); });
+        y += 4;
+      }
+
+      if (s.opd_share?.departments?.length) {
+        y = footer(y + 2);
+        doc.setFontSize(11);
+        doc.setTextColor(4, 87, 67);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Department OPD Share', margin, y);
+        y += 7;
+        y = tableHead(y, ['Department', 'Patients', 'Share'], [margin + 2, 85, 105], [68, 20, 20]);
+        s.opd_share.departments.forEach((d, i) => { y = footer(y); y = tableRow(y, [d.name, d.count, d.percentage + '%'], [margin + 2, 85, 105], i % 2 === 1); });
+        y += 4;
+      }
+
+      if (s.wait_time_trend?.values?.length) {
+        y = footer(y + 2);
+        doc.setFontSize(11);
+        doc.setTextColor(4, 87, 67);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Wait Time Trend', margin, y);
+        y += 7;
+        y = tableHead(y, ['Period', 'Avg Wait (min)'], [margin + 2, 55], [30, 30]);
+        s.wait_time_trend.labels.forEach((l, i) => { y = footer(y); y = tableRow(y, [l, s.wait_time_trend.values[i]], [margin + 2, 55], i % 2 === 1); });
+      }
+
+      doc.setFontSize(8);
+      doc.setTextColor(180);
+      doc.text('Generated by CareFlow', margin, 290);
+      doc.save('CareFlow_Report_' + new Date().toISOString().split('T')[0] + '.pdf');
+      showToast('✅ PDF report downloaded');
+    } catch (e) { showToast('PDF export: ' + e.message, 'error'); }
+  }
 }
 
 /* HELPERS  */
