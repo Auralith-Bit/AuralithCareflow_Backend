@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareFlow</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.35.0/tabler-icons.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="/static/js/api.js"></script>
+    <style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--g50:#f0fdf4;--g100:#dcfce7;--g200:#bbf7d0;--g400:#4ade80;--g500:#22c55e;--g600:#16a34a;--g700:#15803d;--g800:#166534;--g900:#14532d;
+--color-background-primary:#ffffff;--color-background-secondary:#f8fafc;--color-background-tertiary:#f1f5f9;
+--color-text-primary:#0f172a;--color-text-secondary:#475569;--border-soft:rgba(0,0,0,.09);--border-softer:rgba(0,0,0,.06);--hover-tint:#f1f5f9}
+[data-theme="dark"]{--color-background-primary:#1e293b;--color-background-secondary:#162032;--color-background-tertiary:#0b1220;
+--color-text-primary:#e7eef7;--color-text-secondary:#93a4bd;--border-soft:rgba(255,255,255,.12);--border-softer:rgba(255,255,255,.08);--hover-tint:#243044}
+[data-theme="dark"] .card,[data-theme="dark"] .ch,[data-theme="dark"] .topbar,[data-theme="dark"] .tabs,[data-theme="dark"] .tbl th,
+[data-theme="dark"] .tbl td,[data-theme="dark"] .ab,[data-theme="dark"] .qb,[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select,[data-theme="dark"] .form-group textarea,[data-theme="dark"] .btn-sec,
+[data-theme="dark"] .search-bar input,[data-theme="dark"] .pcard,[data-theme="dark"] .history-item,
+[data-theme="dark"] .settings-section h4,[data-theme="dark"] .sched-row,[data-theme="dark"] .notif-item,
+[data-theme="dark"] #noteModalWrap>div,[data-theme="dark"] #referModalWrap>div,[data-theme="dark"] .theme-toggle{border-color:var(--border-soft)}
+[data-theme="dark"] .ab:hover,[data-theme="dark"] .qb:hover,[data-theme="dark"] .theme-toggle:hover{background:var(--hover-tint)}
+[data-theme="dark"] .tbl tr:hover td{background:#16342966}
+[data-theme="dark"] .tbl tr.cur td{background:#14532d55}
+[data-theme="dark"] .vcard{background:#14532d40;border-color:#15803d80}
+[data-theme="dark"] .vcard.warn{background:#92400e40;border-color:#fcd34d80}
+[data-theme="dark"] .vcard.danger{background:#99181840;border-color:#fca5a580}
+[data-theme="dark"] .qb.emg{background:#14532d40;border-color:#15803d}
+[data-theme="dark"] ::placeholder{color:#5b6b85}
+.theme-toggle{font-size:12px;padding:.3rem .75rem;display:flex;align-items:center;gap:5px}
+body{font-family:var(--font-sans,system-ui,sans-serif);background:var(--color-background-tertiary,#f1f5f9);color:var(--color-text-primary,#0f172a);min-height:100vh}
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.sidebar {
+    background: #1a3d2b;
+    display: flex;
+    flex-direction: column;
+}
+.slogo{padding:5px 10px 10px;border-bottom:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;align-items:center;text-align:center}
+.sidebar .logo-img {
+    width: 200px;
+    height: 150px;
+    display: block;
+    margin: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.16));
+}
+.tagline{margin-top:8px;color:#bfd1cb;font-size:28px;font-weight:500;letter-spacing:1px;line-height:1.2}
+.snav{padding:.625rem .5rem;flex:1;overflow-y:auto}
+.snav-label{font-size:11px;font-weight:700;letter-spacing:1px;opacity:.4;padding:.5rem .625rem .2rem;color:#fff;text-transform:uppercase}
+.sitem{display:flex;align-items:center;gap:9px;padding:.5rem .75rem;border-radius:7px; font-size: 15px;cursor:pointer;margin-bottom:1px;color:rgba(255,255,255,.7);transition:background .12s}
+.sidebar .menu-left span {
+    font-size: 15px;
+    color: #d7e2de;
+    transition: color .3s;
+}
+
+.sitem:hover{background:rgba(255,255,255,.08)}
+.sitem.active{background:var(--g600);color:#fff;font-weight:500}
+.sitem i{font-size:17px;flex-shrink:0}
+.sdoc{padding:.875rem;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:9px}
+.sdoc-av{width:34px;height:34px;border-radius:50%;background:var(--g400);display:flex;align-items:center;justify-content:center;font-weight:500;font-size:12px;color:var(--g900);flex-shrink:0}
+.sdoc-name{font-size:14px;font-weight:500;color:#fff}
+.sdoc-role{font-size:11px;color:rgba(255,255,255,.5)}
+.sbtn{margin-left:auto;padding:3px 7px;border-radius:20px;font-size:10px;border:none;cursor:pointer;font-weight:500;background:var(--g400);color:var(--g900)}
+.main{display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--color-background-primary,#fff);border-bottom:.5px solid rgba(0,0,0,.1);padding:.625rem 1.25rem;display:flex;align-items:center;gap:10px}
+.topbar-title{font-size:15px;font-weight:500;flex:1}
+.tdate{font-size:12px;color:var(--color-text-secondary,#475569)}
+.bdg{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.bg{background:var(--g100);color:var(--g800)}
+.ba{background:#fef3c7;color:#92400e}
+.br{background:#fee2e2;color:#991b1b}
+.bs{background:#f1f5f9;color:#334155}
+.bb{background:#eff6ff;color:#1e40af}
+.bp{background:#fdf4ff;color:#6b21a8}
+.dot-live{width:7px;height:7px;border-radius:50%;background:var(--g500);display:inline-block;animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.tabs{display:flex;gap:2px;padding:.5rem 1.25rem 0;background:var(--color-background-primary,#fff);border-bottom:.5px solid rgba(0,0,0,.08)}
+.tab{padding:.5rem .875rem;font-size:12.5px;cursor:pointer;border-bottom:2px solid transparent;color:var(--color-text-secondary,#475569);transition:color .12s;white-space:nowrap}
+.tab.active{color:var(--g700);border-bottom-color:var(--g600);font-weight:500}
+.tab:hover:not(.active){color:var(--color-text-primary,#0f172a)}
+.page{display:none;padding:1.125rem 1.25rem;flex:1}
+.page.active{display:block}
+.grid2{display:grid;grid-template-columns:1fr 320px;gap:1.125rem;align-items:start}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem}
+.card{background:var(--color-background-primary,#fff);border:.5px solid rgba(0,0,0,.09);border-radius:12px;overflow:hidden}
+.ch{padding:.75rem 1rem;border-bottom:.5px solid rgba(0,0,0,.07);display:flex;align-items:center;gap:7px}
+.ch-title{font-size:13.5px;font-weight:500;flex:1}
+.ch i{font-size:17px;color:var(--g600)}
+.cb{padding:.875rem 1rem}
+.stat-card{background:var(--color-background-secondary,#f8fafc);border-radius:8px;padding:.75rem;text-align:center}
+.sv{font-size:24px;font-weight:500;color:var(--g700);line-height:1}
+.sl{font-size:11px;color:var(--color-text-secondary,#64748b);margin-top:3px}
+.sv.red{color:#dc2626}
+.sv.amber{color:#d97706}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:11px;color:var(--color-text-secondary,#475569);font-weight:500;text-align:left;padding:.45rem .875rem;background:var(--color-background-secondary,#f8fafc);border-bottom:.5px solid rgba(0,0,0,.07)}
+.tbl td{padding:.65rem .875rem;font-size:13px;border-bottom:.5px solid rgba(0,0,0,.05);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--g50)}
+.tbl tr.cur td{background:#f0fdf4}
+.tbl tr.cancelled-row td{opacity:.5;text-decoration:line-through}
+.tnum{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:12px;background:var(--g100);color:var(--g800)}
+.tnum.cur{background:var(--g600);color:#fff}
+.pname{font-weight:500;font-size:13px}
+.pmeta{font-size:11px;color:var(--color-text-secondary,#64748b);margin-top:1px}
+.abts{display:flex;gap:3px}
+.ab{padding:2px 7px;border-radius:5px;font-size:11px;border:.5px solid rgba(0,0,0,.12);background:transparent;cursor:pointer;color:var(--color-text-secondary,#475569);font-family:inherit}
+.ab:hover{background:#f1f5f9}
+.ab.g{color:var(--g700);border-color:#86efac}
+.ab.g:hover{background:var(--g50)}
+.call-panel {
+    background: var(--g600);
+    border-radius: 12px;
+    padding: 1.125rem;
+    color: #fff;
+    margin-bottom: 1rem;
+}
+.cp-lbl{font-size:11px;opacity:.7;margin-bottom:.2rem}
+.cp-tok{font-size:38px;font-weight:500;line-height:1;color:#fff}
+.cp-name{font-size:14px;font-weight:500;margin-top:.2rem}
+.cp-cc{font-size:11px;opacity:.65;margin-bottom:.75rem}
+.cp-timer{font-size:12px;opacity:.75;margin-bottom:.875rem;display:flex;align-items:center;gap:5px}
+.cp-btn{width:100%;padding:.75rem;border:none;border-radius:9px;background:#fff;color:var(--g800);font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;font-family:inherit}
+.cp-btn:hover{opacity:.92}
+.cp-btn i{font-size:18px}
+.qctrl{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;padding:.875rem 1rem}
+.qb{padding:.55rem .5rem;border-radius:7px;border:.5px solid rgba(0,0,0,.11);background:transparent;cursor:pointer;font-size:12px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;color:var(--color-text-primary,#0f172a)}
+.qb:hover{background:#f1f5f9}
+.qb i{font-size:15px;color:var(--g600)}
+.qb.danger i{color:#dc2626}
+.qb.emg{grid-column:span 2;background:var(--g50);border-color:#86efac;color:var(--g800)}
+.qb.emg:hover{background:var(--g100)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.625rem;margin-bottom:.625rem}
+.form-group{display:flex;flex-direction:column;gap:4px;margin-bottom:.625rem}
+.form-group label{font-size:12px;color:var(--color-text-secondary,#475569);font-weight:500}
+.form-group input,.form-group select,.form-group textarea{padding:.45rem .625rem;border:.5px solid rgba(0,0,0,.15);border-radius:7px;font-size:13px;font-family:inherit;background:var(--color-background-primary,#fff);color:var(--color-text-primary,#0f172a)}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--g500)}
+.form-group textarea{resize:vertical;min-height:70px}
+.btn-primary{padding:.55rem 1.25rem;border:none;border-radius:8px;background:var(--g600);color:#fff;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+.btn-primary:hover{background:var(--g700)}
+.btn-sec{padding:.55rem 1rem;border:.5px solid rgba(0,0,0,.12);border-radius:8px;background:transparent;font-size:13px;cursor:pointer;font-family:inherit;color:var(--color-text-secondary,#64748b)}
+.vitals-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.625rem;margin-bottom:.875rem}
+.vcard{background:var(--g50);border:.5px solid #86efac;border-radius:9px;padding:.625rem .75rem;text-align:center}
+.vval{font-size:20px;font-weight:500;color:var(--g800)}
+.vlbl{font-size:10px;color:var(--g700);margin-top:2px}
+.vcard.warn{background:#fef3c7;border-color:#fcd34d}
+.vcard.warn .vval{color:#92400e}
+.vcard.warn .vlbl{color:#b45309}
+.vcard.danger{background:#fee2e2;border-color:#fca5a5}
+.vcard.danger .vval{color:#991b1b}
+.vcard.danger .vlbl{color:#b91c1c}
+.history-item{padding:.625rem .875rem;border-bottom:.5px solid rgba(0,0,0,.06);display:flex;align-items:flex-start;gap:.625rem}
+.history-item:last-child{border-bottom:none}
+.hdate{font-size:11px;color:var(--color-text-secondary,#64748b);min-width:72px}
+.hcontent{flex:1}
+.htitle{font-size:13px;font-weight:500}
+.hdesc{font-size:11px;color:var(--color-text-secondary,#64748b);margin-top:2px}
+.toast{position:absolute;top:12px;right:12px;background:var(--g700);color:#fff;padding:.5rem 1rem;border-radius:8px;font-size:13px;display:none;z-index:200;font-family:inherit}
+.toast.show{display:block;animation:fadeout 2.5s forwards}
+@keyframes fadeout{0%,70%{opacity:1}100%{opacity:0}}
+.search-bar{display:flex;gap:.5rem;margin-bottom:.875rem}
+.search-bar input{flex:1;padding:.45rem .75rem;border:.5px solid rgba(0,0,0,.12);border-radius:7px;font-size:13px;font-family:inherit;background:var(--color-background-primary,#fff);color:var(--color-text-primary,#0f172a)}
+.search-bar input:focus{outline:none;border-color:var(--g500)}
+.pcard{background:var(--color-background-primary,#fff);border:.5px solid rgba(0,0,0,.09);border-radius:10px;padding:.875rem;margin-bottom:.625rem;display:flex;align-items:center;gap:.875rem}
+.pav{width:40px;height:40px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;font-weight:500;font-size:13px;color:var(--g800);flex-shrink:0}
+.pinfo{flex:1}
+.pn{font-weight:500;font-size:13.5px}
+.pm{font-size:11px;color:var(--color-text-secondary,#64748b);margin-top:2px}
+.pacts{display:flex;gap:.375rem}
+.sched-row{display:grid;grid-template-columns:60px 1fr auto;gap:.75rem;align-items:center;padding:.625rem .875rem;border-bottom:.5px solid rgba(0,0,0,.06)}
+.sched-row:last-child{border-bottom:none}
+.stime{font-size:13px;font-weight:500;color:var(--g700)}
+.sinfo{font-size:13px}
+.smeta{font-size:11px;color:var(--color-text-secondary,#64748b);margin-top:1px}
+.prog-bar{height:5px;background:#e2e8f0;border-radius:3px;margin-top:.5rem}
+.prog-fill{height:100%;background:var(--g500);border-radius:3px;transition:width .4s}
+.notif-item{display:flex;gap:.75rem;padding:.625rem .875rem;border-bottom:.5px solid rgba(0,0,0,.06);align-items:flex-start}
+.notif-item:last-child{border-bottom:none}
+.notif-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
+.ni-green{background:var(--g100);color:var(--g700)}
+.ni-amber{background:#fef3c7;color:#d97706}
+.ni-red{background:#fee2e2;color:#dc2626}
+.ni-blue{background:#eff6ff;color:#2563eb}
+.notif-text{font-size:12.5px;flex:1}
+.notif-time{font-size:11px;color:var(--color-text-secondary,#64748b)}
+.settings-section{margin-bottom:1.25rem}
+.settings-section h4{font-size:13px;font-weight:500;margin-bottom:.625rem;color:var(--color-text-secondary,#475569);border-bottom:.5px solid rgba(0,0,0,.08);padding-bottom:.375rem}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:.45rem 0;font-size:13px}
+.toggle{position:relative;width:36px;height:20px}
+.toggle input{opacity:0;width:0;height:0}
+.tslider{position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:20px;transition:.2s}
+.tslider:before{content:'';position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked+.tslider{background:var(--g500)}
+.toggle input:checked+.tslider:before{transform:translateX(16px)}
+body:not(.js-ready) .shell{opacity:0;pointer-events:none}
+body.js-ready .shell{opacity:1}
+</style>
+<div id="toast" class="toast"></div>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="slogo">
+      <img src="/static/images/Careflow_LOGO.png" alt="CareFlow Logo" class="logo-img">
+      <div class="tagline">Care FLow</div>
+    </div>
+    <nav class="snav">
+      <div class="snav-label">Main</div>
+      <div class="sitem active" onclick="showTab('queue',this)"><i class="ti ti-layout-list" aria-hidden="true"></i> Today's Queue</div>
+      <div class="sitem" onclick="showTab('register',this)"><i class="ti ti-user-plus" aria-hidden="true"></i> Register Patient</div>
+      <div class="sitem" onclick="showTab('vitals',this)"><i class="ti ti-activity" aria-hidden="true"></i> Record Vitals</div>
+      <div class="snav-label">Records</div>
+      <div class="sitem" onclick="showTab('patients',this)"><i class="ti ti-users" aria-hidden="true"></i> Patient Directory</div>
+      <div class="sitem" onclick="showTab('history',this)"><i class="ti ti-history" aria-hidden="true"></i> Visit History</div>
+      <div class="sitem" onclick="showTab('schedule',this)"><i class="ti ti-calendar" aria-hidden="true"></i> Schedule View</div>
+      <div class="snav-label">System</div>
+      <div class="sitem" onclick="showTab('profile',this)"><i class="ti ti-user-circle" aria-hidden="true"></i> My Profile</div>
+      <div class="sitem" onclick="showTab('notifications',this)"><i class="ti ti-bell" aria-hidden="true"></i> Notifications <span class="bdg bb" style="margin-left:auto;font-size:10px;padding:1px 6px" id="notifBadge">0</span></div>
+      <div class="sitem" onclick="showTab('settings',this)"><i class="ti ti-settings" aria-hidden="true"></i> Settings</div>
+    </nav>
+    <div class="sdoc">
+      <div class="sdoc-av">DR</div>
+      <div><div class="sdoc-name">Dr. Ramesh K.</div><div class="sdoc-role">General Physician</div></div>
+      <button class="sbtn" id="docStatusBtn" onclick="cycleStatus()">Available</button>
+    </div>
+    <div style="padding:.5rem .875rem .75rem;border-top:1px solid rgba(255,255,255,.1)">
+      <button onclick="logout()" style="width:100%;padding:.45rem;border-radius:7px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.7);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background='transparent'"><i class="ti ti-logout" style="font-size:14px"></i> Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="pageTitle"><i class="ti ti-layout-list" style="font-size:17px;color:var(--g600);vertical-align:-3px;margin-right:5px" aria-hidden="true"></i>Today's Token Queue</div>
+      <div class="tdate"><i class="ti ti-calendar" style="font-size:14px;vertical-align:-2px;margin-right:3px" aria-hidden="true"></i>Sun, 14 Jun 2026</div>
+      <div class="bdg bg"><span class="dot-live"></span> Live</div>
+      <button class="btn-sec theme-toggle" id="themeToggleBtn" onclick="toggleTheme()"><i class="ti ti-moon" id="themeIcon" aria-hidden="true"></i> <span id="themeLabel">Dark</span></button>
+      <button class="btn-sec" style="font-size:12px;padding:.3rem .75rem" onclick="printQueue()"><i class="ti ti-printer" style="font-size:14px;vertical-align:-2px" aria-hidden="true"></i> Print</button>
+    </div>
+    <div class="tabs">
+      <div class="tab active" id="tab-queue" onclick="showTab('queue',null)">Queue</div>
+      <div class="tab" id="tab-register" onclick="showTab('register',null)">Register</div>
+      <div class="tab" id="tab-vitals" onclick="showTab('vitals',null)">Vitals</div>
+      <div class="tab" id="tab-patients" onclick="showTab('patients',null)">Patients</div>
+      <div class="tab" id="tab-history" onclick="showTab('history',null)">History</div>
+      <div class="tab" id="tab-schedule" onclick="showTab('schedule',null)">Schedule</div>
+      <div class="tab" id="tab-profile" onclick="showTab('profile',null)">Profile</div>
+      <div class="tab" id="tab-notifications" onclick="showTab('notifications',null)">Notifications</div>
+      <div class="tab" id="tab-settings" onclick="showTab('settings',null)">Settings</div>
+    </div>
+    <!-- QUEUE PAGE -->
+    <div class="page active" id="page-queue">
+      <div class="grid2">
+        <div>
+          <div class="grid4" style="margin-bottom:.875rem">
+            <div class="stat-card"><div class="sv" id="sDone">—</div><div class="sl">Done</div></div>
+            <div class="stat-card"><div class="sv" id="sWait">—</div><div class="sl">Waiting</div></div>
+            <div class="stat-card"><div class="sv amber" id="sSkip">—</div><div class="sl">Skipped</div></div>
+            <div class="stat-card"><div class="sv" id="sEst">—</div><div class="sl">Est. left</div></div>
+          </div>
+          <div class="card">
+            <div class="ch"><i class="ti ti-list-numbers" aria-hidden="true"></i><span class="ch-title">Patient token list</span><span class="bdg bg" id="totalBdg">—</span></div>
+            <div style="overflow-x:auto">
+              <table class="tbl"><thead><tr><th>Token</th><th>Patient</th><th>Age</th><th>Complaint</th><th>Vitals</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="queueBody"></tbody></table>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="call-panel">
+            <div class="cp-lbl">Now consulting</div>
+            <div class="cp-tok" id="cpTok">—</div>
+            <div class="cp-name" id="cpName">—</div>
+            <div class="cp-cc" id="cpCC">—</div>
+            <div class="cp-timer"><i class="ti ti-clock" style="font-size:14px" aria-hidden="true"></i><span id="timerDisp">00:00</span> elapsed · <span id="slotMin">20</span> min slot</div>
+            <button class="cp-btn" onclick="callNext()"><i class="ti ti-player-skip-forward" aria-hidden="true"></i> Call Next Token</button>
+          </div>
+          <div class="card" style="margin-bottom:.875rem">
+            <div class="ch"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i><span class="ch-title">Queue control</span></div>
+            <div class="qctrl">
+              <button class="qb" onclick="holdToken()"><i class="ti ti-player-pause" aria-hidden="true"></i> Hold</button>
+              <button class="qb" onclick="skipToken()"><i class="ti ti-player-track-next" aria-hidden="true"></i> Skip</button>
+              <button class="qb danger" onclick="markNoShow()"><i class="ti ti-user-x" aria-hidden="true"></i> No Show</button>
+              <button class="qb" onclick="markDone()"><i class="ti ti-check" aria-hidden="true"></i> Mark Done</button>
+              <button class="qb" onclick="openNoteModal(null)"><i class="ti ti-note" style="color:var(--g600)" aria-hidden="true"></i> Quick Note</button>
+              <button class="qb" onclick="reorderQueue()"><i class="ti ti-arrows-sort" style="color:var(--g600)" aria-hidden="true"></i> Re-order</button>
+              <button class="qb" onclick="openReferModal(null)"><i class="ti ti-arrow-forward-up" style="color:var(--g600)" aria-hidden="true"></i> Refer to Dr</button>
+              <button class="qb danger" onclick="cancelToken(null)"><i class="ti ti-circle-x" aria-hidden="true"></i> Cancel</button>
+              <button class="qb emg" onclick="addEmergency()"><i class="ti ti-ambulance" style="color:#dc2626;font-size:16px" aria-hidden="true"></i> Add Emergency Token</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><i class="ti ti-progress" aria-hidden="true"></i><span class="ch-title">Today's progress</span></div>
+            <div class="cb">
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Queue completion</span><span id="progPct" style="color:var(--g700);font-weight:500">25%</span></div>
+              <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+              <div style="font-size:11px;color:var(--color-text-secondary,#64748b);margin-top:.5rem" id="avgTime">Loading...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- REGISTER PAGE -->
+    <div class="page" id="page-register">
+      <div class="grid2">
+        <div class="card">
+          <div class="ch"><i class="ti ti-user-plus" aria-hidden="true"></i><span class="ch-title">Register new patient / walk-in</span></div>
+          <div class="cb">
+            <div class="form-row">
+              <div class="form-group"><label>Full name *</label><input type="text" id="regName" placeholder="Patient full name"></div>
+              <div class="form-group"><label>Age *</label><input type="number" id="regAge" placeholder="Age" min="0" max="120"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Gender</label>
+                <select id="regGender"><option>Male</option><option>Female</option><option>Other</option></select>
+              </div>
+              <div class="form-group"><label>Phone number</label><input type="text" id="regPhone" placeholder="98XXXXXXXX"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Token type</label>
+                <select id="regType"><option value="normal">Normal</option><option value="priority">Priority</option><option value="emergency">Emergency</option></select>
+              </div>
+              <div class="form-group"><label>Appointment time</label><input type="time" id="regTime" value="10:30"></div>
+            </div>
+            <div class="form-group"><label>Chief complaint</label><input type="text" id="regCC" placeholder="e.g. Fever, headache, follow-up..."></div>
+            <div class="form-group"><label>Address / notes</label><textarea id="regAddr" placeholder="Optional address or intake notes"></textarea></div>
+            <div style="display:flex;gap:.5rem;margin-top:.25rem">
+              <button class="btn-primary" onclick="registerPatient()"><i class="ti ti-plus" style="font-size:14px;vertical-align:-2px" aria-hidden="true"></i> Add to Queue</button>
+              <button class="btn-sec" onclick="clearRegForm()">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="ch"><i class="ti ti-clipboard-list" aria-hidden="true"></i><span class="ch-title">Today's registrations</span></div>
+            <div id="regList" style="max-height:380px;overflow-y:auto"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- VITALS PAGE -->
+    <div class="page" id="page-vitals">
+      <div class="grid2">
+        <div class="card">
+          <div class="ch"><i class="ti ti-activity" aria-hidden="true"></i><span class="ch-title">Record patient vitals</span></div>
+          <div class="cb">
+            <div class="form-group"><label>Select patient / token</label>
+              <select id="vitalPatient"></select>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Blood pressure (mmHg)</label><input type="text" id="vBP" placeholder="120/80"></div>
+              <div class="form-group"><label>Pulse rate (bpm)</label><input type="number" id="vPulse" placeholder="72"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Temperature (°C)</label><input type="number" step="0.1" id="vTemp" placeholder="37.0"></div>
+              <div class="form-group"><label>SpO2 (%)</label><input type="number" id="vSpo2" placeholder="98"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Weight (kg)</label><input type="number" step="0.1" id="vWeight" placeholder="65.0"></div>
+              <div class="form-group"><label>Height (cm)</label><input type="number" id="vHeight" placeholder="165"></div>
+            </div>
+            <div class="form-group"><label>RBS / Blood sugar (mg/dL)</label><input type="number" id="vRBS" placeholder="110"></div>
+            <div style="display:flex;gap:.5rem;margin-top:.25rem">
+              <button class="btn-primary" onclick="saveVitals()"><i class="ti ti-device-floppy" style="font-size:14px;vertical-align:-2px" aria-hidden="true"></i> Save Vitals</button>
+              <button class="btn-sec" onclick="clearVitals()">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="ch"><i class="ti ti-heart-rate-monitor" aria-hidden="true"></i><span class="ch-title">Current vitals — <span id="vPatientName">select patient</span></span></div>
+            <div class="cb">
+              <div class="vitals-grid" id="vitalsDisplay">
+                <div class="vcard"><div class="vval">—</div><div class="vlbl">BP (mmHg)</div></div>
+                <div class="vcard"><div class="vval">—</div><div class="vlbl">Pulse (bpm)</div></div>
+                <div class="vcard"><div class="vval">—</div><div class="vlbl">Temp (°C)</div></div>
+                <div class="vcard"><div class="vval">—</div><div class="vlbl">SpO2 (%)</div></div>
+                <div class="vcard"><div class="vval">—</div><div class="vlbl">Weight (kg)</div></div>
+                <div class="vcard"><div class="vval">—</div><div class="vlbl">BMI</div></div>
+              </div>
+              <div id="vitalsAlerts"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- PATIENTS PAGE -->
+    <div class="page" id="page-patients">
+      <div class="search-bar"><input type="text" placeholder="Search by name, phone, complaint..." id="pSearch" oninput="filterPatients()"><button class="btn-primary" onclick="filterPatients()"><i class="ti ti-search" style="font-size:14px;vertical-align:-2px" aria-hidden="true"></i> Search</button></div>
+      <div id="patientList"></div>
+    </div>
+    <!-- HISTORY PAGE -->
+    <div class="page" id="page-history">
+      <div class="card">
+        <div class="ch"><i class="ti ti-history" aria-hidden="true"></i><span class="ch-title">Visit history — all consultations</span></div>
+        <div id="historyList"></div>
+      </div>
+    </div>
+    <!-- SCHEDULE PAGE -->
+    <div class="page" id="page-schedule">
+      <div class="grid2">
+        <div class="card">
+          <div class="ch"><i class="ti ti-calendar" aria-hidden="true"></i><span class="ch-title">Daily schedule — Sun 14 Jun</span></div>
+          <div id="scheduleList"></div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="ch"><i class="ti ti-clock-edit" aria-hidden="true"></i><span class="ch-title">Consultation time settings</span></div>
+            <div class="cb">
+              <div class="form-group"><label>Default slot duration (min) — 20 min minimum</label><input type="number" id="slotDurInput" value="20" min="20" max="60" onchange="updateSlot()"></div>
+              <div class="form-group"><label>Start time</label><input type="time" id="schedStart" value="09:00"></div>
+              <div class="form-group"><label>End time</label><input type="time" id="schedEnd" value="17:00"></div>
+              <div class="form-group"><label>Break time</label><input type="time" id="breakTime" value="13:00"></div>
+              <button class="btn-primary" onclick="saveSchedule()">Save schedule</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- PROFILE PAGE -->
+    <div class="page" id="page-profile">
+      <div class="grid2">
+        <div class="card">
+          <div class="ch"><i class="ti ti-user-circle" style="color:var(--g600);font-size:20px" aria-hidden="true"></i><span class="ch-title">My Profile</span></div>
+          <div class="cb" id="profileDisplay">
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem">
+              <div style="width:64px;height:64px;border-radius:50%;background:var(--g600);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:#fff" id="profAvatar">DR</div>
+              <div>
+                <div style="font-size:18px;font-weight:600" id="profName">—</div>
+                <div style="font-size:13px;color:var(--color-text-secondary,#64748b)" id="profRole">—</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+              <div><div style="font-size:11px;color:var(--color-text-secondary,#64748b);font-weight:500">Specialty</div><div style="font-size:14px;font-weight:500;margin-top:2px" id="profSpecialty">—</div></div>
+              <div><div style="font-size:11px;color:var(--color-text-secondary,#64748b);font-weight:500">Qualification</div><div style="font-size:14px;font-weight:500;margin-top:2px" id="profQual">—</div></div>
+              <div><div style="font-size:11px;color:var(--color-text-secondary,#64748b);font-weight:500">Phone</div><div style="font-size:14px;font-weight:500;margin-top:2px" id="profPhone">—</div></div>
+              <div><div style="font-size:11px;color:var(--color-text-secondary,#64748b);font-weight:500">Email</div><div style="font-size:14px;font-weight:500;margin-top:2px" id="profEmail">—</div></div>
+              <div><div style="font-size:11px;color:var(--color-text-secondary,#64748b);font-weight:500">Department</div><div style="font-size:14px;font-weight:500;margin-top:2px" id="profDept">—</div></div>
+              <div><div style="font-size:11px;color:var(--color-text-secondary,#64748b);font-weight:500">Token Prefix</div><div style="font-size:14px;font-weight:500;margin-top:2px" id="profPrefix">—</div></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:.875rem">
+            <div class="ch"><i class="ti ti-id-badge" aria-hidden="true"></i><span class="ch-title">Status</span></div>
+            <div class="cb" style="text-align:center">
+              <div style="font-size:14px;margin-bottom:.75rem">Current status: <span class="bdg bg" id="profStatusBadge">Available</span></div>
+              <div style="display:flex;gap:.5rem;justify-content:center">
+                <button class="qb" onclick="setProfStatus('active')" style="border-color:var(--g400)"><i class="ti ti-circle-check" style="color:var(--g600)"></i> Available</button>
+                <button class="qb" onclick="setProfStatus('on-leave')" style="border-color:#fcd34d"><i class="ti ti-clock-off" style="color:#d97706"></i> On Break</button>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><i class="ti ti-info-circle" aria-hidden="true"></i><span class="ch-title">Account info</span></div>
+            <div class="cb" style="font-size:13px;line-height:2">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-secondary,#64748b)">Module</span><span>Doctor Dashboard</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-secondary,#64748b)">Developed by</span><span>Auralith Bit</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- NOTIFICATIONS PAGE -->
+    <div class="page" id="page-notifications">
+      <div class="card">
+        <div class="ch"><i class="ti ti-bell" aria-hidden="true"></i><span class="ch-title">Notifications</span><button class="btn-sec" style="font-size:11px;padding:.25rem .625rem" onclick="clearNotifs()">Clear all</button></div>
+        <div id="notifList"></div>
+      </div>
+    </div>
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div class="grid2">
+        <div class="card">
+          <div class="ch"><i class="ti ti-settings" aria-hidden="true"></i><span class="ch-title">System settings</span></div>
+          <div class="cb">
+            <div class="settings-section">
+              <h4>Queue preferences</h4>
+              <div class="toggle-row">Auto-advance to next token after done <label class="toggle"><input type="checkbox" checked id="setAutoAdv"><span class="tslider"></span></label></div>
+              <div class="toggle-row">Show patient age in queue <label class="toggle"><input type="checkbox" checked><span class="tslider"></span></label></div>
+              <div class="toggle-row">Show chief complaint in queue <label class="toggle"><input type="checkbox" checked><span class="tslider"></span></label></div>
+              <div class="toggle-row">Alert on no-show (sound) <label class="toggle"><input type="checkbox"><span class="tslider"></span></label></div>
+            </div>
+            <div class="settings-section">
+              <h4>Notes & records</h4>
+              <div class="toggle-row">Notes visible to patient by default <label class="toggle"><input type="checkbox" checked id="setNoteVisible"><span class="tslider"></span></label></div>
+              <div class="toggle-row">Require note before marking done <label class="toggle"><input type="checkbox"><span class="tslider"></span></label></div>
+            </div>
+            <div class="settings-section">
+              <h4>Display</h4>
+              <div class="toggle-row">Show vitals column in queue <label class="toggle"><input type="checkbox" checked><span class="tslider"></span></label></div>
+              <div class="toggle-row">Compact queue row height <label class="toggle"><input type="checkbox"><span class="tslider"></span></label></div>
+            </div>
+            <div style="font-size:12px;color:var(--color-text-secondary,#64748b);margin-top:.5rem"><i class="ti ti-info-circle" style="font-size:13px;vertical-align:-2px"></i> Profile settings are managed by the hospital admin. View your profile under <strong>My Profile</strong>.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><i class="ti ti-info-circle" aria-hidden="true"></i><span class="ch-title">System info</span></div>
+          <div class="cb" style="font-size:13px;line-height:2">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-secondary,#64748b)">Version</span><span>NoWait HMS v2.0</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-secondary,#64748b)">Module</span><span>Doctor Dashboard</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-secondary,#64748b)">Developed by</span><span>Auralith Bit</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-secondary,#64748b)">Date</span><span>June 14, 2026</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<!-- NOTE MODAL (in-flow) -->
+<div id="noteModalWrap" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:150;align-items:center;justify-content:center;min-height:400px">
+  <div style="background:var(--color-background-primary,#fff);border-radius:14px;width:400px;overflow:hidden;border:.5px solid rgba(0,0,0,.1)">
+    <div style="padding:.875rem 1.125rem;border-bottom:.5px solid rgba(0,0,0,.08);display:flex;align-items:center;gap:7px">
+      <i class="ti ti-notes" style="font-size:17px;color:var(--g600)" aria-hidden="true"></i>
+      <span style="font-size:14px;font-weight:500;flex:1">Consultation note</span>
+      <button onclick="closeNote()" style="background:none;border:none;cursor:pointer;font-size:18px;display:flex;color:var(--color-text-secondary,#64748b)"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div style="padding:1rem 1.125rem">
+      <div style="background:var(--g50);border-radius:8px;padding:.625rem .875rem;margin-bottom:.875rem;font-size:13px">
+        <div style="font-weight:500" id="noteModalPt">—</div>
+        <div style="font-size:11px;color:var(--color-text-secondary,#64748b);margin-top:2px" id="noteModalMeta">—</div>
+      </div>
+      <div style="margin-bottom:.5rem"><label style="font-size:12px;color:var(--color-text-secondary,#64748b);font-weight:500;display:block;margin-bottom:4px">Diagnosis / findings</label>
+        <textarea id="noteDiag" style="width:100%;border:.5px solid rgba(0,0,0,.15);border-radius:7px;padding:.5rem .625rem;font-size:13px;font-family:inherit;resize:vertical;min-height:70px;background:var(--color-background-primary,#fff);color:var(--color-text-primary,#0f172a)" placeholder="Diagnosis, findings..."></textarea>
+      </div>
+      <div style="margin-bottom:.5rem"><label style="font-size:12px;color:var(--color-text-secondary,#64748b);font-weight:500;display:block;margin-bottom:4px">Prescription / advice</label>
+        <textarea id="notePrx" style="width:100%;border:.5px solid rgba(0,0,0,.15);border-radius:7px;padding:.5rem .625rem;font-size:13px;font-family:inherit;resize:vertical;min-height:55px;background:var(--color-background-primary,#fff);color:var(--color-text-primary,#0f172a)" placeholder="Medications, advice, follow-up..."></textarea>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-secondary,#64748b)">
+        <i class="ti ti-eye" style="font-size:13px" aria-hidden="true"></i> Visible to patient
+        <input type="checkbox" id="noteVis" checked style="accent-color:var(--g600);margin-left:2px">
+      </div>
+    </div>
+    <div style="padding:.75rem 1.125rem;border-top:.5px solid rgba(0,0,0,.08);display:flex;gap:.5rem;justify-content:flex-end">
+      <button class="btn-sec" onclick="closeNote()">Cancel</button>
+      <button class="btn-primary" onclick="saveNote()">Save note</button>
+    </div>
+  </div>
+</div>
+<!-- REFER TO DOCTOR MODAL -->
+<div id="referModalWrap" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:150;align-items:center;justify-content:center;min-height:400px">
+  <div style="background:var(--color-background-primary,#fff);border-radius:14px;width:400px;overflow:hidden;border:.5px solid rgba(0,0,0,.1)">
+    <div style="padding:.875rem 1.125rem;border-bottom:.5px solid rgba(0,0,0,.08);display:flex;align-items:center;gap:7px">
+      <i class="ti ti-arrow-forward-up" style="font-size:17px;color:var(--g600)" aria-hidden="true"></i>
+      <span style="font-size:14px;font-weight:500;flex:1">Refer to another doctor</span>
+      <button onclick="closeRefer()" style="background:none;border:none;cursor:pointer;font-size:18px;display:flex;color:var(--color-text-secondary,#64748b)"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div style="padding:1rem 1.125rem">
+      <div style="background:var(--g50);border-radius:8px;padding:.625rem .875rem;margin-bottom:.875rem;font-size:13px">
+        <div style="font-weight:500" id="referModalPt">—</div>
+        <div style="font-size:11px;color:var(--color-text-secondary,#64748b);margin-top:2px" id="referModalMeta">—</div>
+      </div>
+      <div class="form-group"><label>Refer to doctor</label>
+        <select id="referDoctor"></select>
+      </div>
+      <div class="form-group"><label>Reason for referral</label>
+        <textarea id="referReason" placeholder="Reason, suspected condition, urgency..."></textarea>
+      </div>
+    </div>
+    <div style="padding:.75rem 1.125rem;border-top:.5px solid rgba(0,0,0,.08);display:flex;gap:.5rem;justify-content:flex-end">
+      <button class="btn-sec" onclick="closeRefer()">Cancel</button>
+      <button class="btn-primary" onclick="saveRefer()">Save referral</button>
+    </div>
+  </div>
+</div>
+<script>
+const sLabel={done:'Done',serving:'In Progress',waiting:'Waiting',skipped:'Skipped',noshow:'No Show',hold:'On Hold',referred:'Referred',cancelled:'Cancelled'};
+const sBadge={done:'bg',serving:'bb',waiting:'bs',skipped:'ba',noshow:'br',hold:'ba',referred:'bp',cancelled:'br'};
+let queueData=[];
+let curIdx=-1;
+let timerSec=0;
+let timerInt=null;
+let noteTarget=null;
+let referTarget=null;
+const EARLY_FINISH_SEC=10*60;
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800)}
+
+function showTab(id,sideEl){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.sitem').forEach(s=>s.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+  if(sideEl)sideEl.classList.add('active');
+  else{const s=document.querySelector(`.sitem[onclick*="'${id}'"]`);if(s)s.classList.add('active');}
+  const titles={queue:'Today\'s Token Queue',register:'Register Patient',vitals:'Record Vitals',patients:'Patient Directory',history:'Visit History',schedule:'Schedule View',profile:'My Profile',notifications:'Notifications',settings:'Settings'};
+  document.getElementById('pageTitle').textContent=titles[id]||id;
+  if(id==='patients')renderPatients();
+  if(id==='history')loadHistory();
+  if(id==='schedule')loadSchedule();
+  if(id==='profile')loadProfile();
+  if(id==='notifications')loadNotifs();
+  if(id==='vitals')populateVitalSelect();
+  if(id==='register')renderRegList();
+}
+
+async function loadQueue(){
+  try {
+    const data=await API.get('/api/doctor/queue/');
+    queueData=data;
+    curIdx=queueData.findIndex(p=>p.status==='serving');
+    renderQueue();
+    updateCP();
+    if(curIdx>=0)startTimer();else{clearInterval(timerInt);document.getElementById('timerDisp').textContent='00:00';}
+  } catch(e){toast('Failed to load queue');}
+}
+
+async function loadStats(){
+  try {
+    const s=await API.get('/api/doctor/queue/stats/');
+    document.getElementById('sDone').textContent=s.done;
+    document.getElementById('sWait').textContent=s.waiting;
+    document.getElementById('sSkip').textContent=(s.skipped||0)+(s.noshow||0);
+    document.getElementById('sEst').textContent=s.est_time||'—';
+    document.getElementById('totalBdg').textContent=s.total+' Tokens';
+    const pct=s.total>0?Math.round(s.done/s.total*100):0;
+    document.getElementById('progPct').textContent=pct+'%';
+    document.getElementById('progFill').style.width=pct+'%';
+  } catch(e){}
+}
+
+function renderQueue(){
+  const tb=document.getElementById('queueBody');
+  tb.innerHTML=queueData.map((p,i)=>`<tr class="${p.status==='serving'?'cur':''}${p.status==='cancelled'?' cancelled-row':''}">
+    <td><div class="tnum${p.status==='serving'?' cur':''}">${p.token.replace(/^[A-Z]+-/,'')}</div></td>
+    <td><div class="pname">${p.patient_name}</div><div class="pmeta">${p.status==='referred'?'<i class="ti ti-arrow-forward-up" style="font-size:11px;color:#6b21a8"></i> Referred to '+(p.referred_to||'—'):p.note?'<i class="ti ti-note" style="font-size:11px;color:var(--g600)"></i> Note':'No note'}</div></td>
+    <td style="font-size:12px">${p.age}${p.gender&&p.gender!=='—'?' / '+p.gender[0]:''}</td>
+    <td style="font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.complaint}</td>
+    <td>${p.vitals&&p.vitals.bp?`<span class="bdg bg" style="font-size:10px">${p.vitals.temp?p.vitals.temp+'°C':'—'}</span>`:'<span style="color:var(--color-text-secondary,#64748b);font-size:11px">Pending</span>'}</td>
+    <td><span class="bdg ${sBadge[p.status]||'bs'}">${sLabel[p.status]||p.status}</span></td>
+    <td><div class="abts">
+      <button class="ab g" onclick="openNoteModal(${i})" title="Note"><i class="ti ti-pencil" style="font-size:12px"></i></button>
+      ${p.status==='waiting'?`<button class="ab" onclick="setStatus(${i},'serving')" title="Start"><i class="ti ti-player-play" style="font-size:12px"></i></button>`:''}
+      ${p.status!=='done'&&p.status!=='noshow'&&p.status!=='cancelled'&&p.status!=='referred'?`<button class="ab" onclick="setStatus(${i},'done')" title="Done"><i class="ti ti-check" style="font-size:12px"></i></button>`:''}
+      ${p.status!=='done'&&p.status!=='cancelled'&&p.status!=='referred'&&p.status!=='noshow'?`<button class="ab" onclick="openReferModal(${i})" title="Refer"><i class="ti ti-arrow-forward-up" style="font-size:12px"></i></button><button class="ab" onclick="cancelToken(${i})" title="Cancel"><i class="ti ti-circle-x" style="font-size:12px;color:#dc2626"></i></button>`:''}
+      <button class="ab" onclick="viewVitals(${i})" title="Vitals"><i class="ti ti-activity" style="font-size:12px"></i></button>
+    </div></td>
+  </tr>`).join('');
+  loadStats();
+}
+
+function updateCP(){
+  const c=queueData[curIdx];if(!c){document.getElementById('cpTok').textContent='—';document.getElementById('cpName').textContent='—';document.getElementById('cpCC').textContent='—';return;}
+  document.getElementById('cpTok').textContent=c.token;
+  document.getElementById('cpName').textContent=c.patient_name;
+  document.getElementById('cpCC').textContent=c.complaint;
+}
+
+function startTimer(){clearInterval(timerInt);timerSec=0;timerInt=setInterval(()=>{timerSec++;const m=String(Math.floor(timerSec/60)).padStart(2,'0'),s=String(timerSec%60).padStart(2,'0');document.getElementById('timerDisp').textContent=m+':'+s;},1000);}
+
+async function callNext(){
+  try {
+    const res=await API.post('/api/doctor/queue/call-next/');
+    if(res.queue_complete){toast('All tokens completed!');clearInterval(timerInt);await loadQueue();return;}
+    curIdx=queueData.findIndex(p=>p.id===res.id);
+    await loadQueue();
+    toast('Called: '+res.patient_name+' ('+res.token+')');
+  } catch(e){toast('Failed to call next');}
+}
+
+async function holdToken(){await setStatus(curIdx,'hold');}
+async function skipToken(){await setStatus(curIdx,'skipped');}
+async function markNoShow(){await setStatus(curIdx,'noshow');}
+
+async function markDone(){
+  try {
+    await API.patch('/api/doctor/queue/'+queueData[curIdx].id+'/status/',{status:'done'});
+    await callNext();
+    toast('Marked done, called next');
+  } catch(e){toast('Failed to mark done');}
+}
+
+async function setStatus(i,newStatus){
+  try {
+    const p=queueData[i];
+    const res=await API.patch('/api/doctor/queue/'+p.id+'/status/',{status:newStatus});
+    if(newStatus==='serving'){curIdx=i;updateCP();startTimer();}
+    await loadQueue();
+  } catch(e){toast('Failed to update status');}
+}
+
+async function reorderQueue(){
+  try {
+    const res=await API.post('/api/doctor/queue/reorder/');
+    toast(res.message);
+  } catch(e){toast('Failed to reorder');}
+}
+
+async function addEmergency(){
+  const name=prompt('Emergency patient name:');if(!name)return;
+  try {
+    await API.post('/api/doctor/queue/emergency/',{patient_name:name});
+    await loadQueue();
+    toast('Emergency token added for '+name);
+  } catch(e){toast('Failed to add emergency');}
+}
+
+async function openNoteModal(i){
+  noteTarget=i!==null?i:curIdx;
+  const p=queueData[noteTarget];
+  if(!p){toast('No patient selected');return;}
+  document.getElementById('noteModalPt').textContent=p.patient_name;
+  document.getElementById('noteModalMeta').textContent=p.token+' · '+p.complaint;
+  try {
+    const note=await API.get('/api/doctor/notes/'+p.id+'/');
+    document.getElementById('noteDiag').value=note.diagnosis||'';
+    document.getElementById('notePrx').value=note.prescription||'';
+    document.getElementById('noteVis').checked=note.is_visible_to_patient!==false;
+  } catch(e){
+    document.getElementById('noteDiag').value='';
+    document.getElementById('notePrx').value='';
+    document.getElementById('noteVis').checked=true;
+  }
+  document.getElementById('noteModalWrap').style.display='flex';
+}
+
+function closeNote(){document.getElementById('noteModalWrap').style.display='none';}
+
+async function saveNote(){
+  if(noteTarget===null||!queueData[noteTarget])return;
+  const p=queueData[noteTarget];
+  try {
+    await API.post('/api/doctor/notes/',{
+      queue_entry:p.id,
+      diagnosis:document.getElementById('noteDiag').value,
+      prescription:document.getElementById('notePrx').value,
+      is_visible_to_patient:document.getElementById('noteVis').checked,
+    });
+    closeNote();
+    await loadQueue();
+    toast('Note saved for '+p.patient_name);
+  } catch(e){toast('Failed to save note');}
+}
+
+function viewVitals(i){showTab('vitals',null);setTimeout(()=>{const sel=document.getElementById('vitalPatient');if(sel)sel.value=i;showVitals(i);},100);}
+
+async function openReferModal(i){
+  referTarget=i!==null?i:curIdx;
+  const p=queueData[referTarget];
+  if(!p){toast('No patient selected');return;}
+  document.getElementById('referModalPt').textContent=p.patient_name;
+  document.getElementById('referModalMeta').textContent=p.token+' · '+p.complaint;
+  try {
+    const docs=await API.get('/api/doctor/refer/doctors/');
+    const sel=document.getElementById('referDoctor');
+    sel.innerHTML=docs.map(d=>`<option value="${d.name} (${d.specialty})">${d.name} — ${d.specialty||d.department_name}</option>`).join('');
+  } catch(e){}
+  document.getElementById('referReason').value='';
+  document.getElementById('referModalWrap').style.display='flex';
+}
+
+function closeRefer(){document.getElementById('referModalWrap').style.display='none';}
+
+async function saveRefer(){
+  if(referTarget===null)return;
+  const p=queueData[referTarget];
+  const doc=document.getElementById('referDoctor').value;
+  const reason=document.getElementById('referReason').value.trim();
+  if(!reason){toast('Please add a reason for referral');return;}
+  try {
+    await API.post('/api/doctor/refer/'+p.id+'/',{doctor:doc,reason:reason});
+    closeRefer();
+    await loadQueue();
+    toast(p.patient_name+' referred to '+doc);
+  } catch(e){toast('Failed to save referral');}
+}
+
+async function cancelToken(i){
+  const idx=i!==null?i:curIdx;
+  const p=queueData[idx];
+  if(!p||!confirm('Cancel token '+p.token+' for '+p.patient_name+'?'))return;
+  try {
+    await API.patch('/api/doctor/queue/'+p.id+'/status/',{status:'cancelled'});
+    await loadQueue();
+    toast('Token '+p.token+' cancelled');
+  } catch(e){toast('Failed to cancel');}
+}
+
+async function registerPatient(){
+  const name=document.getElementById('regName').value.trim();
+  const age=document.getElementById('regAge').value;
+  if(!name||!age){toast('Name and age required');return;}
+  try {
+    await API.post('/api/doctor/patients/register/',{
+      patient_name:name,
+      patient_phone:document.getElementById('regPhone').value||'',
+      complaint:document.getElementById('regCC').value||'General consultation',
+      token_type:document.getElementById('regType').value,
+      age:parseInt(age),
+      gender:document.getElementById('regGender').value,
+    });
+    clearRegForm();
+    await loadQueue();
+    renderRegList();
+    toast('Registered '+name);
+  } catch(e){toast('Failed to register patient');}
+}
+
+function clearRegForm(){['regName','regAge','regPhone','regCC','regAddr'].forEach(id=>document.getElementById(id).value='');document.getElementById('regGender').value='Male';document.getElementById('regType').value='normal';}
+
+function renderRegList(){
+  const el=document.getElementById('regList');
+  if(!el)return;
+  el.innerHTML=queueData.slice().reverse().map(p=>`<div class="history-item"><div class="hdate">${p.token}</div><div class="hcontent"><div class="htitle">${p.patient_name} <span class="bdg ${sBadge[p.status]||'bs'}" style="font-size:10px;padding:1px 6px">${sLabel[p.status]||p.status}</span></div><div class="hdesc">${p.age?p.age+'y':'—'} · ${p.complaint}</div></div></div>`).join('');
+}
+
+function populateVitalSelect(){
+  const sel=document.getElementById('vitalPatient');
+  sel.innerHTML=queueData.map((p,i)=>`<option value="${i}">${p.token} — ${p.patient_name}</option>`).join('');
+  sel.onchange=()=>showVitals(parseInt(sel.value));
+  if(curIdx>=0){sel.value=curIdx;showVitals(curIdx);}
+}
+
+async function showVitals(i){
+  const p=queueData[i];if(!p)return;
+  document.getElementById('vPatientName').textContent=p.patient_name;
+  try {
+    const v=await API.get('/api/doctor/vitals/'+p.id+'/');
+    const bmi=v.weight&&v.height?Math.round(v.weight/(v.height/100)**2*10)/10:'—';
+    const cells=[
+      {val:v.bp||'—',lbl:'BP (mmHg)',warn:v.bp&&parseInt(v.bp)>140,danger:v.bp&&parseInt(v.bp)>160},
+      {val:v.pulse||'—',lbl:'Pulse (bpm)',warn:v.pulse>100||v.pulse<60,danger:v.pulse>120},
+      {val:v.temp||'—',lbl:'Temp (°C)',warn:v.temp>37.5,danger:v.temp>38.5},
+      {val:v.spo2||'—',lbl:'SpO2 (%)',warn:v.spo2<95,danger:v.spo2<90},
+      {val:v.weight||'—',lbl:'Weight (kg)',warn:false,danger:false},
+      {val:bmi,lbl:'BMI',warn:bmi>25&&bmi!=='—',danger:bmi>30&&bmi!=='—'},
+    ];
+    document.getElementById('vitalsDisplay').innerHTML=cells.map(c=>`<div class="vcard${c.danger?' danger':c.warn?' warn':''}"><div class="vval">${c.val}</div><div class="vlbl">${c.lbl}</div></div>`).join('');
+    const alerts=[];
+    if(v.temp>38)alerts.push('<div class="bdg br" style="margin-bottom:4px;font-size:12px"><i class="ti ti-alert-triangle" style="font-size:13px;vertical-align:-2px"></i> Fever: '+v.temp+'°C</div>');
+    if(v.spo2&&v.spo2<95)alerts.push('<div class="bdg br" style="margin-bottom:4px;font-size:12px"><i class="ti ti-alert-triangle" style="font-size:13px;vertical-align:-2px"></i> Low SpO2: '+v.spo2+'%</div>');
+    if(v.bp&&parseInt(v.bp)>140)alerts.push('<div class="bdg ba" style="margin-bottom:4px;font-size:12px"><i class="ti ti-alert-circle" style="font-size:13px;vertical-align:-2px"></i> Elevated BP: '+v.bp+' mmHg</div>');
+    document.getElementById('vitalsAlerts').innerHTML=alerts.join('');
+  } catch(e){}
+}
+
+async function saveVitals(){
+  const sel=document.getElementById('vitalPatient');
+  const i=parseInt(sel.value);
+  const p=queueData[i];if(!p)return;
+  try {
+    await API.post('/api/doctor/vitals/',{
+      queue_entry:p.id,
+      bp:document.getElementById('vBP').value,
+      pulse:parseInt(document.getElementById('vPulse').value)||null,
+      temp:parseFloat(document.getElementById('vTemp').value)||null,
+      spo2:parseInt(document.getElementById('vSpo2').value)||null,
+      weight:parseFloat(document.getElementById('vWeight').value)||null,
+      height:parseInt(document.getElementById('vHeight').value)||null,
+      rbs:parseInt(document.getElementById('vRBS').value)||null,
+    });
+    showVitals(i);
+    toast('Vitals saved for '+p.patient_name);
+  } catch(e){toast('Failed to save vitals');}
+}
+
+function clearVitals(){['vBP','vPulse','vTemp','vSpo2','vWeight','vHeight','vRBS'].forEach(id=>document.getElementById(id).value='');}
+
+async function filterPatients(){
+  const q=document.getElementById('pSearch').value||'';
+  await renderPatients(q);
+}
+
+async function renderPatients(q=''){
+  const list=document.getElementById('patientList');if(!list)return;
+  try {
+    const data=q?await API.get('/api/doctor/patients/?q='+encodeURIComponent(q)):await API.get('/api/doctor/patients/');
+    list.innerHTML=data.map((p,i)=>`<div class="pcard">
+      <div class="pav">${p.patient_name.split(' ').map(w=>w[0]).join('').slice(0,2)||'?'}</div>
+      <div class="pinfo"><div class="pn">${p.patient_name} <span class="bdg ${sBadge[p.status]||'bs'}" style="font-size:10px;padding:1px 5px">${sLabel[p.status]||p.status}</span></div>
+      <div class="pm">${p.token} · ${p.age?p.age+'y':'—'} · ${p.patient_phone} · ${p.complaint}</div></div>
+      <div class="pacts">
+        <button class="ab g" onclick="openNoteModal(${queueData.findIndex(x=>x.id===p.id)})" title="Note"><i class="ti ti-pencil" style="font-size:12px"></i></button>
+        <button class="ab" onclick="viewVitals(${queueData.findIndex(x=>x.id===p.id)})" title="Vitals"><i class="ti ti-activity" style="font-size:12px"></i></button>
+      </div>
+    </div>`).join('');
+  } catch(e){list.innerHTML='<div style="padding:1rem;text-align:center;color:var(--color-text-secondary)">No patients found</div>';}
+}
+
+async function loadHistory(){
+  try {
+    const data=await API.get('/api/doctor/history/');
+    document.getElementById('historyList').innerHTML=data.map(h=>`<div class="history-item">
+      <div class="hdate">${h.date}<br><span style="color:var(--color-text-secondary,#64748b);font-size:10px">${h.token}</span></div>
+      <div class="hcontent"><div class="htitle">${h.name} <span style="color:var(--color-text-secondary,#64748b);font-weight:400;font-size:12px">— ${h.complaint}</span></div>
+      <div class="hdesc"><i class="ti ti-stethoscope" style="font-size:11px;vertical-align:-1px"></i> ${h.diag||'—'} &nbsp;|&nbsp; <i class="ti ti-pill" style="font-size:11px;vertical-align:-1px"></i> ${h.rx||'—'}</div></div>
+    </div>`).join('');
+  } catch(e){document.getElementById('historyList').innerHTML='<div style="padding:1rem;text-align:center;color:var(--color-text-secondary)">No history</div>';}
+}
+
+async function loadSchedule(){
+  try {
+    const s=await API.get('/api/doctor/schedule/');
+    document.getElementById('slotDurInput').value=s.slot_duration||30;
+    document.getElementById('schedStart').value=s.start_time||'09:00';
+    document.getElementById('schedEnd').value=s.end_time||'17:00';
+    document.getElementById('breakTime').value=s.break_time||'13:00';
+    document.getElementById('slotMin').textContent=s.slot_duration||30;
+  } catch(e){}
+  const times=['09:00','09:10','09:20','09:30','09:40','09:50','10:00','10:10','10:20','10:30','10:40','10:50'];
+  document.getElementById('scheduleList').innerHTML=queueData.slice(0,12).map((p,i)=>`<div class="sched-row">
+    <div class="stime">${times[i]||'—'}</div>
+    <div><div class="sinfo">${p.patient_name}</div><div class="smeta">${p.complaint}</div></div>
+    <span class="bdg ${sBadge[p.status]||'bs'}">${sLabel[p.status]||p.status}</span>
+  </div>`).join('');
+}
+
+async function loadNotifs(){
+  try {
+    const data=await API.get('/api/doctor/notifications/');
+    const badge=document.getElementById('notifBadge');
+    if(badge)badge.textContent=data.length;
+    document.getElementById('notifList').innerHTML=data.map(n=>`<div class="notif-item">
+      <div class="notif-icon ${n.icon_class||'ni-blue'}"><i class="ti ${n.icon||'ti-info-circle'}"></i></div>
+      <div class="notif-text">${n.message}</div>
+      <div class="notif-time">${n.created_at||''}</div>
+    </div>`).join('');
+  } catch(e){}
+}
+
+async function clearNotifs(){
+  try {
+    await API.del('/api/doctor/notifications/clear/');
+    document.getElementById('notifList').innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--color-text-secondary,#64748b);font-size:13px">No notifications</div>';
+    document.getElementById('notifBadge').textContent='0';
+    toast('Notifications cleared');
+  } catch(e){toast('Failed to clear');}
+}
+
+async function updateSlot(){
+  let v=parseInt(document.getElementById('slotDurInput').value)||30;
+  if(v<10){v=10;document.getElementById('slotDurInput').value=10;toast('Minimum consult slot is 10 minutes');}
+  else{toast('Slot duration updated to '+v+' min');}
+  document.getElementById('slotMin').textContent=v;
+}
+
+async function saveSchedule(){
+  try {
+    await API.put('/api/doctor/schedule/',{
+      slot_duration:parseInt(document.getElementById('slotDurInput').value)||30,
+      start_time:document.getElementById('schedStart').value,
+      end_time:document.getElementById('schedEnd').value,
+      break_time:document.getElementById('breakTime').value,
+    });
+    toast('Schedule saved');
+  } catch(e){toast('Failed to save schedule');}
+}
+
+async function loadProfile(){
+  try {
+    const p=await API.get('/api/doctor/profile/');
+    document.getElementById('profAvatar').textContent=p.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('profName').textContent=p.name;
+    document.getElementById('profRole').textContent=(p.specialty||'')+(p.department_name?' · '+p.department_name:'');
+    document.getElementById('profSpecialty').textContent=p.specialty||'—';
+    document.getElementById('profQual').textContent=p.qualification||'—';
+    document.getElementById('profPhone').textContent=p.phone||'—';
+    document.getElementById('profEmail').textContent=p.email||'—';
+    document.getElementById('profDept').textContent=p.department_name||'—';
+    document.getElementById('profPrefix').textContent=p.prefix||'—';
+    const statusLabels={active:'Available','on-leave':'On Break'};
+    const statusColors={active:'bg','on-leave':'ba'};
+    document.getElementById('profStatusBadge').textContent=statusLabels[p.status]||p.status;
+    document.getElementById('profStatusBadge').className='bdg '+(statusColors[p.status]||'bs');
+  } catch(e){}
+}
+
+async function setProfStatus(status){
+  try {
+    await API.patch('/api/doctor/status/',{status});
+    await loadProfile();
+    const s=document.getElementById('docStatusBtn');
+    const labels={active:'Available','on-leave':'On Break'};
+    const colors={active:['var(--g400)','var(--g900)'],'on-leave':['#fcd34d','#92400e']};
+    s.textContent=labels[status]||status;
+    s.style.background=colors[status]?.[0]||'var(--g400)';
+    s.style.color=colors[status]?.[1]||'var(--g900)';
+    toast('Status: '+s.textContent);
+  } catch(e){toast('Failed to update status');}
+}
+
+function printQueue(){window.print&&window.print();toast('Printing queue...');}
+
+function toggleTheme(){
+  const html=document.documentElement;
+  const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  document.getElementById('themeIcon').className=next==='dark'?'ti ti-sun':'ti ti-moon';
+  document.getElementById('themeLabel').textContent=next==='dark'?'Light':'Dark';
+}
+
+function logout(){
+  API.clearToken();
+  window.location.href = '/login/';
+}
+
+async function cycleStatus(){
+  const btn=document.getElementById('docStatusBtn');
+  const states=['Available','On Break','Unavailable'];
+  const backendMap={Available:'active','On Break':'on-leave','Unavailable':'on-leave'};
+  const bgs=['var(--g400)','#fcd34d','#fca5a5'];
+  const cols=['var(--g900)','#92400e','#991b1b'];
+  let i=states.indexOf(btn.textContent);i=(i+1)%3;
+  btn.textContent=states[i];btn.style.background=bgs[i];btn.style.color=cols[i];
+  try {
+    await API.patch('/api/doctor/status/',{status:backendMap[states[i]]});
+    toast('Status: '+states[i]);
+  } catch(e){}
+}
+
+async function loadDoctorProfile(){
+  try {
+    const profile=await API.get('/api/doctor/profile/');
+    const initials=profile.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    document.querySelector('.sdoc-av').textContent=initials;
+    document.querySelector('.sdoc-name').textContent=profile.name;
+    document.querySelector('.sdoc-role').textContent=profile.specialty||profile.department_name||'Doctor';
+    document.getElementById('setDocName').value=profile.name;
+    document.getElementById('setDept').value=profile.specialty||'';
+    if(profile.status==='on-leave'){
+      const btn=document.getElementById('docStatusBtn');
+      btn.textContent='On Break';btn.style.background='#fcd34d';btn.style.color='#92400e';
+    }
+  } catch(e){}
+}
+
+async function initDashboard(){
+  const token=API.getToken();
+  if(!token){window.location.href='/login/';return;}
+  try {
+    const user=await API.getMe();
+    if(user.role!=='doctor'&&user.role!=='hospital_admin'&&user.role!=='super_admin'){window.location.href='/login/';return;}
+    document.querySelector('.tdate').innerHTML='<i class="ti ti-calendar" style="font-size:14px;vertical-align:-2px;margin-right:3px" aria-hidden="true"></i>'+new Date().toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+    await Promise.all([loadDoctorProfile(), loadQueue()]);
+    document.body.classList.add('js-ready');
+  } catch(e){API.clearToken();window.location.href='/login/';}
+}
+
+initDashboard();
+</script>
+</body>
+</html>
