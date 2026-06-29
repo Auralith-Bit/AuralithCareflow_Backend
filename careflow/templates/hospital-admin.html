@@ -1679,6 +1679,7 @@
 let doctors = [];
 let departments = [];
 let staffList = [];
+let departmentColorMap = {};
 let holidays = [];
 let dashboardStats = null;
 let hospitalProfile = null;
@@ -2480,6 +2481,14 @@ function renderDashboard() {
   // Weekly/range OPD SVG chart
   renderWeeklyOPDChart(opdData);
 
+  // Build department color map from all active departments (stable, range-independent)
+  departmentColorMap = {};
+  const unifiedPalette = ['var(--green-main)', 'var(--accent-blue)', 'var(--accent-orange)', 'var(--accent-purple)', 'var(--accent-gold)', '#e63946'];
+  (s.all_departments || []).sort().forEach((dept, i) => {
+    departmentColorMap[dept] = unifiedPalette[i % unifiedPalette.length];
+  });
+  departmentColorMap['Unknown'] = 'var(--gray-400)';
+
   // OPD by doctor (already range-aware from backend)
   renderOPDByDoctor(s.opd_by_doctor || []);
 
@@ -2617,8 +2626,8 @@ function renderOPDByDoctor(data) {
   const maxCount = Math.max(...data.map(d => d.count), 1);
   cont.innerHTML = data.map(d => {
     const pct = Math.round(d.count / maxCount * 100);
-    const colors = ['var(--green-main)', 'var(--accent-blue)', 'var(--accent-orange)', 'var(--accent-purple)', 'var(--accent-gold)'];
-    const color = colors[data.indexOf(d) % colors.length];
+    const dept = d.department || '';
+    const color = departmentColorMap[dept] || 'var(--gray-400)';
     return `<div class="metric-row"><div class="metric-label" style="display:flex;align-items:center;gap:8px;">
       <div class="doc-avatar-lg ${d.avatar_color}" style="width:28px;height:28px;font-size:11px;">${d.initials}</div> ${d.name}
     </div>
@@ -2638,17 +2647,17 @@ function renderDeptShareDonut(data) {
     return;
   }
   const total = data.total || 1;
-  const maxDepts = Math.min(depts.length, 4);
+  const maxDepts = Math.min(depts.length, 6);
   let donutSlices = '';
   let cumOffset = 0;
-  const colors = ['var(--green-main)', 'var(--accent-blue)', 'var(--accent-orange)', 'var(--accent-purple)'];
   for (let i = 0; i < maxDepts; i++) {
     const d = depts[i];
     const pct = d.percentage;
+    const color = departmentColorMap[d.name];
     const circ = 283;
     const dashLen = (pct / 100) * circ;
     const offset = -cumOffset;
-    donutSlices += `<circle cx="60" cy="60" r="45" fill="none" stroke="${colors[i]}" stroke-width="18" stroke-dasharray="${dashLen} ${circ - dashLen}" stroke-dashoffset="${offset}" transform="rotate(-90 60 60)"/>`;
+    donutSlices += `<circle cx="60" cy="60" r="45" fill="none" stroke="${color}" stroke-width="18" stroke-dasharray="${dashLen} ${circ - dashLen}" stroke-dashoffset="${offset}" transform="rotate(-90 60 60)"/>`;
     cumOffset += pct;
   }
   const otherPct = 100 - depts.slice(0, maxDepts).reduce((s, d) => s + d.percentage, 0);
@@ -2658,9 +2667,10 @@ function renderDeptShareDonut(data) {
     donutSlices += `<circle cx="60" cy="60" r="45" fill="none" stroke="#e8f5e9" stroke-width="18" stroke-dasharray="${dashLen} ${circ - dashLen}" stroke-dashoffset="${-cumOffset}" transform="rotate(-90 60 60)"/>`;
   }
 
-  const legend = depts.slice(0, maxDepts).map((d, i) =>
-    `<div class="legend-item"><div class="legend-dot" style="background:${colors[i]}"></div>${d.name} (${d.percentage}%)</div>`
-  ).join('');
+  const legend = depts.slice(0, maxDepts).map((d, i) => {
+    const color = departmentColorMap[d.name];
+    return `<div class="legend-item"><div class="legend-dot" style="background:${color}"></div>${d.name} (${d.percentage}%)</div>`;
+  }).join('');
   if (otherPct > 0) {
     legend += `<div class="legend-item"><div class="legend-dot" style="background:#e8f5e9;border:1px solid var(--gray-300)"></div>Others (${otherPct}%)</div>`;
   }
