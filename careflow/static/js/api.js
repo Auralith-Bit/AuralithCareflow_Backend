@@ -149,6 +149,7 @@ const API = {
     appointments(params = '') { return API.get('/api/patient/appointments/' + params); },
     createAppointment(data) { return API.post('/api/patient/appointments/', data); },
     cancelAppointment(id) { return API.del(`/api/patient/appointments/${id}/`); },
+    rescheduleAppointment(id, data) { return API.patch(`/api/patient/appointments/${id}/reschedule/`, data); },
     createReview(data) { return API.post('/api/patient/reviews/', data); },
     notifications() { return API.get('/api/patient/notifications/'); },
     markNotificationRead(id) { return API.patch(`/api/patient/notifications/${id}/read/`); },

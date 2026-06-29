@@ -34,17 +34,22 @@ class QueueEntrySerializer(serializers.ModelSerializer):
                   'complaint', 'status', 'note', 'vitals', 'visit_type', 'time',
                   'referred_to', 'refer_reason', 'doctor_name', 'department_name']
 
+    def _get_from_notes(self, obj, key):
+        if obj.notes:
+            for part in obj.notes.split('|'):
+                if ':' in part:
+                    k, v = part.split(':', 1)
+                    if k.strip() == key and v.strip():
+                        return v.strip()
+        return None
+
     def get_age(self, obj):
-        if obj.patient and hasattr(obj.patient, 'created_at'):
-            birth = getattr(obj.patient, 'date_of_birth', None)
-            if birth:
-                from datetime import date
-                today = date.today()
-                return today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
-        return '—'
+        age = self._get_from_notes(obj, 'age')
+        return age if age else '—'
 
     def get_gender(self, obj):
-        return '—'
+        gender = self._get_from_notes(obj, 'gender')
+        return gender if gender else '—'
 
     def get_complaint(self, obj):
         return obj.notes.split('|')[0] if obj.notes else 'General consultation'
