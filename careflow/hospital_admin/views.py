@@ -175,10 +175,11 @@ class DashboardStatsView(generics.GenericAPIView):
         # ── Totals ──
         total_doctors = Doctor.objects.filter(is_active=True).count()
         total_departments = Department.objects.filter(is_active=True).count()
+        all_departments = list(Department.objects.filter(is_active=True).values_list('name', flat=True))
         total_staff = User.objects.exclude(role__in=['patient', 'super_admin']).count()
 
         # ── Queue today ──
-        today_qs = QueueEntry.objects.filter(created_at__gte=today_start, created_at__lt=today_end)
+        today_qs = QueueEntry.objects.filter(created_at__gte=today_start, created_at__lt=today_end).select_related('doctor__department')
         patients_today = today_qs.count()
 
         # ── Avg wait time (today) ──
@@ -214,7 +215,8 @@ class DashboardStatsView(generics.GenericAPIView):
         # ── Department load today ──
         dept_raw = defaultdict(int)
         for entry in today_qs:
-            dept_raw[entry.department_name] += 1
+            name = entry.doctor.department.name if entry.doctor and entry.doctor.department else 'Unknown'
+            dept_raw[name] += 1
         total_dept = sum(dept_raw.values()) or 1
         dept_colors = ['#52b788', '#4361ee', '#f4a261', '#7209b7', '#e63946', '#e9c46a']
         dept_load = []
@@ -243,7 +245,7 @@ class DashboardStatsView(generics.GenericAPIView):
             })
 
         # ── Range-aware period queryset (for Reports & Analytics) ──
-        range_qs = QueueEntry.objects.filter(created_at__gte=period_start, created_at__lt=period_end)
+        range_qs = QueueEntry.objects.filter(created_at__gte=period_start, created_at__lt=period_end).select_related('doctor__department')
 
         # ── Range OPD grouping ──
         if range_param == 'daily':
@@ -301,6 +303,7 @@ class DashboardStatsView(generics.GenericAPIView):
                     'name': doc.name,
                     'initials': initials,
                     'avatar_color': doc.avatar_color or 'av-1',
+                    'department': doc.department.name if doc.department else '',
                     'count': count,
                     'percentage': round(count / max_doc_count * 100),
                 })
@@ -316,7 +319,8 @@ class DashboardStatsView(generics.GenericAPIView):
         # ── Department OPD share (range period) ──
         dept_share_raw = defaultdict(int)
         for entry in range_qs:
-            dept_share_raw[entry.department_name] += 1
+            name = entry.doctor.department.name if entry.doctor and entry.doctor.department else 'Unknown'
+            dept_share_raw[name] += 1
         total_share = sum(dept_share_raw.values()) or 1
         dept_share_colors = ['#52b788', '#4361ee', '#f4a261', '#7209b7', '#e63946', '#e9c46a']
         dept_shares = []
@@ -415,6 +419,7 @@ class DashboardStatsView(generics.GenericAPIView):
             'total_doctors': total_doctors,
             'total_staff': total_staff,
             'total_departments': total_departments,
+            'all_departments': all_departments,
             'patients_today': patients_today,
             'avg_wait_time': avg_wait_min,
             'doctors_on_duty': doctors_on_duty,
