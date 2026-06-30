@@ -18,6 +18,7 @@ urlpatterns = [
     path('reviews/', views.DoctorReviewCreateView.as_view(), name='patient-create-review'),
     path('notifications/', views.NotificationListView.as_view(), name='patient-notifications'),
     path('notifications/<int:pk>/read/', views.NotificationMarkReadView.as_view(), name='patient-notification-read'),
+    path('notifications/read-all/', views.NotificationMarkAllReadView.as_view(), name='patient-notifications-read-all'),
     path('queue/status/', views.QueueStatusView.as_view(), name='patient-queue-status'),
     path('queue/qr/', views.QueueQRView.as_view(), name='patient-queue-qr'),
     path('my-bookings/', views.MyBookingsView.as_view(), name='patient-my-bookings'),

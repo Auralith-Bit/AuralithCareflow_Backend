@@ -591,6 +591,13 @@ class NotificationMarkReadView(APIView):
         return Response({'status': 'ok'})
 
 
+class NotificationMarkAllReadView(APIView):
+    def patch(self, request):
+        profile, _ = PatientProfile.objects.get_or_create(user=request.user)
+        updated = NotificationLog.objects.filter(patient=profile, is_read=False).update(is_read=True)
+        return Response({'updated': updated})
+
+
 class GuestBookingView(APIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []

@@ -915,7 +915,10 @@ async function loadNotifs(){
   try {
     const data=await API.get('/api/doctor/notifications/');
     const badge=document.getElementById('notifBadge');
-    if(badge)badge.textContent=data.length;
+    if(badge){
+      badge.textContent=data.length;
+      badge.style.display=data.length>0?'inline':'none';
+    }
     document.getElementById('notifList').innerHTML=data.map(n=>`<div class="notif-item">
       <div class="notif-icon ${n.icon_class||'ni-blue'}"><i class="ti ${n.icon||'ti-info-circle'}"></i></div>
       <div class="notif-text">${n.message}</div>
@@ -929,6 +932,7 @@ async function clearNotifs(){
     await API.del('/api/doctor/notifications/clear/');
     document.getElementById('notifList').innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--color-text-secondary,#64748b);font-size:13px">No notifications</div>';
     document.getElementById('notifBadge').textContent='0';
+    document.getElementById('notifBadge').style.display='none';
     toast('Notifications cleared');
   } catch(e){toast('Failed to clear');}
 }
