@@ -547,13 +547,13 @@ class QueueStatusView(APIView):
         else:
             base_qs = QueueEntry.objects.none()
 
+        today = timezone.now().date()
+        today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+        today_end = today_start + timedelta(days=1)
         my_entry = base_qs.exclude(status__in=['done', 'cancelled']).filter(token=token).first()
         if my_entry and my_entry.scheduled_date:
             entries = base_qs.filter(scheduled_date=my_entry.scheduled_date)
         else:
-            today = timezone.now().date()
-            today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
-            today_end = today_start + timedelta(days=1)
             entries = base_qs.filter(
                 Q(created_at__gte=today_start, created_at__lt=today_end, scheduled_date__isnull=True) |
                 Q(scheduled_date=today)
@@ -561,18 +561,48 @@ class QueueStatusView(APIView):
         entries = entries.exclude(status__in=['done', 'cancelled']).order_by('time')
 
         now_serving = entries.filter(status='serving').first()
-        ahead = 0
         my_entry = entries.filter(token=token).first()
-        if my_entry and now_serving:
+        ahead = 0
+        if my_entry:
             all_ids = list(entries.values_list('id', flat=True))
-            my_pos = all_ids.index(my_entry.id)
-            serving_pos = all_ids.index(now_serving.id) if now_serving.id in all_ids else 0
-            ahead = max(0, my_pos - serving_pos)
+            if my_entry.id in all_ids:
+                my_pos = all_ids.index(my_entry.id)
+                if now_serving and now_serving.id in all_ids:
+                    serving_pos = all_ids.index(now_serving.id)
+                    ahead = max(0, my_pos - serving_pos)
+                else:
+                    ahead = my_pos
+
+        # Calculate avg consult time from completed entries today
+        completed_today_qs = base_qs.filter(
+            status='done',
+            updated_at__gte=today_start,
+            updated_at__lt=today_end,
+        )
+        completed_count = completed_today_qs.count()
+        avg_consult = 0
+        if completed_count > 0:
+            total_secs = 0
+            samples = 0
+            for entry in completed_today_qs:
+                if entry.created_at and entry.updated_at:
+                    diff = (entry.updated_at - entry.created_at).total_seconds()
+                    if 60 <= diff <= 3600:
+                        total_secs += diff
+                        samples += 1
+            if samples > 0:
+                avg_consult = round(total_secs / samples / 60)
+
+        estimated_wait = avg_consult * ahead if avg_consult and ahead else 0
+
         return Response({
             'now_serving': now_serving.token if now_serving else None,
             'tokens_ahead': ahead,
             'total_waiting': entries.filter(status='waiting').count(),
             'my_status': my_entry.status if my_entry else None,
+            'avg_consult_time': avg_consult,
+            'completed_today': completed_count,
+            'estimated_wait': estimated_wait,
         })
 
 
