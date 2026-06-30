@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
     <title>CareFlow — Smart OPD Booking System</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -182,7 +183,8 @@
             letter-spacing: .5px;
         }
 
-        .sidebar .menu { flex: 1; padding: 10px 6px; }
+        .sidebar .menu-wrap { flex: 1; overflow-y: auto; min-height: 0; }
+        .sidebar .menu { padding: 10px 6px; }
 
         .sidebar .section-title {
             color: #86a79f;
@@ -593,6 +595,7 @@
             border: 1px solid var(--primary); border-radius: 8px;
             color: var(--primary); background-color: rgba(15,159,116,.05);
         }
+        .day.today { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 
         .slots-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
         .slots-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
@@ -1218,7 +1221,7 @@
 
 <!-- SIDEBAR (shared across all pages) -->
 <div class="sidebar">
-    <div>
+    <div class="menu-wrap">
         <div class="logo-section">
             <img src="{% static 'images/Careflow_LOGO.png' %}" alt="CareFlow Logo" class="logo-img">
             <div class="tagline">CARE FLOW</div>
@@ -1269,6 +1272,13 @@
                 <div class="menu-left">
                     <i class="fa-regular fa-bell"></i>
                     <span>Notifications</span>
+                </div>
+            </div>
+
+            <div class="menu-item" onclick="signOut()" style="cursor:pointer;">
+                <div class="menu-left" style="color:#ef4444;">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <span>Logout</span>
                 </div>
             </div>
         </div>
@@ -1659,53 +1669,23 @@
                 <div>
                     <div class="card">
                         <div class="calendar-header">
-                            <div class="month-title">June 2026</div>
+                            <div class="month-title" id="cal-month-title">June 2026</div>
                             <div class="cal-nav-btns">
-                                <button class="cal-nav-btn">&lt;</button>
-                                <button class="cal-nav-btn">&gt;</button>
+                                <button class="cal-nav-btn" onclick="changeMonth(-1)">&lt;</button>
+                                <button class="cal-nav-btn" onclick="changeMonth(1)">&gt;</button>
                             </div>
                         </div>
-                        <div class="calendar-grid">
-                            <div class="weekday">Su</div><div class="weekday">Mo</div><div class="weekday">Tu</div><div class="weekday">We</div><div class="weekday">Th</div><div class="weekday">Fr</div><div class="weekday">Sa</div>
-                            <div class="day">25</div><div class="day">26</div><div class="day">27</div><div class="day">28</div><div class="day">29</div><div class="day">30</div><div class="day">31</div>
-                            <div class="day">1</div>
-                            <div class="day available">2</div>
-                            <div class="day available selected">3</div>
-                            <div class="day available">4</div>
-                            <div class="day available">5</div>
-                            <div class="day available">6</div>
-                            <div class="day">7</div>
-                            <div class="day">8</div>
-                            <div class="day available">9</div>
-                            <div class="day available">10</div>
-                            <div class="day">11</div>
-                            <div class="day available">12</div>
-                            <div class="day available">13</div>
-                            <div class="day">14</div>
-                            <div class="day">15</div>
-                            <div class="day available">16</div>
-                            <div class="day available">17</div>
-                            <div class="day available">18</div>
-                            <div class="day available">19</div>
-                            <div class="day available">20</div>
-                            <div class="day">21</div>
+                        <div class="calendar-grid" id="cal-grid">
                         </div>
                     </div>
 
                     <div class="card">
                         <div class="slots-header">
-                            <div style="font-weight:700;font-size:16px;color:var(--text-heading)">Available Slots — Jun 3</div>
-                            <div style="color:var(--text-muted);font-size:14px">8 slots available</div>
+                            <div style="font-weight:700;font-size:16px;color:var(--text-heading)">Available Slots</div>
+                            <div style="color:var(--text-muted);font-size:14px" id="slots-count">Select a date</div>
                         </div>
-                        <div class="slots-grid">
-                            <div class="slot-btn full">09:00 <span class="slot-status">Full</span></div>
-                            <div class="slot-btn full">09:30 <span class="slot-status">Full</span></div>
-                            <div class="slot-btn">10:00</div>
-                            <div class="slot-btn">10:30</div>
-                            <div class="slot-btn selected">11:00</div>
-                            <div class="slot-btn">11:30</div>
-                            <div class="slot-btn">12:00</div>
-                            <div class="slot-btn">14:00</div>
+                        <div class="slots-grid" id="slots-grid">
+                            <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1">Please select a date to see available slots</div>
                         </div>
                     </div>
                 </div>
@@ -2402,6 +2382,16 @@
     }
 
     async function initPatientApp() {
+        try {
+            const me = await API.getMe();
+            if (!me || me.role !== 'patient') {
+                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#333;background:#f5f5f5"><div style="text-align:center;padding:40px;background:white;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.1)"><h2>Access Denied</h2><p style="color:#666;margin:12px 0">This page is for patients only.<br>Please login with a patient account.</p><a href="/login/" style="display:inline-block;padding:10px 24px;background:#15b887;color:white;border-radius:8px;text-decoration:none;font-weight:600">Go to Login</a></div></div>';
+                return;
+            }
+        } catch (e) {
+            window.location.href = '/login/';
+            return;
+        }
         await Promise.all([loadDoctors(), loadProfile(), loadMyBookings(), loadFamily()]);
         updateGreeting();
         renderDoctorsList();
@@ -2477,6 +2467,28 @@
         // Handle notifications page - load and mark all as read
         if (pageKey === 'notifications') {
             loadNotificationsPage();
+        }
+
+        // Refresh queue data when navigating to live queue page
+        if (pageKey === 'live-queue' && myBookingsData.length > 0) {
+            const b = myBookingsData[0];
+            loadQueueStatus(b.token, b.doctor_name).then(() => {
+                updateQueueMetrics();
+                updateDashboardTokenInfo();
+            });
+        }
+
+        // Render calendar when navigating to booking date/time page
+        if (pageKey === 'book-datetime' && selectedDoctor) {
+            calDate = new Date();
+            calDate.setDate(1);
+            renderCalendar();
+            const now = new Date();
+            const todayStr = fmtDate(now.getFullYear(), now.getMonth(), now.getDate());
+            const todayEl = document.querySelector(`#cal-grid .day[data-date="${todayStr}"]`);
+            if (todayEl && todayEl.classList.contains('available')) {
+                selectDay(todayEl);
+            }
         }
     }
 
@@ -2595,47 +2607,65 @@
         const nowServing = liveQueueState.now_serving;
         const ahead = liveQueueState.tokens_ahead;
         const totalWaiting = liveQueueState.total_waiting;
-        const hasQueue = nowServing != null;
+        const avgConsult = liveQueueState.avg_consult_time || 0;
+        const completedToday = liveQueueState.completed_today || 0;
+        const estimatedWait = liveQueueState.estimated_wait || 0;
+        const myStatus = liveQueueState.my_status;
+        const hasQueue = myStatus != null;
+        const servingDisplay = nowServing || (hasQueue ? 'Waiting...' : '—');
 
-        setText('serving-token-display', hasQueue ? nowServing : '—');
-        setText('live-box-token', hasQueue ? nowServing : '—');
+        setText('serving-token-display', servingDisplay);
+        setText('live-box-token', servingDisplay);
         setText('tokens-ahead-display', hasQueue ? (ahead ?? 0) : '—');
         setText('tracker-completion-text', hasQueue ? `${totalWaiting ?? 0} waiting in queue` : '—');
         setText('sidebar-queue-badge', hasQueue ? `${ahead ?? 0} Ahead` : '—');
 
-        setText('lq-now-serving', hasQueue ? nowServing : '—');
-        setText('lq-progress-label', hasQueue ? nowServing + ' Serving Now' : '—');
-        setText('lq-ahead-count', hasQueue ? (ahead ?? 0) : '—');
+        setText('lq-now-serving', servingDisplay);
+        setText('lq-wait-time', estimatedWait > 0 ? estimatedWait : hasQueue ? '~' : '—');
         setText('lq-in-queue', hasQueue ? (totalWaiting ?? 0) : '—');
-        setText('lq-progress-start', hasQueue ? `Start` : '—');
+        setText('lq-avg-consult', avgConsult > 0 ? `${avgConsult} min` : '—');
+        setText('lq-completed', completedToday > 0 ? `${completedToday}` : hasQueue ? '0' : '—');
+        setText('lq-ahead-count', hasQueue ? (ahead ?? 0) : '—');
+        setText('lq-progress-label', (hasQueue && nowServing) ? nowServing + ' Serving Now' : (hasQueue ? 'In Queue' : '—'));
+        setText('lq-progress-start', hasQueue ? 'Start' : '—');
         setText('lq-progress-end', hasQueue ? 'End' : '—');
         setText('lq-progress-summary', hasQueue && myBookingsData.length > 0
             ? `You are token ${myBookingsData[0].token} — ${ahead ?? 0} tokens ahead.`
             : '—');
+        setWidth('lq-progress-fill', hasQueue && totalWaiting > 0
+            ? `${((ahead ?? 0) / totalWaiting) * 100}%`
+            : '0%');
     }
 
     function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
     function setWidth(id, val) { const el = document.getElementById(id); if (el) el.style.width = val; }
 
     function getSelectedAppointmentDate() {
-        const dayEl = document.querySelector('.calendar-grid .day.available.selected');
+        const dayEl = document.querySelector('#cal-grid .day.selected');
+        if (dayEl && dayEl.dataset.date) {
+            const d = new Date(dayEl.dataset.date + 'T00:00:00');
+            const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+        }
         const today = new Date();
-        const day = Number(dayEl?.textContent.trim() || today.getDate());
-        const date = new Date(today.getFullYear(), today.getMonth(), day);
         const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
         const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+        return `${days[today.getDay()]}, ${months[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
     }
 
     function getSelectedAppointmentTime() {
-        const slotEl = document.querySelector('.slots-grid .slot-btn.selected');
-        const raw = (slotEl?.childNodes[0]?.textContent || '11:00').trim();
-        const [hourText, minute = '00'] = raw.split(':');
-        const hour = Number(hourText);
-        if (Number.isNaN(hour)) return raw;
-        const period = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour > 12 ? hour - 12 : hour;
-        return `${displayHour}:${minute} ${period}`;
+        const slotEl = document.querySelector('#slots-grid .slot-btn.selected');
+        if (slotEl) {
+            const raw = slotEl.dataset.time || slotEl.textContent.trim();
+            const [hourText, minute = '00'] = raw.split(':');
+            const hour = Number(hourText);
+            if (Number.isNaN(hour)) return raw;
+            const period = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour > 12 ? hour - 12 : hour;
+            return `${displayHour}:${minute} ${period}`;
+        }
+        return '11:00 AM';
     }
 
     function updateBookingSummaryFields() {
@@ -2663,6 +2693,103 @@
             document.getElementById('pay-amount').textContent = 0;
         }
     }
+
+    function to24hTime(val) {
+        if (!val) return null;
+        const t = val.trim();
+        const m = t.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
+        if (!m) return t;
+        let h = parseInt(m[1], 10);
+        const min = m[2];
+        const p = (m[3] || '').toUpperCase();
+        if (p === 'PM' && h < 12) h += 12;
+        if (p === 'AM' && h === 12) h = 0;
+        return String(h).padStart(2, '0') + ':' + min;
+    }
+
+    function fmtDate(year, month, day) {
+        return year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+    }
+
+    /* Calendar */
+    let calDate = new Date();
+    calDate.setDate(1);
+
+    function renderCalendar() {
+        const grid = document.getElementById('cal-grid');
+        if (!grid) return;
+        const year = calDate.getFullYear();
+        const month = calDate.getMonth();
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        document.getElementById('cal-month-title').textContent = monthNames[month] + ' ' + year;
+        const todayLocal = fmtDate(today.getFullYear(), today.getMonth(), today.getDate());
+        const prevSelected = grid.querySelector('.day.selected');
+        const prevDate = prevSelected ? prevSelected.dataset.date : null;
+
+        let html = '<div class="weekday">Su</div><div class="weekday">Mo</div><div class="weekday">Tu</div><div class="weekday">We</div><div class="weekday">Th</div><div class="weekday">Fr</div><div class="weekday">Sa</div>';
+        for (let i = 0; i < firstDay; i++) {
+            html += '<div class="day"></div>';
+        }
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(year, month, d);
+            const dateStr = fmtDate(year, month, d);
+            const isPast = dateObj < today;
+            const isToday = dateStr === todayLocal;
+            const isSelected = dateStr === prevDate;
+            const classes = ['day'];
+            if (!isPast) classes.push('available');
+            if (isToday) classes.push('today');
+            if (isSelected) classes.push('selected');
+            html += `<div class="${classes.join(' ')}" data-date="${dateStr}"${isPast ? '' : ' onclick="selectDay(this)"'}>${d}</div>`;
+        }
+        grid.innerHTML = html;
+    }
+
+    window.selectDay = (el) => {
+        document.querySelectorAll('#cal-grid .day').forEach(d => d.classList.remove('selected'));
+        el.classList.add('selected');
+        loadSlotsForDate(el.dataset.date);
+        updateBookingSummaryFields();
+    };
+
+    window.changeMonth = (delta) => {
+        calDate.setMonth(calDate.getMonth() + delta);
+        renderCalendar();
+        document.getElementById('slots-grid').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1">Select a date to see available slots</div>';
+        document.getElementById('slots-count').textContent = 'Select a date';
+    };
+
+    async function loadSlotsForDate(dateStr) {
+        if (!selectedDoctor) return;
+        const slotsGrid = document.getElementById('slots-grid');
+        const slotsCount = document.getElementById('slots-count');
+        try {
+            const data = await API.get('/api/patient/doctors/slots/?doctor_id=' + selectedDoctor.id + '&date=' + dateStr);
+            const slots = data.available_slots || data.slots || [];
+            if (slots.length === 0) {
+                slotsGrid.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1">No slots available for this date</div>';
+                slotsCount.textContent = '0 slots available';
+                return;
+            }
+            slotsGrid.innerHTML = slots.map(s => `<div class="slot-btn" onclick="selectSlot(this)" data-time="${s.time}">${s.label}</div>`).join('');
+            slotsCount.textContent = slots.length + ' slots available';
+            const first = slotsGrid.querySelector('.slot-btn');
+            if (first) selectSlot(first);
+        } catch (e) {
+            slotsGrid.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;grid-column:1/-1">Failed to load slots</div>';
+            slotsCount.textContent = 'Unavailable';
+        }
+    }
+
+    window.selectSlot = (el) => {
+        document.querySelectorAll('#slots-grid .slot-btn').forEach(s => s.classList.remove('selected'));
+        el.classList.add('selected');
+        updateBookingSummaryFields();
+    };
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -3062,9 +3189,10 @@
         const paymentMethod = selectedMethod ? selectedMethod.dataset.method : '';
         try {
             const slot = document.querySelector('.slots-grid .slot-btn.selected');
-            const time = slot ? slot.textContent.trim().split('\n')[0].trim() : '09:00';
+            const time = slot ? to24hTime(slot.dataset.time || slot.textContent.trim().split('\n')[0].trim()) : '09:00';
             const day = document.querySelector('.calendar-grid .day.available.selected');
-            const dateStr = day ? day.dataset.date : new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const dateStr = day ? day.dataset.date : fmtDate(now.getFullYear(), now.getMonth(), now.getDate());
             const fee = parseFloat(selectedDoctor.consultation_fee) || 0;
             const appointment = await API.patient.createAppointment({
                 doctor_id: selectedDoctor.id,
@@ -3094,12 +3222,14 @@
             alert(`✅ Appointment confirmed!\n\nDoctor: ${docName}\nToken: ${appointment.token}\n\nSMS confirmation will be sent shortly.`);
             navigateTo('my-bookings');
         } catch (e) {
+            console.error('Booking failed:', e);
             alert('Booking failed: ' + e.message);
         }
     };
 
-    /* Edit Profile Modal */
-    window.openEditProfileModal = () => {
+    /* Reschedule */
+    window.openRescheduleModal = (token) => {
+        const data = myBookingsData.find(b => b.token === token);
         // Pre-fill from current display values
         document.getElementById('edit-name').value    = document.getElementById('disp-name').textContent;
         document.getElementById('edit-phone').value   = document.getElementById('disp-phone').textContent;
@@ -3448,7 +3578,7 @@
                     doctor_name: booking.doctor_name,
                     doctor_specialty: '',
                     department_name: booking.department_name,
-                    appointment_date: selectedDate.toISOString().split('T')[0],
+                    appointment_date: fmtDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()),
                     appointment_time: slotEl.textContent.trim().split('\n')[0].trim(),
                     notes: 'Rescheduled',
                     patient_name: selectedPatient?.name || '',
@@ -3524,19 +3654,9 @@
     window.signOut = () => {
         const confirmed = confirm('Are you sure you want to sign out?');
         if (!confirmed) return;
+        API.clearToken();
         localStorage.removeItem('careflow-theme');
-        document.body.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#045743,#15946e);flex-direction:column;gap:20px;">
-                <div style="background:#fff;border-radius:20px;padding:40px 50px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-width:400px;">
-                    <i class="fa-solid fa-right-from-bracket" style="font-size:48px;color:#045743;margin-bottom:16px;display:block;"></i>
-                    <h2 style="color:#111827;font-size:22px;font-weight:700;margin-bottom:8px;">Signed Out Successfully</h2>
-                    <p style="color:#64748b;font-size:14px;margin-bottom:24px;">You have been securely signed out from CareFlow.</p>
-                    <a href="/login/" style="display:inline-block;background:#045743;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
-                        Sign In Again
-                    </a>
-                </div>
-                <p style="color:rgba(255,255,255,0.7);font-size:13px;">CareFlow — Smart OPD Booking System</p>
-            </div>`;
+        window.location.href = '/login/';
     };
 
     /* Initialization */
