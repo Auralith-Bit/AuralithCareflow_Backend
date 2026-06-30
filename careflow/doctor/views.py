@@ -325,7 +325,10 @@ class VitalsView(APIView):
     permission_classes = [IsDoctor]
 
     def get(self, request, queue_pk):
-        entry = get_object_or_404(QueueEntry, pk=queue_pk)
+        doctor = _get_doctor_for_user(request.user)
+        if not doctor:
+            return Response({'error': 'Doctor not found'}, status=404)
+        entry = get_object_or_404(QueueEntry, pk=queue_pk, doctor=doctor)
         vr = entry.vital_records.first()
         if vr:
             return Response(VitalRecordSerializer(vr).data)
@@ -360,7 +363,10 @@ class ConsultationNoteView(APIView):
     permission_classes = [IsDoctor]
 
     def get(self, request, queue_pk):
-        entry = get_object_or_404(QueueEntry, pk=queue_pk)
+        doctor = _get_doctor_for_user(request.user)
+        if not doctor:
+            return Response({'error': 'Doctor not found'}, status=404)
+        entry = get_object_or_404(QueueEntry, pk=queue_pk, doctor=doctor)
         try:
             cn = entry.consultation_note
             return Response(ConsultationNoteSerializer(cn).data)
@@ -422,7 +428,10 @@ class ReferPatientView(APIView):
     permission_classes = [IsDoctor]
 
     def post(self, request, queue_pk):
-        entry = get_object_or_404(QueueEntry, pk=queue_pk)
+        doctor = _get_doctor_for_user(request.user)
+        if not doctor:
+            return Response({'error': 'Doctor not found'}, status=404)
+        entry = get_object_or_404(QueueEntry, pk=queue_pk, doctor=doctor)
         doctor_name = request.data.get('doctor', '').strip()
         reason = request.data.get('reason', '').strip()
         if not reason:
@@ -435,15 +444,13 @@ class ReferPatientView(APIView):
         entry.notes = _build_notes(extra)
         entry.save()
 
-        doctor = _get_doctor_for_user(request.user)
-        if doctor:
-            DoctorNotification.objects.create(
-                doctor=doctor,
-                type='referral',
-                icon='ti-arrow-forward-up',
-                icon_class='ni-blue',
-                message=f"{entry.patient_name} ({entry.token}) referred to {doctor_name} — {reason}"
-            )
+        DoctorNotification.objects.create(
+            doctor=doctor,
+            type='referral',
+            icon='ti-arrow-forward-up',
+            icon_class='ni-blue',
+            message=f"{entry.patient_name} ({entry.token}) referred to {doctor_name} — {reason}"
+        )
 
         s = QueueEntrySerializer(entry).data
         s['status'] = 'referred'

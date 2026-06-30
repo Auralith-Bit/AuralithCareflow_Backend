@@ -1,5 +1,6 @@
 import logging
 from django.db import models as db_models
+from django.db import transaction
 from rest_framework import generics, permissions, status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -28,6 +29,42 @@ logger = logging.getLogger(__name__)
 @login_required
 def patient_dashboard(request):
     return render(request, 'patient.html')
+
+
+class IsPatient(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == User.Role.PATIENT
+
+
+BOOKED_APPOINTMENT_STATUSES = [
+    Appointment.Status.PENDING,
+    Appointment.Status.CONFIRMED,
+    Appointment.Status.SCHEDULED,
+    Appointment.Status.RESCHEDULED,
+]
+
+
+def _slot_is_available(doctor, appointment_date, appointment_time, exclude_appointment_id=None):
+    if not doctor or not appointment_date or not appointment_time:
+        return False
+
+    appointment_qs = Appointment.objects.filter(
+        doctor=doctor,
+        appointment_date=appointment_date,
+        appointment_time=appointment_time,
+        status__in=BOOKED_APPOINTMENT_STATUSES,
+    )
+    if exclude_appointment_id:
+        appointment_qs = appointment_qs.exclude(pk=exclude_appointment_id)
+
+    queue_qs = QueueEntry.objects.filter(
+        doctor=doctor,
+        scheduled_date=appointment_date,
+        time=appointment_time,
+        status__in=['waiting', 'arrived', 'serving'],
+    )
+
+    return not appointment_qs.exists() and not queue_qs.exists()
 
 
 class PatientRegisterView(APIView):
@@ -79,6 +116,8 @@ class PatientRegisterView(APIView):
 
 
 class PatientProfileView(APIView):
+    permission_classes = [IsPatient]
+
     def get(self, request):
         profile, _ = PatientProfile.objects.get_or_create(user=request.user)
         return Response(PatientProfileSerializer(profile).data)
@@ -108,6 +147,7 @@ class PatientProfileView(APIView):
 
 class FamilyMemberListCreateView(generics.ListCreateAPIView):
     serializer_class = FamilyMemberSerializer
+    permission_classes = [IsPatient]
 
     def get_queryset(self):
         profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
@@ -120,6 +160,7 @@ class FamilyMemberListCreateView(generics.ListCreateAPIView):
 
 class FamilyMemberDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = FamilyMemberSerializer
+    permission_classes = [IsPatient]
 
     def get_queryset(self):
         profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
@@ -308,6 +349,8 @@ class AvailableSlotsView(APIView):
 
 
 class AppointmentListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsPatient]
+
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return AppointmentCreateSerializer
@@ -331,6 +374,15 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
             doctor = Doctor.objects.filter(id=doctor_id, is_active=True).first()
         if not doctor:
             doctor = Doctor.objects.filter(name=serializer.validated_data.get('doctor_name', ''), is_active=True).first()
+        if not doctor:
+            raise serializers.ValidationError({'doctor_id': 'Valid doctor is required'})
+        doctor = Doctor.objects.select_for_update().get(pk=doctor.pk)
+        appointment_date = serializer.validated_data.get('appointment_date', timezone.now().date())
+        appointment_time = serializer.validated_data.get('appointment_time', timezone.now().time())
+        if appointment_date < date.today():
+            raise serializers.ValidationError({'appointment_date': 'Cannot book for a past date'})
+        if not _slot_is_available(doctor, appointment_date, appointment_time):
+            raise serializers.ValidationError({'appointment_time': 'This slot is already booked'})
         doctor_name = doctor.name if doctor else serializer.validated_data.get('doctor_name', '')
         prefix = doctor.prefix if doctor else 'X'
         token = TokenCounter.get_next_token(prefix)
@@ -339,14 +391,12 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        appointment = serializer.instance
-
-        doctor = appointment.doctor
-        if not doctor and appointment.doctor_name:
-            doctor = Doctor.objects.filter(name=appointment.doctor_name, is_active=True).first()
-
-        try:
+        with transaction.atomic():
+            self.perform_create(serializer)
+            appointment = serializer.instance
+            doctor = appointment.doctor
+            if not doctor and appointment.doctor_name:
+                doctor = Doctor.objects.filter(name=appointment.doctor_name, is_active=True).first()
             if doctor:
                 QueueEntry.objects.create(
                     token=appointment.token,
@@ -361,8 +411,6 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
                     scheduled_date=appointment.appointment_date,
                     notes=f"Appointment id: {appointment.id}",
                 )
-        except Exception as e:
-            logger.exception('Failed to create QueueEntry for appointment %s: %s', appointment.id, e)
 
         try:
             NotificationLog.objects.create(
@@ -380,6 +428,8 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
 
 class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = AppointmentSerializer
+    permission_classes = [IsPatient]
+    http_method_names = ['get', 'delete', 'head', 'options']
 
     def get_queryset(self):
         profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
@@ -401,6 +451,8 @@ class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class AppointmentRescheduleView(APIView):
+    permission_classes = [IsPatient]
+
     def patch(self, request, pk):
         from reception.models import QueueEntry, TokenCounter
         from hospital_admin.models import Doctor
@@ -434,21 +486,26 @@ class AppointmentRescheduleView(APIView):
         doctor = appointment.doctor
         if not doctor and appointment.doctor_name:
             doctor = Doctor.objects.filter(name=appointment.doctor_name, is_active=True).first()
-        prefix = doctor.prefix if doctor else 'X'
-        new_token = TokenCounter.get_next_token(prefix)
+        if not doctor:
+            return Response({'error': 'Doctor not found'}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():
+            doctor = Doctor.objects.select_for_update().get(pk=doctor.pk)
+            if not _slot_is_available(doctor, parsed_date, new_time, exclude_appointment_id=appointment.id):
+                return Response({'error': 'This slot is already booked'}, status=status.HTTP_400_BAD_REQUEST)
+            prefix = doctor.prefix
+            new_token = TokenCounter.get_next_token(prefix)
 
-        QueueEntry.objects.filter(token=appointment.token, doctor_name=appointment.doctor_name).update(
-            status='cancelled',
-            notes=f"Cancelled on reschedule to {parsed_date}. Previous token: {appointment.token}",
-        )
+            QueueEntry.objects.filter(token=appointment.token, doctor_name=appointment.doctor_name).update(
+                status='cancelled',
+                notes=f"Cancelled on reschedule to {parsed_date}. Previous token: {appointment.token}",
+            )
 
-        appointment.appointment_date = parsed_date
-        appointment.appointment_time = new_time
-        appointment.token = new_token
-        appointment.status = Appointment.Status.RESCHEDULED
-        appointment.save()
+            appointment.appointment_date = parsed_date
+            appointment.appointment_time = new_time
+            appointment.token = new_token
+            appointment.status = Appointment.Status.RESCHEDULED
+            appointment.save()
 
-        if doctor:
             QueueEntry.objects.create(
                 token=new_token,
                 patient_name=appointment.patient.user.name,
@@ -484,15 +541,24 @@ class QueueStatusView(APIView):
             return Response({'error': 'doctor or doctor_id param required'}, status=400)
 
         if doctor_id:
-            entries = QueueEntry.objects.filter(
-                doctor_id=doctor_id
-            ).exclude(status__in=['done', 'cancelled']).order_by('time')
+            base_qs = QueueEntry.objects.filter(doctor_id=doctor_id)
         elif doctor_name:
-            entries = QueueEntry.objects.filter(
-                doctor_name=doctor_name
-            ).exclude(status__in=['done', 'cancelled']).order_by('time')
+            base_qs = QueueEntry.objects.filter(doctor_name=doctor_name)
         else:
-            entries = QueueEntry.objects.none()
+            base_qs = QueueEntry.objects.none()
+
+        my_entry = base_qs.exclude(status__in=['done', 'cancelled']).filter(token=token).first()
+        if my_entry and my_entry.scheduled_date:
+            entries = base_qs.filter(scheduled_date=my_entry.scheduled_date)
+        else:
+            today = timezone.now().date()
+            today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+            today_end = today_start + timedelta(days=1)
+            entries = base_qs.filter(
+                Q(created_at__gte=today_start, created_at__lt=today_end, scheduled_date__isnull=True) |
+                Q(scheduled_date=today)
+            )
+        entries = entries.exclude(status__in=['done', 'cancelled']).order_by('time')
 
         now_serving = entries.filter(status='serving').first()
         ahead = 0
@@ -512,6 +578,7 @@ class QueueStatusView(APIView):
 
 class MyBookingsView(generics.ListAPIView):
     serializer_class = AppointmentSerializer
+    permission_classes = [IsPatient]
 
     def get_queryset(self):
         profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
@@ -528,6 +595,8 @@ class MyBookingsView(generics.ListAPIView):
 
 
 class DoctorReviewCreateView(APIView):
+    permission_classes = [IsPatient]
+
     def post(self, request):
         serializer = DoctorReviewCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -574,6 +643,7 @@ class DoctorReviewsView(APIView):
 
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationLogSerializer
+    permission_classes = [IsPatient]
 
     def get_queryset(self):
         profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
@@ -581,6 +651,8 @@ class NotificationListView(generics.ListAPIView):
 
 
 class NotificationMarkReadView(APIView):
+    permission_classes = [IsPatient]
+
     def patch(self, request, pk):
         profile, _ = PatientProfile.objects.get_or_create(user=request.user)
         notification = NotificationLog.objects.filter(pk=pk, patient=profile).first()
@@ -592,6 +664,8 @@ class NotificationMarkReadView(APIView):
 
 
 class NotificationMarkAllReadView(APIView):
+    permission_classes = [IsPatient]
+
     def patch(self, request):
         profile, _ = PatientProfile.objects.get_or_create(user=request.user)
         updated = NotificationLog.objects.filter(patient=profile, is_read=False).update(is_read=True)
@@ -613,6 +687,8 @@ class GuestBookingView(APIView):
         from datetime import date
         if data['appointment_date'] < date.today():
             return Response({'error': 'Cannot book for past date'}, status=400)
+        if not _slot_is_available(doctor, data['appointment_date'], data['appointment_time']):
+            return Response({'error': 'This slot is already booked'}, status=status.HTTP_400_BAD_REQUEST)
         guest_name = data.get('patient_name', '') or f'Guest_{data["phone"][-6:]}'
         existing_user = User.objects.filter(phone=data['phone']).first()
         if existing_user and existing_user.role != User.Role.PATIENT:
@@ -628,35 +704,39 @@ class GuestBookingView(APIView):
             }
         )
         profile, _ = PatientProfile.objects.get_or_create(user=user)
-        token = TokenCounter.get_next_token(doctor.prefix)
-        appointment = Appointment.objects.create(
-            patient=profile,
-            doctor=doctor,
-            doctor_name=doctor.name,
-            doctor_specialty=doctor.specialty,
-            department_name=doctor.department.name if doctor.department else '',
-            location=doctor.department.name if doctor.department else '',
-            appointment_date=data['appointment_date'],
-            appointment_time=data['appointment_time'],
-            token=token,
-            fee=doctor.consultation_fee if doctor.consultation_fee else None,
-            status=Appointment.Status.PENDING,
-            notes=data.get('notes', ''),
-        )
+        with transaction.atomic():
+            doctor = Doctor.objects.select_for_update().get(pk=doctor.pk)
+            if not _slot_is_available(doctor, data['appointment_date'], data['appointment_time']):
+                return Response({'error': 'This slot is already booked'}, status=status.HTTP_400_BAD_REQUEST)
+            token = TokenCounter.get_next_token(doctor.prefix)
+            appointment = Appointment.objects.create(
+                patient=profile,
+                doctor=doctor,
+                doctor_name=doctor.name,
+                doctor_specialty=doctor.specialty,
+                department_name=doctor.department.name if doctor.department else '',
+                location=doctor.department.name if doctor.department else '',
+                appointment_date=data['appointment_date'],
+                appointment_time=data['appointment_time'],
+                token=token,
+                fee=doctor.consultation_fee if doctor.consultation_fee else None,
+                status=Appointment.Status.PENDING,
+                notes=data.get('notes', ''),
+            )
 
-        QueueEntry.objects.create(
-            token=token,
-            patient_name=user.name,
-            patient_phone=user.phone or '',
-            doctor=doctor,
-            doctor_name=doctor.name,
-            department_name=doctor.department.name if doctor.department else '',
-            visit_type='Booking',
-            time=data['appointment_time'],
-            status='waiting',
-            scheduled_date=data['appointment_date'],
-            notes=f"Appointment id: {appointment.id}",
-        )
+            QueueEntry.objects.create(
+                token=token,
+                patient_name=user.name,
+                patient_phone=user.phone or '',
+                doctor=doctor,
+                doctor_name=doctor.name,
+                department_name=doctor.department.name if doctor.department else '',
+                visit_type='Booking',
+                time=data['appointment_time'],
+                status='waiting',
+                scheduled_date=data['appointment_date'],
+                notes=f"Appointment id: {appointment.id}",
+            )
 
         NotificationLog.objects.create(
             patient=profile,
