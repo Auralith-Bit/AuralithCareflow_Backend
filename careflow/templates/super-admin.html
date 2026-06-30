@@ -720,9 +720,9 @@ async function confirmAction() {
   }
 }
 
-async function openEditModal(id, firstName, lastName, phone, email) {
+async function openEditModal(id, name, phone, email) {
   document.getElementById('edit-user-id').value = id;
-  document.getElementById('edit-name').value = (firstName + ' ' + lastName).trim();
+  document.getElementById('edit-name').value = name;
   document.getElementById('edit-phone').value = phone;
   document.getElementById('edit-email').value = email;
   // Load user groups
