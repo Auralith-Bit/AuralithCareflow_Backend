@@ -1842,7 +1842,7 @@ function setNav(el, view) {
   document.getElementById('topbar-title').innerHTML = viewTitles[view] || view;
   if (view === 'dashboard') {
     if (analyticsRangeChanged) {
-      loadDashboardStats().then(() => renderDashboard());
+      loadDashboardStats(currentAnalyticsRange).then(() => renderDashboard());
       analyticsRangeChanged = false;
     } else {
       setTimeout(renderDashboard, 50);
@@ -1854,7 +1854,10 @@ function setNav(el, view) {
   if (view === 'holidays') renderHolidays();
   if (view === 'slots') populateSlotDoctors();
   if (view === 'analytics') {
-    setTimeout(() => { renderDashboard(); updateAnalyticsLabels(currentAnalyticsRange); }, 50);
+    loadDashboardStats(currentAnalyticsRange).then(() => {
+      renderDashboard();
+      updateAnalyticsLabels(currentAnalyticsRange);
+    });
   }
   if (view === 'heatmap') renderHeatmap();
 }
@@ -2667,7 +2670,7 @@ function renderDeptShareDonut(data) {
     donutSlices += `<circle cx="60" cy="60" r="45" fill="none" stroke="#e8f5e9" stroke-width="18" stroke-dasharray="${dashLen} ${circ - dashLen}" stroke-dashoffset="${-cumOffset}" transform="rotate(-90 60 60)"/>`;
   }
 
-  const legend = depts.slice(0, maxDepts).map((d, i) => {
+  let legend = depts.slice(0, maxDepts).map((d, i) => {
     const color = departmentColorMap[d.name];
     return `<div class="legend-item"><div class="legend-dot" style="background:${color}"></div>${d.name} (${d.percentage}%)</div>`;
   }).join('');
