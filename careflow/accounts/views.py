@@ -117,7 +117,6 @@ class RegisterView(APIView):
         phone = request.data.get('phone', '').strip()
         name = request.data.get('name', '').strip()
         email = request.data.get('email', '').strip()
-        role = request.data.get('role', 'patient')
         gender = request.data.get('gender', '').strip()
         date_of_birth = request.data.get('date_of_birth', None)
         address = request.data.get('address', '').strip()
@@ -131,16 +130,15 @@ class RegisterView(APIView):
             phone=phone,
             name=name,
             email=email,
-            role=role,
+            role=User.Role.PATIENT,
             gender=gender,
             date_of_birth=date_of_birth if date_of_birth else None,
             address=address,
         )
         user.save()
 
-        if role == 'patient':
-            from Patient.models import PatientProfile
-            PatientProfile.objects.get_or_create(user=user)
+        from Patient.models import PatientProfile
+        PatientProfile.objects.get_or_create(user=user)
 
         refresh = RefreshToken.for_user(user)
         auth_login(request, user)
