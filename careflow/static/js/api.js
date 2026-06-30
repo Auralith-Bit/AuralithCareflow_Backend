@@ -153,6 +153,7 @@ const API = {
     createReview(data) { return API.post('/api/patient/reviews/', data); },
     notifications() { return API.get('/api/patient/notifications/'); },
     markNotificationRead(id) { return API.patch(`/api/patient/notifications/${id}/read/`); },
+    markAllNotificationsRead() { return API.patch('/api/patient/notifications/read-all/'); },
     queueStatus(params) { return API.get('/api/patient/queue/status/?' + params); },
     queueQR(params) { return API.get('/api/patient/queue/qr/?' + params); },
     myBookings(params = '') { return API.get('/api/patient/my-bookings/' + params); },

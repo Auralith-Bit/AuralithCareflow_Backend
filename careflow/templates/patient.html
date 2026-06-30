@@ -934,7 +934,7 @@
         .activity-time-stamp { font-size: 13px; color: var(--text-muted); font-weight: 500; }
 
         /* ==========================================================================
-           PAGE: NOTIFICATIONS (placeholder)
+           PAGE: NOTIFICATIONS
            ========================================================================== */
         .notifications-empty {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -943,6 +943,26 @@
         .notifications-empty i { font-size: 56px; color: var(--text-muted); opacity: .4; }
         .notifications-empty h3 { font-size: 20px; font-weight: 700; color: var(--text-heading); }
         .notifications-empty p { font-size: 14px; color: var(--text-muted); }
+        .notif-item {
+            display: flex; gap: 14px; padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color); align-items: flex-start;
+            transition: background 0.2s;
+        }
+        .notif-item:last-child { border-bottom: none; }
+        .notif-unread { background: rgba(15,159,116,0.04); }
+        .notif-icon {
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 15px; color: #fff;
+        }
+        .ni-green { background: #10b981; }
+        .ni-yellow { background: #f59e0b; }
+        .ni-red { background: #ef4444; }
+        .ni-blue { background: #3b82f6; }
+        .notif-content { flex: 1; min-width: 0; }
+        .notif-title { font-size: 14px; font-weight: 600; color: var(--text-heading); margin-bottom: 2px; }
+        .notif-message { font-size: 13px; color: var(--text-muted); line-height: 1.4; }
+        .notif-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; opacity: 0.7; }
 
         /* ==========================================================================
            PAGE: PAYMENT
@@ -1285,7 +1305,7 @@
                     <button class="icon-btn" id="theme-toggle" title="Toggle Theme">
                         <i class="fa-solid fa-moon"></i>
                     </button>
-                    <button class="icon-btn" onclick="alert('No new notifications!')">
+                    <button class="icon-btn" onclick="navigateTo('notifications')">
                         <i class="fa-regular fa-bell"></i>
                         <span class="notification-dot"></span>
                     </button>
@@ -1413,7 +1433,7 @@
                         <input type="text" placeholder="Search appointments, doctors...">
                     </div>
                     <button class="icon-btn theme-toggle-btn" title="Toggle Theme"><i class="fa-solid fa-moon"></i></button>
-                    <button class="icon-btn"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
+                    <button class="icon-btn" onclick="navigateTo('notifications')"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
                     <button class="icon-btn"><i class="fa-regular fa-circle-question"></i></button>
                 </div>
             </div>
@@ -1513,7 +1533,7 @@
                         <input type="text" id="book-doc-search" placeholder="Search by doctor or department...">
                     </div>
                     <button class="icon-btn theme-toggle-btn" title="Toggle Theme"><i class="fa-solid fa-moon"></i></button>
-                    <button class="icon-btn"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
+                    <button class="icon-btn" onclick="navigateTo('notifications')"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
                     <button class="icon-btn"><i class="fa-regular fa-circle-question"></i></button>
                 </div>
             </div>
@@ -1621,7 +1641,7 @@
                 </div>
                 <div class="top-actions">
                     <button class="icon-btn theme-toggle-btn" title="Toggle Theme"><i class="fa-solid fa-moon"></i></button>
-                    <button class="icon-btn"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
+                    <button class="icon-btn" onclick="navigateTo('notifications')"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
                 </div>
             </div>
 
@@ -1749,7 +1769,7 @@
                 </div>
                 <div class="top-actions">
                     <button class="icon-btn theme-toggle-btn" title="Toggle Theme"><i class="fa-solid fa-moon"></i></button>
-                    <button class="icon-btn"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
+                    <button class="icon-btn" onclick="navigateTo('notifications')"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
                 </div>
             </div>
 
@@ -1899,7 +1919,7 @@
                         <input type="text" placeholder="Search...">
                     </div>
                     <button class="icon-btn theme-toggle-btn" title="Toggle Theme"><i class="fa-solid fa-moon"></i></button>
-                    <button class="icon-btn"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
+                    <button class="icon-btn" onclick="navigateTo('notifications')"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
                     <button class="icon-btn"><i class="fa-regular fa-circle-question"></i></button>
                 </div>
             </div>
@@ -1990,7 +2010,7 @@
                         <input type="text" value="—" readonly>
                     </div>
                     <button class="icon-btn theme-toggle-btn" title="Toggle Theme"><i class="fa-solid fa-moon"></i></button>
-                    <button class="icon-btn"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
+                    <button class="icon-btn" onclick="navigateTo('notifications')"><i class="fa-regular fa-bell"></i><span class="notification-dot"></span></button>
                     <button class="icon-btn"><i class="fa-regular fa-circle-question"></i></button>
                 </div>
             </div>
@@ -2097,11 +2117,7 @@
                 </div>
             </div>
 
-            <div class="notifications-empty">
-                <i class="fa-regular fa-bell-slash"></i>
-                <h3>You're all caught up!</h3>
-                <p>No new notifications right now. Check back after your appointment.</p>
-            </div>
+            <div id="notifList"></div>
 
         </div>
     </div>
@@ -2395,6 +2411,7 @@
         updateBookingSummaryFields();
         navigateTo('dashboard');
         updateQueueMetrics();
+        updateNotificationDots();
     }
 
     /* Theme Controller */
@@ -2456,6 +2473,86 @@
         applyTheme(currentTheme);
 
         window.scrollTo(0, 0);
+
+        // Handle notifications page - load and mark all as read
+        if (pageKey === 'notifications') {
+            loadNotificationsPage();
+        }
+    }
+
+    /* Notifications */
+    async function updateNotificationDots() {
+        try {
+            const notifications = await API.patient.notifications();
+            const unreadCount = notifications.filter(n => !n.is_read).length;
+            const dots = document.querySelectorAll('.notification-dot');
+            dots.forEach(dot => {
+                dot.style.display = unreadCount > 0 ? 'block' : 'none';
+            });
+        } catch (e) {
+            console.warn('Failed to fetch notifications:', e);
+        }
+    }
+
+    async function loadNotificationsPage() {
+        try {
+            const notifications = await API.patient.notifications();
+            const listEl = document.getElementById('notifList');
+            if (!listEl) return;
+
+            const unreadNotifications = notifications.filter(n => !n.is_read);
+            if (unreadNotifications.length > 0) {
+                await API.patient.markAllNotificationsRead();
+            }
+
+            if (notifications.length === 0) {
+                listEl.innerHTML = '<div class="notifications-empty"><i class="fa-regular fa-bell-slash"></i><h3>You\'re all caught up!</h3><p>No new notifications right now. Check back after your appointment.</p></div>';
+            } else {
+                listEl.innerHTML = notifications.map(n => `
+                    <div class="notif-item ${n.is_read ? 'notif-read' : 'notif-unread'}">
+                        <div class="notif-icon ${getNotifIconClass(n.type)}"><i class="fa ${getNotifIcon(n.type)}"></i></div>
+                        <div class="notif-content">
+                            <div class="notif-title">${n.title}</div>
+                            <div class="notif-message">${n.message}</div>
+                            <div class="notif-time">${formatNotifTime(n.created_at)}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            updateNotificationDots();
+        } catch (e) {
+            console.warn('Failed to load notifications:', e);
+        }
+    }
+
+    function getNotifIconClass(type) {
+        const icons = {
+            'booking_confirmed': 'ni-green',
+            'token_alert': 'ni-yellow',
+            'your_turn': 'ni-red',
+            'reminder': 'ni-blue',
+            'cancellation': 'ni-red',
+            'doctor_delayed': 'ni-yellow'
+        };
+        return icons[type] || 'ni-blue';
+    }
+
+    function getNotifIcon(type) {
+        const icons = {
+            'booking_confirmed': 'fa-check-circle',
+            'token_alert': 'fa-bell',
+            'your_turn': 'fa-user-check',
+            'reminder': 'fa-clock',
+            'cancellation': 'fa-times-circle',
+            'doctor_delayed': 'fa-clock'
+        };
+        return icons[type] || 'fa-info-circle';
+    }
+
+    function formatNotifTime(isoString) {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     }
 
     // Sidebar click handlers
@@ -3452,6 +3549,14 @@
             await loadQueueStatus(b.token, b.doctor_name);
             updateQueueMetrics();
             updateDashboardTokenInfo();
+        }
+    }, 30000);
+
+    // Refresh notification dot every 30 seconds
+    setInterval(async () => {
+        const currentPage = document.querySelector('.page.active');
+        if (currentPage && currentPage.id !== 'page-notifications') {
+            await updateNotificationDots();
         }
     }, 30000);
     
