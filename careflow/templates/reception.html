@@ -208,6 +208,20 @@
   .status-badge.cancelled::before { background: var(--accent-red); }
   .status-badge.available { background: linear-gradient(90deg, #d8f3dc, #b7e4c7); color: var(--green-mid); border: 1px solid var(--green-light); animation: availablePulse 2.5s infinite; }
   .status-badge.available::before { background: var(--green-main); }
+  .notif-item{display:flex;gap:.75rem;padding:.75rem .875rem;border-bottom:.5px solid rgba(0,0,0,.06);align-items:flex-start;transition:background .15s;}
+  .notif-item:last-child{border-bottom:none}
+  .notif-item:hover{background:var(--gray-100)}
+  .notif-unread{background:rgba(82,183,136,0.04);border-left:3px solid var(--green-light);}
+  .notif-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
+  .notif-icon.ni-red{background:#ffeaea;color:#e53935}
+  .notif-icon.ni-green{background:#e6f7f2;color:#2e7d32}
+  .notif-icon.ni-blue{background:#e3f2fd;color:#1565c0}
+  .notif-icon.ni-yellow{background:#fff8e1;color:#f57f17}
+  .notif-icon i{font-size:16px}
+  .notif-content{flex:1;min-width:0}
+  .notif-title{font-size:13.5px;font-weight:600;color:var(--gray-800);margin-bottom:2px}
+  .notif-message{font-size:12.5px;color:var(--gray-500);line-height:1.4}
+  .notif-time{font-size:11px;color:var(--gray-400);margin-top:4px}
   @keyframes availablePulse { 0%,100% { box-shadow: 0 0 0 0 rgba(82,183,136,0.3); } 50% { box-shadow: 0 0 0 4px rgba(82,183,136,0); } }
   .cancelled-notice { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--accent-red); background: #fff0f0; border: 1px dashed #fbb; border-radius: 6px; padding: 2px 8px; margin-top: 3px; }
   .patient-name-cell { font-weight: 600; color: var(--gray-700); }
@@ -352,6 +366,7 @@
   <div class="nav-item" onclick="setNav(this, 'search')"><span class="icon">⌕</span> Patient Search</div>
   <div class="nav-item" onclick="setNav(this, 'checkin')"><span class="icon">✔</span> Check-In Patients <span class="nav-badge green" id="nav-checkin-badge">0</span></div>
   <div class="nav-item" onclick="setNav(this, 'schedule')"><span class="icon">⊟</span> OPD Flow</div>
+  <div class="nav-item" onclick="setNav(this, 'notifications')"><span class="icon">🔔</span> Notifications <span class="nav-badge" id="notif-badge">0</span></div>
   <div class="sidebar-bottom">
     <div class="receptionist-card">
       <div class="rec-avatar">{{ user.name|first|default:'R' }}</div>
@@ -544,6 +559,17 @@
       <div class="panel"><div class="panel-header"><h3>📅 Full OPD Queue — All Doctors</h3></div><div class="queue-table-wrap"><table class="queue-table"><thead><tr><th>Token</th><th>Patient</th><th>Doctor</th><th>Dept</th><th>Type</th><th>Status</th><th class="no-print">Actions</th></tr></thead><tbody id="schedule-tbody"></tbody></table></div></div>
     </div>
 
+    <div id="view-notifications" class="tab-content">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>🔔 Notifications</h3>
+          <button class="btn btn-ghost btn-sm" onclick="markAllNotifRead()" style="font-size:12px;">✓ Mark all read</button>
+          <button class="btn btn-outline btn-sm" onclick="clearNotifs()" style="font-size:12px;">🗑️ Clear all</button>
+        </div>
+        <div class="panel-body" id="notifList" style="padding:0;"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -611,6 +637,55 @@ let pendingRescheduleId = null;
 
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
+/* Notifications */
+async function loadNotifs() {
+  try {
+    const data = await API.notifications.list();
+    const badge = document.getElementById('notif-badge');
+    const unread = data.filter(n => !n.is_read).length;
+    if (badge) {
+      badge.textContent = unread;
+      badge.style.display = unread > 0 ? 'inline' : 'none';
+    }
+    const listEl = document.getElementById('notifList');
+    if (!listEl) return;
+    if (data.length === 0) {
+      listEl.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--gray-400);font-size:14px;">🔔 No notifications yet</div>';
+    } else {
+      listEl.innerHTML = data.map(n => `
+        <div class="notif-item ${n.is_read ? '' : 'notif-unread'}">
+          <div class="notif-icon ${n.icon_color || 'ni-blue'}"><i class="ti ${n.icon || 'ti-info-circle'}"></i></div>
+          <div class="notif-content">
+            <div class="notif-title">${n.title || n.type}</div>
+            <div class="notif-message">${n.message}</div>
+            <div class="notif-time">${n.time_ago || ''}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+  } catch(e) { console.warn('Failed to load notifications:', e); }
+}
+
+async function markAllNotifRead() {
+  try {
+    await API.notifications.markAllRead();
+    document.querySelectorAll('.notif-unread').forEach(el => el.classList.remove('notif-unread'));
+    const badge = document.getElementById('notif-badge');
+    if (badge) { badge.textContent = '0'; badge.style.display = 'none'; }
+    toast('All marked as read');
+  } catch(e) { toast('Failed to mark as read'); }
+}
+
+async function clearNotifs() {
+  try {
+    await API.notifications.clear();
+    document.getElementById('notifList').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--gray-400);font-size:14px;">🔔 No notifications yet</div>';
+    const badge = document.getElementById('notif-badge');
+    if (badge) { badge.textContent = '0'; badge.style.display = 'none'; }
+    toast('Notifications cleared');
+  } catch(e) { toast('Failed to clear'); }
+}
+
 async function loadAllData() {
   try {
     const [queue, stats, activity, doctors] = await Promise.all([
@@ -662,11 +737,12 @@ function setNav(el, viewName) {
   el.classList.add('active');
   document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + viewName).classList.add('active');
-  const titles = { dashboard: 'Receptionist <span>Dashboard</span>', queue: "Today's <span>Queue Board</span>", walkin: 'Issue <span>Walk-In Token</span>', search: '<span>Patient</span> Search', checkin: 'Check-In <span>Patients</span>', schedule: 'OPD <span>Flow</span>' };
+  const titles = { dashboard: 'Receptionist <span>Dashboard</span>', queue: "Today's <span>Queue Board</span>", walkin: 'Issue <span>Walk-In Token</span>', search: '<span>Patient</span> Search', checkin: 'Check-In <span>Patients</span>', schedule: 'OPD <span>Flow</span>', notifications: '<span>Notifications</span>' };
   document.getElementById('topbar-title').innerHTML = titles[viewName] || viewName;
   if (viewName === 'queue' || viewName === 'schedule') renderQueueTable();
   if (viewName === 'checkin') renderCheckInTable();
   if (viewName === 'walkin') renderRecentWalkIns();
+  if (viewName === 'notifications') loadNotifs();
   if (viewName === 'dashboard') renderDashboard();
 }
 
@@ -803,6 +879,7 @@ async function issueWalkInToken() {
     showToast(`🎫 Token ${entry.token} issued to ${name}`);
     addActivity(`Walk-in token ${entry.token} issued to ${name}`, 'issue');
     loadAllData();
+    loadNotifs();
     openPrintSlipDirect(entry.token, name, entry.doctor_name, entry.department_name, entry.room, entry.time);
     resetWalkInForm();
   } catch (e) { console.error('issueWalkInToken error:', e); showToast(e.message, 'error'); }
@@ -829,6 +906,7 @@ async function issueWalkInFromModal() {
     addActivity(`Walk-in token ${entry.token} issued to ${name}`, 'issue');
     closeModal('walkin-modal');
     loadAllData();
+    loadNotifs();
     openPrintSlipDirect(entry.token, name, entry.doctor_name, entry.department_name, entry.room, entry.time);
   } catch (e) { showToast(e.message, 'error'); }
 }
@@ -906,6 +984,7 @@ async function confirmCancel() {
     addActivity(`Token ${t ? t.token : ''} cancelled by receptionist. Slot available.`, 'cancel');
     closeModal('cancel-modal');
     loadAllData();
+    loadNotifs();
   } catch (e) { showToast(e.message, 'error'); }
 }
 
@@ -1132,6 +1211,18 @@ function statCardClick(filter) {
 setDate();
 initTheme();
 loadAllData();
+loadNotifs();
+setInterval(async () => {
+  const activeView = document.querySelector('.tab-content.active');
+  if (activeView && activeView.id !== 'view-notifications') {
+    try {
+      const data = await API.notifications.list();
+      const unread = data.filter(n => !n.is_read).length;
+      const badge = document.getElementById('notif-badge');
+      if (badge) { badge.textContent = unread; badge.style.display = unread > 0 ? 'inline' : 'none'; }
+    } catch(e) {}
+  }
+}, 30000);
 </script>
 </body>
 </html>

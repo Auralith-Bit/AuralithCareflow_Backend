@@ -7,8 +7,8 @@ from rest_framework.response import Response
 from django.shortcuts import redirect
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
-from .serializers import UserSerializer, PermissionSerializer, GroupSerializer, UserDetailSerializer
+from .models import User, Notification
+from .serializers import UserSerializer, PermissionSerializer, GroupSerializer, UserDetailSerializer, NotificationSerializer
 from .permissions import IsHospitalAdmin, IsSuperAdmin
 from django.contrib.auth.models import Group, Permission
 from hospital_admin.models import Doctor
@@ -183,6 +183,24 @@ class CreateStaffView(APIView):
         )
         user.save()
 
+        Notification.send(
+            user=request.user,
+            type='staff_added',
+            title='👤 Staff Created',
+            message=f"{name} added as {role.replace('_', ' ').title()}",
+            icon='ti-user-plus',
+            icon_color='ni-green',
+        )
+        for admin in User.objects.filter(role='hospital_admin', is_active=True).exclude(pk=request.user.pk):
+            Notification.send(
+                user=admin,
+                type='staff_added',
+                title='👤 Staff Created',
+                message=f"{name} added as {role.replace('_', ' ').title()} by {request.user.name}",
+                icon='ti-user-plus',
+                icon_color='ni-green',
+            )
+
         if role == 'doctor':
             used = set(Doctor.objects.values_list('prefix', flat=True))
             prefix = next((l for l in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' if l not in used), f'D{Doctor.objects.count() + 1}')
@@ -331,3 +349,37 @@ class RoleSummaryView(APIView):
                 'is_active': users_qs.filter(is_active=True).count(),
             })
         return Response({'roles': data})
+
+
+class NotificationListView(generics.ListAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)[:50]
+
+
+class NotificationMarkReadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        notif = get_object_or_404(Notification, pk=pk, user=request.user)
+        notif.is_read = True
+        notif.save(update_fields=['is_read'])
+        return Response({'status': 'ok'})
+
+
+class NotificationMarkAllReadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        updated = Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return Response({'updated': updated})
+
+
+class ClearNotificationsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request):
+        Notification.objects.filter(user=request.user).delete()
+        return Response({'message': 'Notifications cleared'})

@@ -1,5 +1,6 @@
+from datetime import timezone
 from rest_framework import serializers
-from .models import User
+from .models import User, Notification
 from django.contrib.auth.models import Group, Permission
 
 
@@ -50,3 +51,27 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     def get_groups(self, obj):
         return [{'id': g.id, 'name': g.name} for g in obj.groups.all()]
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    time_ago = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Notification
+        fields = ['id', 'user', 'type', 'title', 'message', 'icon', 'icon_color', 'is_read', 'created_at', 'time_ago']
+        read_only_fields = ['user', 'created_at', 'time_ago']
+
+    def get_time_ago(self, obj):
+        from django.utils import timezone
+        now = timezone.now()
+        delta = now - obj.created_at
+        if delta.days > 0:
+            return f'{delta.days} day{"s" if delta.days > 1 else ""} ago'
+        elif delta.seconds >= 3600:
+            hrs = delta.seconds // 3600
+            return f'{hrs} hour{"s" if hrs > 1 else ""} ago'
+        elif delta.seconds >= 60:
+            mins = delta.seconds // 60
+            return f'{mins} min ago'
+        else:
+            return 'just now'

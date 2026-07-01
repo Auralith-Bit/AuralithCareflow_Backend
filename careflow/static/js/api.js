@@ -192,4 +192,12 @@ const API = {
     deleteGroup(id) { return API.del(`/api/auth/groups/${id}/`); },
     roles() { return API.get('/api/auth/roles/'); },
   },
+
+  // Shared Notifications (for all roles)
+  notifications: {
+    list() { return API.get('/api/auth/notifications/'); },
+    markRead(id) { return API.patch(`/api/auth/notifications/${id}/read/`); },
+    markAllRead() { return API.patch('/api/auth/notifications/read-all/'); },
+    clear() { return API.del('/api/auth/notifications/clear/'); },
+  },
 };

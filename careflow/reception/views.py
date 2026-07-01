@@ -8,8 +8,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.models import User, Notification
 from accounts.permissions import IsReceptionist
 from hospital_admin.models import Doctor
+from Patient.models import NotificationLog, PatientProfile
 from .models import Patient, QueueEntry, ActivityLog, TokenCounter
 from .serializers import (
     PatientSerializer, QueueEntrySerializer,
@@ -104,6 +106,7 @@ class CreateQueueEntryView(APIView):
                     {'error': 'This slot is no longer available for reassignment.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            original_phone = entry.patient_phone
             entry.patient_name = data['patient_name']
             entry.patient_phone = data['patient_phone']
             entry.visit_type = data['visit_type']
@@ -117,6 +120,36 @@ class CreateQueueEntryView(APIView):
                 message=f"Cancelled slot {entry.token} reassigned to walk-in: {data['patient_name']}",
                 related_token=entry.token,
             )
+            Notification.send(
+                user=request.user,
+                type='info',
+                title='✅ Slot Reassigned',
+                message=f"Cancelled slot {entry.token} reassigned to {data['patient_name']}",
+                icon='ti-check',
+                icon_color='ni-green',
+            )
+            for admin in User.objects.filter(role='hospital_admin', is_active=True).exclude(pk=request.user.pk):
+                Notification.send(
+                    user=admin,
+                    type='info',
+                    title='✅ Slot Reassigned',
+                    message=f"Cancelled slot {entry.token} reassigned to {data['patient_name']} by {request.user.name}",
+                    icon='ti-check',
+                    icon_color='ni-green',
+                )
+            if original_phone:
+                original_user = User.objects.filter(phone=original_phone, role='patient', is_active=True).first()
+                if original_user:
+                    try:
+                        original_profile = PatientProfile.objects.get(user=original_user)
+                        NotificationLog.objects.create(
+                            patient=original_profile,
+                            type=NotificationLog.Type.CANCELLATION,
+                            title='Slot Reassigned',
+                            message=f'Your cancelled slot (token {entry.token}) has been reassigned to another patient.',
+                        )
+                    except PatientProfile.DoesNotExist:
+                        pass
             return Response(QueueEntrySerializer(entry).data)
 
         doctor = get_object_or_404(Doctor, id=data['doctor_id'])
@@ -143,6 +176,50 @@ class CreateQueueEntryView(APIView):
             message=f"Walk-in token {token} issued to {data['patient_name']}",
             related_token=token,
         )
+        Notification.send(
+            user=request.user,
+            type='info',
+            title='🔵 New Token',
+            message=f"Walk-in token {token} issued to {data['patient_name']}",
+            icon='ti-plus',
+            icon_color='ni-blue',
+        )
+        for admin in User.objects.filter(role='hospital_admin', is_active=True).exclude(pk=request.user.pk):
+            Notification.send(
+                user=admin,
+                type='info',
+                title='🔵 New Token',
+                message=f"Walk-in token {token} issued to {data['patient_name']} by {request.user.name}",
+                icon='ti-plus',
+                icon_color='ni-blue',
+            )
+        if data.get('visit_type') == 'emergency':
+            Notification.send(
+                user=request.user,
+                type='emergency',
+                title='🚨 Emergency Token',
+                message=f"Emergency token {token} issued to {data['patient_name']}",
+                icon='ti-alert-triangle',
+                icon_color='ni-red',
+            )
+            for admin in User.objects.filter(role='hospital_admin', is_active=True).exclude(pk=request.user.pk):
+                Notification.send(
+                    user=admin,
+                    type='emergency',
+                    title='🚨 Emergency Token',
+                    message=f"Emergency token {token} issued to {data['patient_name']} by {request.user.name}",
+                    icon='ti-alert-triangle',
+                    icon_color='ni-red',
+                )
+            if doctor.user and doctor.user.pk != request.user.pk:
+                Notification.send(
+                    user=doctor.user,
+                    type='emergency',
+                    title='🚨 Emergency Patient',
+                    message=f"Emergency token {token} added to your queue — {data['patient_name']}",
+                    icon='ti-alert-triangle',
+                    icon_color='ni-red',
+                )
         return Response(QueueEntrySerializer(entry).data, status=status.HTTP_201_CREATED)
 
 
@@ -183,6 +260,23 @@ class CancelQueueEntryView(APIView):
             message=f"Token {entry.token} cancelled — {entry.patient_name}. Slot now available.",
             related_token=entry.token,
         )
+        Notification.send(
+            user=request.user,
+            type='cancellation',
+            title='❌ Token Cancelled',
+            message=f"Token {entry.token} cancelled — {entry.patient_name}",
+            icon='ti-x-circle',
+            icon_color='ni-red',
+        )
+        for admin in User.objects.filter(role='hospital_admin', is_active=True).exclude(pk=request.user.pk):
+            Notification.send(
+                user=admin,
+                type='cancellation',
+                title='❌ Token Cancelled',
+                message=f"Token {entry.token} cancelled — {entry.patient_name} by {request.user.name}",
+                icon='ti-x-circle',
+                icon_color='ni-red',
+            )
         return Response(QueueEntrySerializer(entry).data)
 
 
