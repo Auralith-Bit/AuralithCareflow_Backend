@@ -246,6 +246,20 @@ class UpdateUserView(APIView):
         return Response(UserSerializer(user).data)
 
 
+class DeleteStaffView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsHospitalAdmin]
+
+    def delete(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        if user.role in ('patient', 'super_admin'):
+            return Response({'error': 'Cannot delete this user'}, status=400)
+        if user.role == 'doctor':
+            Doctor.objects.filter(user=user).update(is_active=False)
+        user.is_active = False
+        user.save(update_fields=['is_active'])
+        return Response({'message': 'Staff deleted'}, status=200)
+
+
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
