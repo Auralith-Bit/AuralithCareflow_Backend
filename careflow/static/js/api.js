@@ -162,15 +162,17 @@ const API = {
 
   // Admin APIs
   admin: {
-    departments() { return API.get('/api/admin/departments/'); },
+    departments(params = '') { return API.get('/api/admin/departments/' + params); },
     createDept(data) { return API.post('/api/admin/departments/', data); },
     updateDept(id, data) { return API.put(`/api/admin/departments/${id}/`, data); },
     deleteDept(id) { return API.del(`/api/admin/departments/${id}/`); },
+    restoreDept(id) { return API.post(`/api/admin/departments/${id}/restore/`); },
     doctors(params = '') { return API.get('/api/admin/doctors/' + params); },
     doctorDetail(id) { return API.get(`/api/admin/doctors/${id}/`); },
     createDoctor(data) { return API.post('/api/admin/doctors/', data); },
     updateDoctor(id, data) { return API.put(`/api/admin/doctors/${id}/`, data); },
     deleteDoctor(id) { return API.del(`/api/admin/doctors/${id}/`); },
+    restoreDoctor(id) { return API.post(`/api/admin/doctors/${id}/restore/`); },
     hospitalProfile() { return API.get('/api/admin/hospital-profile/'); },
     updateHospitalProfile(data) { return API.put('/api/admin/hospital-profile/', data); },
     holidays(params = '') { return API.get('/api/admin/holidays/' + params); },

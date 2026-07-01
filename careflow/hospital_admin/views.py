@@ -4,7 +4,7 @@ from rest_framework import viewsets, generics, permissions, status
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.utils import timezone
@@ -27,18 +27,39 @@ def admin_dashboard(request):
 
 
 class DepartmentViewSet(viewsets.ModelViewSet):
-    queryset = Department.objects.filter(is_active=True)
     serializer_class = DepartmentSerializer
     search_fields = ['name']
     ordering_fields = ['name']
     permission_classes = [IsHospitalAdmin]
 
+    def get_queryset(self):
+        qs = Department.objects.all()
+        if self.request.query_params.get('include_inactive') != 'true':
+            qs = qs.filter(is_active=True)
+        return qs
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save(update_fields=['is_active'])
+
+    @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        dept = get_object_or_404(Department, pk=pk)
+        dept.is_active = True
+        dept.save(update_fields=['is_active'])
+        return Response(DepartmentSerializer(dept).data)
+
 
 class DoctorViewSet(viewsets.ModelViewSet):
-    queryset = Doctor.objects.filter(is_active=True)
     search_fields = ['name', 'specialty', 'department__name']
     ordering_fields = ['name', 'status']
     permission_classes = [IsHospitalAdmin]
+
+    def get_queryset(self):
+        qs = Doctor.objects.all()
+        if self.request.query_params.get('include_inactive') != 'true':
+            qs = qs.filter(is_active=True)
+        return qs
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -92,6 +113,16 @@ class DoctorViewSet(viewsets.ModelViewSet):
             instance.user.save(update_fields=['is_active'])
         instance.is_active = False
         instance.save(update_fields=['is_active'])
+
+    @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        doctor = get_object_or_404(Doctor, pk=pk)
+        doctor.is_active = True
+        doctor.save(update_fields=['is_active'])
+        if doctor.user:
+            doctor.user.is_active = True
+            doctor.user.save(update_fields=['is_active'])
+        return Response(DoctorSerializer(doctor).data)
 
     def _sync_time_slots(self, doctor):
         TimeSlot.objects.filter(doctor=doctor).delete()
