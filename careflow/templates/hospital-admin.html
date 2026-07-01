@@ -2487,7 +2487,7 @@ function confirmDelete(type, id, label) {
     try {
       if (type==='doctor') { await API.admin.deleteDoctor(id); await loadDoctors(); await loadDepartments(); }
       if (type==='dept') { await API.admin.deleteDept(id); await loadDepartments(); }
-      if (type==='staff') { /* API may not support user delete, hide */ showToast('Staff deletion via API coming soon','warning'); closeModal('modal-confirm'); return; }
+      if (type==='staff') { await API.admin.deleteStaff(id); await loadStaff(); }
       if (type==='holiday') { await API.admin.deleteHoliday(id); await loadHolidays(); }
       closeModal('modal-confirm');
       showToast(`${label.charAt(0).toUpperCase()+label.slice(1)} deleted`,'error');

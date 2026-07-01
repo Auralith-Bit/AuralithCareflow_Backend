@@ -40,6 +40,7 @@ const API = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || err.error || `HTTP ${res.status}`);
     }
+    if (res.status === 204) return null;
     return res.json();
   },
 
@@ -181,6 +182,7 @@ const API = {
     users(params = '') { return API.get('/api/auth/users/' + params); },
     createStaff(data) { return API.post('/api/auth/create-staff/', data); },
     toggleUserStatus(id) { return API.patch(`/api/auth/users/${id}/toggle-status/`); },
+    deleteStaff(id) { return API.del(`/api/auth/users/${id}/delete/`); },
     updateUser(id, data) { return API.patch(`/api/auth/users/${id}/update/`, data); },
     userDetail(id) { return API.get(`/api/auth/users/${id}/`); },
     updateUserGroups(id, groupIds) { return API.put(`/api/auth/users/${id}/groups/`, { groups: groupIds }); },

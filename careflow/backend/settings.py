@@ -61,7 +61,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'careflow_db',
         'USER': 'root',
-        'PASSWORD': '123456',
+        'PASSWORD': '@naumaya5903',
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
