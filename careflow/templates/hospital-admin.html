@@ -1735,8 +1735,17 @@ async function loadAll() {
   ]);
 }
 
+let showArchivedDepts = false;
+
 async function loadDepartments() {
-  try { departments = await API.admin.departments(); renderDepts(); populateDeptDropdowns(); } catch (e) { showToast('Failed to load departments','error'); }
+  const params = showArchivedDepts ? '?include_inactive=true' : '';
+  try { departments = await API.admin.departments(params); renderDepts(); populateDeptDropdowns(); } catch (e) { showToast('Failed to load departments','error'); }
+}
+
+function toggleArchivedDepts() {
+  showArchivedDepts = !showArchivedDepts;
+  document.getElementById('archive-toggle-btn').textContent = showArchivedDepts ? 'Hide Archived' : 'Show Archived';
+  loadDepartments();
 }
 
 function populateDeptDropdowns() {
@@ -1749,12 +1758,21 @@ function populateDeptDropdowns() {
   if (filterDept) filterDept.innerHTML = '<option value="">All Departments</option>' + departments.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
 }
 
+let showArchivedDoctors = false;
+
 async function loadDoctors() {
   try {
-    doctors = await API.admin.doctors();
+    const params = showArchivedDoctors ? '?include_inactive=true' : '';
+    doctors = await API.admin.doctors(params);
     renderDoctors();
     document.getElementById('badge-doctors').textContent = doctors.length;
   } catch (e) { showToast('Failed to load doctors','error'); }
+}
+
+function toggleArchivedDoctors() {
+  showArchivedDoctors = !showArchivedDoctors;
+  document.getElementById('archive-doc-toggle-btn').textContent = showArchivedDoctors ? 'Hide Archived' : 'Show Archived';
+  loadDoctors();
 }
 
 async function loadStaff() {
@@ -1961,7 +1979,15 @@ function setNavById(view) {
 /*  DEPARTMENTS  */
 function renderDepts() {
   const g = document.getElementById('dept-grid');
-  g.innerHTML = departments.map(d => `
+  const active = departments.filter(d => d.is_active !== false);
+  const archived = departments.filter(d => d.is_active === false);
+  g.innerHTML = (active.length || showArchivedDepts ? `
+    <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+      <button id="archive-toggle-btn" class="btn btn-sm btn-outline" onclick="toggleArchivedDepts()">${showArchivedDepts ? 'Hide Archived' : 'Show Archived'}</button>
+      ${archived.length > 0 ? `<span style="font-size:12px;color:var(--gray-400);">${archived.length} archived department${archived.length!==1?'s':''}</span>` : ''}
+    </div>
+  ` : '') +
+  active.map(d => `
     <div class="dept-card">
       <div class="dept-icon">${d.icon || '🏥'}</div>
       <div class="dept-name">${d.name}</div>
@@ -1972,12 +1998,30 @@ function renderDepts() {
         <button class="btn btn-danger btn-sm" onclick="confirmDelete('dept',${d.id},'department')">🗑</button>
       </div>
     </div>
-  `).join('') + `
+  `).join('') +
+  (showArchivedDepts ? archived.map(d => `
+    <div class="dept-card" style="opacity:0.6;border-color:var(--gray-300);">
+      <div class="dept-icon">${d.icon || '🏥'}</div>
+      <div class="dept-name">${d.name}</div>
+      <div class="dept-count" style="color:var(--gray-400);">Archived</div>
+      <div class="dept-card-actions">
+        <button class="btn btn-sm" style="background:var(--green-main);color:#fff;" onclick="restoreDept(${d.id})">↩ Restore</button>
+      </div>
+    </div>
+  `).join('') : '') + `
     <div class="dept-card" style="border-style:dashed;background:var(--gray-100);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:160px;" onclick="openModal('modal-dept')">
       <div style="font-size:28px;opacity:0.4;">+</div>
       <div style="font-size:13px;color:var(--gray-400);font-weight:600;margin-top:4px;">Add Department</div>
     </div>
   `;
+}
+
+async function restoreDept(id) {
+  try {
+    await API.admin.restoreDept(id);
+    showToast('Department restored ✅');
+    await loadDepartments();
+  } catch (e) { showToast(e.message || 'Error restoring department','error'); }
 }
 
 function editDept(id) {
@@ -2023,8 +2067,17 @@ async function saveDept() {
 /*  DOCTORS  */
 function renderDoctors(filter='') {
   const g = document.getElementById('doctor-grid');
-  const list = filter ? doctors.filter(d => (d.name||'').toLowerCase().includes(filter) || (d.specialty||'').toLowerCase().includes(filter) || (d.department_name||'').toLowerCase().includes(filter)) : doctors;
-  g.innerHTML = list.map(d => {
+  const active = doctors.filter(d => d.is_active !== false);
+  const archived = doctors.filter(d => d.is_active === false);
+  const list = filter ? active.filter(d => (d.name||'').toLowerCase().includes(filter) || (d.specialty||'').toLowerCase().includes(filter) || (d.department_name||'').toLowerCase().includes(filter)) : active;
+  g.innerHTML =
+    (active.length || showArchivedDoctors ? `
+    <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+      <button id="archive-doc-toggle-btn" class="btn btn-sm btn-outline" onclick="toggleArchivedDoctors()">${showArchivedDoctors ? 'Hide Archived' : 'Show Archived'}</button>
+      ${archived.length > 0 ? `<span style="font-size:12px;color:var(--gray-400);">${archived.length} archived doctor${archived.length!==1?'s':''}</span>` : ''}
+    </div>
+  ` : '') +
+  list.map(d => {
     const deptName = d.department_name || '';
     const spec = d.specialty || '';
     const qual = d.qualification || '';
@@ -2057,9 +2110,35 @@ function renderDoctors(filter='') {
         <button class="btn btn-danger btn-sm" onclick="confirmDelete('doctor',${d.id},'doctor')">🗑</button>
       </div>
     </div>`;
-  }).join('');
-  document.getElementById('badge-doctors').textContent = doctors.length;
-  document.querySelector('#view-doctors .section-header span:last-child').textContent = `${doctors.length} doctors on staff`;
+  }).join('') +
+  (showArchivedDoctors ? archived.map(d => {
+    const deptName = d.department_name || '';
+    const av = d.avatar_color || 'av-1';
+    return `<div class="doctor-card" style="opacity:0.6;border-color:var(--gray-300);">
+      <div class="doc-card-badge"><span class="badge badge-gray">📦 Archived</span></div>
+      <div class="doc-card-header">
+        <div class="doc-avatar-lg ${av}">${initials(d.name)}</div>
+        <div>
+          <div class="doc-card-name">${d.name}</div>
+          <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">${d.specialty || ''}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">🏢 ${deptName}</div>
+      <div class="doc-card-actions">
+        <button class="btn btn-sm" style="background:var(--green-main);color:#fff;flex:1;" onclick="restoreDoctor(${d.id})">↩ Restore</button>
+      </div>
+    </div>`;
+  }).join('') : '');
+  document.getElementById('badge-doctors').textContent = active.length;
+  document.querySelector('#view-doctors .section-header span:last-child').textContent = `${active.length} doctors on staff`;
+}
+
+async function restoreDoctor(id) {
+  try {
+    await API.admin.restoreDoctor(id);
+    showToast('Doctor restored ✅');
+    await loadDoctors();
+  } catch (e) { showToast(e.message || 'Error restoring doctor','error'); }
 }
 
 function filterDoctors(v) { renderDoctors(v.toLowerCase()); }
