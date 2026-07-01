@@ -21,4 +21,8 @@ urlpatterns = [
     path('groups/', views.GroupListCreateView.as_view(), name='groups'),
     path('groups/<int:pk>/', views.GroupDetailView.as_view(), name='group-detail'),
     path('roles/', views.RoleSummaryView.as_view(), name='role-summary'),
+    path('notifications/', views.NotificationListView.as_view(), name='notifications'),
+    path('notifications/<int:pk>/read/', views.NotificationMarkReadView.as_view(), name='notification-mark-read'),
+    path('notifications/read-all/', views.NotificationMarkAllReadView.as_view(), name='notification-mark-all-read'),
+    path('notifications/clear/', views.ClearNotificationsView.as_view(), name='notifications-clear'),
 ]

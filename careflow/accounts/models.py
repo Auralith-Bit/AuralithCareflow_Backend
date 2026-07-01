@@ -49,3 +49,31 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.name} ({self.get_role_display()})"
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    type = models.CharField(max_length=30, default='info')
+    title = models.CharField(max_length=200, blank=True, default='')
+    message = models.TextField()
+    icon = models.CharField(max_length=50, blank=True, default='ti-info-circle')
+    icon_color = models.CharField(max_length=30, blank=True, default='ni-blue')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.type}] {self.message[:50]}"
+
+    @classmethod
+    def send(cls, user, type, message, title='', icon='ti-info-circle', icon_color='ni-blue'):
+        qs = cls.objects.filter(user=user)
+        if qs.count() >= 50:
+            oldest = qs.order_by('created_at')[:qs.count() - 50]
+            cls.objects.filter(pk__in=[o.pk for o in oldest]).delete()
+        return cls.objects.create(
+            user=user, type=type, title=title,
+            message=message, icon=icon, icon_color=icon_color,
+        )

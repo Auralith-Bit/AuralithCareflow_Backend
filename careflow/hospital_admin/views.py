@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.db.models import Count, Avg, F, ExpressionWrapper, DurationField
 from accounts.permissions import IsHospitalAdmin
 from rest_framework.permissions import IsAuthenticated
-from accounts.models import User
+from accounts.models import User, Notification
 from .models import Department, Doctor, HospitalProfile, Holiday, TimeSlot, EmergencyClosure
 from .serializers import (
     DepartmentSerializer, DoctorSerializer, DoctorListSerializer,
@@ -47,6 +47,23 @@ class DoctorViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         doctor = serializer.save()
+        Notification.send(
+            user=self.request.user,
+            type='staff_added',
+            title='👤 Doctor Created',
+            message=f"Dr. {doctor.name} ({doctor.specialty}) added to {doctor.department.name if doctor.department else 'No department'}",
+            icon='ti-user-plus',
+            icon_color='ni-green',
+        )
+        for admin in User.objects.filter(role='hospital_admin', is_active=True).exclude(pk=self.request.user.pk):
+            Notification.send(
+                user=admin,
+                type='staff_added',
+                title='👤 Doctor Created',
+                message=f"Dr. {doctor.name} ({doctor.specialty}) added to {doctor.department.name if doctor.department else 'No department'} by {self.request.user.name}",
+                icon='ti-user-plus',
+                icon_color='ni-green',
+            )
         if not doctor.user:
             user = User(
                 phone=doctor.phone or '',
@@ -143,7 +160,24 @@ class EmergencyClosureViewSet(viewsets.ModelViewSet):
     permission_classes = [IsHospitalAdmin]
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        closure = serializer.save(created_by=self.request.user)
+        Notification.send(
+            user=self.request.user,
+            type='closure',
+            title='🚧 Emergency Closure',
+            message=f"OPD closure activated{' for ' + closure.department.name if closure.department else ''}: {closure.reason or 'No reason provided'}",
+            icon='ti-lock',
+            icon_color='ni-red',
+        )
+        for rec in User.objects.filter(role='receptionist', is_active=True).exclude(pk=self.request.user.pk):
+            Notification.send(
+                user=rec,
+                type='closure',
+                title='🚧 OPD Closure Active',
+                message=f"OPD closed by {self.request.user.name}: {closure.reason or 'No reason provided'}. Stop issuing tokens.",
+                icon='ti-lock',
+                icon_color='ni-red',
+            )
 
 
 class DashboardStatsView(generics.GenericAPIView):
