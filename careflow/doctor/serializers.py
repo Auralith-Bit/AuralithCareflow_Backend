@@ -52,6 +52,9 @@ class QueueEntrySerializer(serializers.ModelSerializer):
         return gender if gender else '—'
 
     def get_complaint(self, obj):
+        complaint = self._get_from_notes(obj, 'complaint')
+        if complaint:
+            return complaint
         return obj.notes.split('|')[0] if obj.notes else 'General consultation'
 
     def get_note(self, obj):
@@ -143,3 +146,4 @@ class RegisterPatientSerializer(serializers.Serializer):
     token_type = serializers.ChoiceField(choices=['normal', 'priority', 'emergency'], default='normal')
     age = serializers.IntegerField(required=False, allow_null=True)
     gender = serializers.CharField(required=False, allow_blank=True, default='')
+    address = serializers.CharField(required=False, allow_blank=True, default='')

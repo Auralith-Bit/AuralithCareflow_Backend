@@ -9,9 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.35.0/tabler-icons.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="/static/js/api.js"></script>
     <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -326,7 +324,6 @@ body.js-ready .shell{opacity:1}
               <div class="form-group"><label>Token type</label>
                 <select id="regType"><option value="normal">Normal</option><option value="priority">Priority</option><option value="emergency">Emergency</option></select>
               </div>
-              <div class="form-group"><label>Appointment time</label><input type="time" id="regTime" value="10:30"></div>
             </div>
             <div class="form-group"><label>Chief complaint</label><input type="text" id="regCC" placeholder="e.g. Fever, headache, follow-up..."></div>
             <div class="form-group"><label>Address / notes</label><textarea id="regAddr" placeholder="Optional address or intake notes"></textarea></div>
@@ -740,6 +737,8 @@ async function saveNote(){
 }
 
 function viewVitals(i){showTab('vitals',null);setTimeout(()=>{const sel=document.getElementById('vitalPatient');if(sel)sel.value=i;showVitals(i);},100);}
+function viewVitalsById(id){const i=queueData.findIndex(x=>x.id===id);if(i>=0)viewVitals(i);else toast('Patient not in current queue');}
+function openNoteModalById(id){const i=queueData.findIndex(x=>x.id===id);if(i>=0)openNoteModal(i);else toast('Patient not in current queue');}
 
 async function openReferModal(i){
   referTarget=i!==null?i:curIdx;
@@ -795,6 +794,7 @@ async function registerPatient(){
       token_type:document.getElementById('regType').value,
       age:parseInt(age),
       gender:document.getElementById('regGender').value,
+      address:document.getElementById('regAddr').value.trim(),
     });
     clearRegForm();
     await loadQueue();
@@ -877,21 +877,25 @@ async function renderPatients(q=''){
       <div class="pinfo"><div class="pn">${p.patient_name} <span class="bdg ${sBadge[p.status]||'bs'}" style="font-size:10px;padding:1px 5px">${sLabel[p.status]||p.status}</span></div>
       <div class="pm">${p.token} · ${p.age?p.age+'y':'—'} · ${p.patient_phone} · ${p.complaint}</div></div>
       <div class="pacts">
-        <button class="ab g" onclick="openNoteModal(${queueData.findIndex(x=>x.id===p.id)})" title="Note"><i class="ti ti-pencil" style="font-size:12px"></i></button>
-        <button class="ab" onclick="viewVitals(${queueData.findIndex(x=>x.id===p.id)})" title="Vitals"><i class="ti ti-activity" style="font-size:12px"></i></button>
+        <button class="ab g" onclick="openNoteModalById(${p.id})" title="Note"><i class="ti ti-pencil" style="font-size:12px"></i></button>
+        <button class="ab" onclick="viewVitalsById(${p.id})" title="Vitals"><i class="ti ti-activity" style="font-size:12px"></i></button>
       </div>
     </div>`).join('');
   } catch(e){list.innerHTML='<div style="padding:1rem;text-align:center;color:var(--color-text-secondary)">No patients found</div>';}
 }
 
-async function loadHistory(){
+async function loadHistory(page=1){
   try {
-    const data=await API.get('/api/doctor/history/');
-    document.getElementById('historyList').innerHTML=data.map(h=>`<div class="history-item">
+    const res=await API.get('/api/doctor/history/?page='+page+'&page_size=50');
+    const data=res.results||res;
+    const total=res.total||data.length;
+    const list=document.getElementById('historyList');
+    list.innerHTML=data.map(h=>`<div class="history-item">
       <div class="hdate">${h.date}<br><span style="color:var(--color-text-secondary,#64748b);font-size:10px">${h.token}</span></div>
       <div class="hcontent"><div class="htitle">${h.name} <span style="color:var(--color-text-secondary,#64748b);font-weight:400;font-size:12px">— ${h.complaint}</span></div>
       <div class="hdesc"><i class="ti ti-stethoscope" style="font-size:11px;vertical-align:-1px"></i> ${h.diag||'—'} &nbsp;|&nbsp; <i class="ti ti-pill" style="font-size:11px;vertical-align:-1px"></i> ${h.rx||'—'}</div></div>
     </div>`).join('');
+    if(res.total>res.page*res.page_size)list.innerHTML+=`<div style="text-align:center;padding:8px"><button class="btn-sec" onclick="loadHistory(${res.page+1})">Load more (${res.total-res.page*res.page_size} remaining)</button></div>`;
   } catch(e){document.getElementById('historyList').innerHTML='<div style="padding:1rem;text-align:center;color:var(--color-text-secondary)">No history</div>';}
 }
 
