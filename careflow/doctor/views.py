@@ -235,7 +235,7 @@ class AddEmergencyTokenView(APIView):
             visit_type='Emergency',
             time=timezone.now().time(),
             status='waiting',
-            notes='status:emergency',
+            notes='complaint:Emergency case|status:emergency',
             created_by=request.user,
         )
 
@@ -262,6 +262,15 @@ class ReorderQueueView(APIView):
             return Response({'error': 'Doctor not found'}, status=404)
         qs = _today_queue_qs(doctor).filter(status='waiting').order_by('time')
         count = qs.count()
+        entries = list(qs)
+        priority_order = {'emergency': 0, 'priority': 1, 'normal': 2, 'Walk-In': 3}
+        entries.sort(key=lambda e: (priority_order.get(e.visit_type, 3), e.time or e.created_at.time()))
+        base = timezone.now().time().replace(microsecond=0)
+        from datetime import timedelta, datetime
+        today = timezone.now().date()
+        for idx, entry in enumerate(entries):
+            entry.time = (datetime.combine(today, base) + timedelta(minutes=idx)).time()
+        QueueEntry.objects.bulk_update(entries, ['time'])
         return Response({'message': f'Re-ordered {count} waiting tokens', 'count': count})
 
 
@@ -289,7 +298,7 @@ class RegisterPatientView(APIView):
             visit_type='Walk-In' if data['token_type'] != 'emergency' else 'Emergency',
             time=timezone.now().time(),
             status='waiting',
-            notes=f"complaint:{complaint}|gender:{data.get('gender', '')}|age:{data.get('age', '')}",
+            notes=f"complaint:{complaint}|gender:{data.get('gender', '')}|age:{data.get('age', '')}|address:{data.get('address', '')}",
             created_by=request.user,
         )
 
@@ -411,7 +420,10 @@ class ReferDoctorListView(APIView):
     permission_classes = [IsDoctor]
 
     def get(self, request):
+        doctor = _get_doctor_for_user(request.user)
         doctors = Doctor.objects.filter(is_active=True, status='active')
+        if doctor:
+            doctors = doctors.exclude(id=doctor.id)
         data = [
             {
                 'id': d.id,
@@ -545,9 +557,11 @@ class DoctorHistoryView(APIView):
         doctor = _get_doctor_for_user(request.user)
         if not doctor:
             return Response({'error': 'Doctor not found'}, status=404)
-        qs = QueueEntry.objects.filter(
-            doctor=doctor, status='done'
-        ).order_by('-created_at')[:50]
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 50))
+        base_qs = QueueEntry.objects.filter(doctor=doctor, status='done').order_by('-created_at')
+        total = base_qs.count()
+        qs = base_qs[(page - 1) * page_size:page * page_size]
         data = []
         for entry in qs:
             extra = _parse_notes_field(entry)
@@ -566,4 +580,4 @@ class DoctorHistoryView(APIView):
                 'diag': diag,
                 'rx': rx,
             })
-        return Response(data)
+        return Response({'results': data, 'total': total, 'page': page, 'page_size': page_size})
