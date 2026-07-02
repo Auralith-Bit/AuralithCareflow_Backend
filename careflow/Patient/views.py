@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import render
 from django.contrib.auth import login as auth_login
-from django.contrib.auth.decorators import login_required
+from accounts.decorators import role_required
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import User
 from datetime import date, datetime, timedelta
@@ -26,7 +26,7 @@ from .serializers import (
 logger = logging.getLogger(__name__)
 
 
-@login_required
+@role_required('patient')
 def patient_dashboard(request):
     return render(request, 'patient.html')
 

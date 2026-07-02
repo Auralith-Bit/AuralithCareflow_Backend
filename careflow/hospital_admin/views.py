@@ -5,8 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
+from accounts.decorators import role_required
 from django.utils import timezone
 from django.db.models import Count, Avg, F, ExpressionWrapper, DurationField
 from accounts.permissions import IsHospitalAdmin
@@ -21,7 +20,7 @@ from .serializers import (
 from reception.models import QueueEntry, ActivityLog
 
 
-@login_required
+@role_required('hospital_admin', 'super_admin')
 def admin_dashboard(request):
     return render(request, 'hospital-admin.html')
 

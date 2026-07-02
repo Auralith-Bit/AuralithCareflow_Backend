@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from accounts.decorators import role_required
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.views import APIView
@@ -57,7 +57,7 @@ STATUS_KEYS = {
 }
 
 
-@login_required
+@role_required('doctor', 'hospital_admin', 'super_admin')
 def doctor_dashboard(request):
     return render(request, 'doctor.html')
 

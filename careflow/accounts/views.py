@@ -82,12 +82,13 @@ class VerifyOTPView(APIView):
         if not user:
             return Response({'error': 'User not found. Please register first.'}, status=400)
         refresh = RefreshToken.for_user(user)
-        auth_login(request, user)
+        auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user': UserSerializer(user).data,
         })
+
 
 
 class LoginView(APIView):
@@ -141,7 +142,7 @@ class RegisterView(APIView):
         PatientProfile.objects.get_or_create(user=user)
 
         refresh = RefreshToken.for_user(user)
-        auth_login(request, user)
+        auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
