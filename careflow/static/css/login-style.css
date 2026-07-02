@@ -94,13 +94,6 @@ body {
     margin-top: 2px;
 }
 
-.login-logo {
-    width: 120px;
-    height: auto;
-    display: block;
-    margin: 0 auto;
-}
-
 /* --- Form Cards --- */
 .auth-card {
     background-color: var(--card-bg);
@@ -121,13 +114,6 @@ body {
     color: var(--text-muted);
     line-height: 1.5;
     margin-bottom: 24px;
-}
-
-.brand-logo-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 4px;
 }
 
 /* --- Form Components --- */
