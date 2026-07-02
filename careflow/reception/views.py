@@ -1,6 +1,5 @@
 from datetime import date, time, datetime, timedelta
 from django.db.models import Q, Count
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from rest_framework import generics, status, permissions
@@ -10,6 +9,7 @@ from rest_framework.views import APIView
 
 from accounts.models import User, Notification
 from accounts.permissions import IsReceptionist
+from accounts.decorators import role_required
 from hospital_admin.models import Doctor
 from Patient.models import NotificationLog, PatientProfile
 from .models import Patient, QueueEntry, ActivityLog, TokenCounter
@@ -21,7 +21,7 @@ from .serializers import (
 )
 
 
-@login_required
+@role_required('receptionist', 'hospital_admin', 'super_admin')
 def reception_dashboard(request):
     return render(request, 'reception.html')
 

@@ -1,7 +1,7 @@
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
+from accounts.decorators import role_required
 
 
-@login_required
+@role_required('super_admin')
 def super_admin_dashboard(request):
     return render(request, 'super-admin.html')
