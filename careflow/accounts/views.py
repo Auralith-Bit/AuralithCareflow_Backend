@@ -366,6 +366,39 @@ class RoleSummaryView(APIView):
         return Response({'roles': data})
 
 
+class SuperAdminStatsView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsSuperAdmin]
+
+    def get(self, request):
+        from Patient.models import Appointment, PatientProfile
+        from reception.models import Patient as ReceptionPatient, QueueEntry
+        from hospital_admin.models import Department
+
+        auth_patients = User.objects.filter(role='patient').count()
+        module_patients = PatientProfile.objects.count()
+        reception_patients = ReceptionPatient.objects.count()
+
+        return Response({
+            'users': {
+                'total': User.objects.count(),
+                'hospital_admins': User.objects.filter(role='hospital_admin').count(),
+                'doctors': User.objects.filter(role='doctor').count(),
+                'receptionists': User.objects.filter(role='receptionist').count(),
+                'patients': auth_patients,
+                'active': User.objects.filter(is_active=True).count(),
+            },
+            'modules': {
+                'patients': max(auth_patients, module_patients, reception_patients),
+                'patient_profiles': module_patients,
+                'reception_patients': reception_patients,
+                'doctors': Doctor.objects.filter(is_active=True).count(),
+                'departments': Department.objects.filter(is_active=True).count(),
+                'opd_queue_entries': QueueEntry.objects.count(),
+                'appointments': Appointment.objects.count(),
+            },
+        })
+
+
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]

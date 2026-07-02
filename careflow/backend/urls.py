@@ -1,9 +1,10 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import render, redirect
 from django.contrib.auth import views as auth_views
+from django.views.static import serve as serve_static
 from accounts.views import LoginView, LogoutView as CustomLogoutView
 from hospital_admin import views as hospital_admin_views
 
@@ -39,6 +40,16 @@ urlpatterns = [
 
     # API login for JWT (kept for backwards compatibility)
     path('api/login/', LoginView.as_view(), name='api_login'),
-
     path('', lambda request: redirect('login')),
-] + static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else '/static/')
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
+else:
+    urlpatterns += [
+        re_path(
+            r'^static/(?P<path>.*)$',
+            serve_static,
+            {'document_root': settings.STATICFILES_DIRS[0]},
+        ),
+    ]

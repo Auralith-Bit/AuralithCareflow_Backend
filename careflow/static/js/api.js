@@ -195,6 +195,7 @@ const API = {
     updateGroup(id, data) { return API.put(`/api/auth/groups/${id}/`, data); },
     deleteGroup(id) { return API.del(`/api/auth/groups/${id}/`); },
     roles() { return API.get('/api/auth/roles/'); },
+    superAdminStats() { return API.get('/api/auth/super-admin-stats/'); },
   },
 
   // Shared Notifications (for all roles)
@@ -205,3 +206,5 @@ const API = {
     clear() { return API.del('/api/auth/notifications/clear/'); },
   },
 };
+
+window.API = API;

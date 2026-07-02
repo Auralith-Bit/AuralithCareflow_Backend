@@ -555,20 +555,23 @@ async function clearNotifs() {
 
 async function loadData() {
   try {
-    const [users, doctorRecords] = await Promise.all([
+    const [users, doctorRecords, stats] = await Promise.all([
       API.admin.users(),
       API.admin.doctors().catch(() => []),
+      API.admin.superAdminStats().catch(() => null),
     ]);
     allUsers = users;
     const admins = users.filter(u => u.role === 'hospital_admin');
     const userDoctors = users.filter(u => u.role === 'doctor');
     const receptionists = users.filter(u => u.role === 'receptionist');
     const patients = users.filter(u => u.role === 'patient');
-    const doctorCount = Math.max(userDoctors.length, (doctorRecords || []).length);
-    document.getElementById('stat-admins').textContent = admins.length;
+    const modules = stats?.modules || {};
+    const userStats = stats?.users || {};
+    const doctorCount = Math.max(userDoctors.length, (doctorRecords || []).length, modules.doctors || 0);
+    document.getElementById('stat-admins').textContent = userStats.hospital_admins ?? admins.length;
     document.getElementById('stat-doctors').textContent = doctorCount;
-    document.getElementById('stat-receptionists').textContent = receptionists.length;
-    document.getElementById('stat-patients').textContent = patients.length;
+    document.getElementById('stat-receptionists').textContent = userStats.receptionists ?? receptionists.length;
+    document.getElementById('stat-patients').textContent = modules.patients ?? patients.length;
     renderStaffList();
     renderStaff();
     renderRoles();
