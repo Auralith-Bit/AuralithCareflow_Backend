@@ -254,7 +254,7 @@ careflow/
 | `/logout/` | `LogoutView` | Redirects to `/login/` |
 | `/` | Lambda redirect | Redirects to `/login/` |
 | `/reception/` | `reception_dashboard` | `reception.html` |
-| `/admin-panel/` | `admin_dashboard` | `hospital-admin.html` |
+| `/hospital-admin/` | `admin_dashboard` | `hospital-admin.html` |
 | `/super-admin/` | `super_admin_dashboard` | `super-admin.html` |
 | `/patient/` | `patient_dashboard` | `patient.html` |
 | `/api/login/` | `LoginView` | JWT login (backwards compat) |

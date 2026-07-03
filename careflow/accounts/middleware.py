@@ -3,7 +3,7 @@ from django.shortcuts import redirect
 
 PROTECTED_PAGES = {
     '/reception/': {'receptionist', 'hospital_admin', 'super_admin'},
-    '/admin-panel/': {'hospital_admin', 'super_admin'},
+    '/hospital-admin/': {'hospital_admin', 'super_admin'},
     '/super-admin/': {'super_admin'},
     '/admin/': {'super_admin'},
     '/patient/': {'patient'},

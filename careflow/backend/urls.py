@@ -21,7 +21,7 @@ urlpatterns = [
 
     # Serve reception, admin, and patient HTML pages
     path('reception/', include('reception.urls_page')),
-    path('admin-panel/', include('hospital_admin.urls_page')),
+    path('hospital-admin/', include('hospital_admin.urls_page')),
     path('super-admin/', include('super_admin.urls_page')),
     path('patient/', include('Patient.urls_page')),
     path('doctor/', include('doctor.urls_page')),
