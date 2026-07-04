@@ -567,8 +567,8 @@ body.js-ready .shell{opacity:1}
   </div>
 </div>
 <script>
-const sLabel={done:'Done',serving:'In Progress',waiting:'Waiting',skipped:'Skipped',noshow:'No Show',hold:'On Hold',referred:'Referred',cancelled:'Cancelled'};
-const sBadge={done:'bg',serving:'bb',waiting:'bs',skipped:'ba',noshow:'br',hold:'ba',referred:'bp',cancelled:'br'};
+const sLabel={done:'Done',serving:'In Progress',waiting:'Waiting',arrived:'Arrived',skipped:'Skipped',noshow:'No Show',hold:'On Hold',referred:'Referred',cancelled:'Cancelled'};
+const sBadge={done:'bg',serving:'bb',waiting:'bs',arrived:'bs',skipped:'ba',noshow:'br',hold:'ba',referred:'bp',cancelled:'br'};
 let queueData=[];
 let curIdx=-1;
 let timerSec=0;
@@ -634,7 +634,7 @@ function renderQueue(){
     <td><span class="bdg ${sBadge[p.status]||'bs'}">${sLabel[p.status]||p.status}</span></td>
     <td><div class="abts">
       <button class="ab g" onclick="openNoteModal(${i})" title="Note"><i class="ti ti-pencil" style="font-size:12px"></i></button>
-      ${p.status==='waiting'?`<button class="ab" onclick="setStatus(${i},'serving')" title="Start"><i class="ti ti-player-play" style="font-size:12px"></i></button>`:''}
+      ${p.status==='waiting'||p.status==='arrived'?`<button class="ab" onclick="setStatus(${i},'serving')" title="Start"><i class="ti ti-player-play" style="font-size:12px"></i></button>`:''}
       ${p.status!=='done'&&p.status!=='noshow'&&p.status!=='cancelled'&&p.status!=='referred'?`<button class="ab" onclick="setStatus(${i},'done')" title="Done"><i class="ti ti-check" style="font-size:12px"></i></button>`:''}
       ${p.status!=='done'&&p.status!=='cancelled'&&p.status!=='referred'&&p.status!=='noshow'?`<button class="ab" onclick="openReferModal(${i})" title="Refer"><i class="ti ti-arrow-forward-up" style="font-size:12px"></i></button><button class="ab" onclick="cancelToken(${i})" title="Cancel"><i class="ti ti-circle-x" style="font-size:12px;color:#dc2626"></i></button>`:''}
       <button class="ab" onclick="viewVitals(${i})" title="Vitals"><i class="ti ti-activity" style="font-size:12px"></i></button>
