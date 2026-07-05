@@ -1324,7 +1324,7 @@
         <div class="page-banner-icon">👥</div>
         <div class="page-banner-text">
           <h2>Staff Accounts</h2>
-          <p>Manage login access for admins, doctors, receptionists, and view-only users.</p>
+          <p>Manage login access for admins, doctors, receptionists, and patients.</p>
         </div>
         <div class="page-banner-actions">
           <button class="btn btn-primary" style="background:white;color:var(--green-dark);" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';closeModal('modal-staff')">+ Add Staff</button>
@@ -1340,10 +1340,7 @@
             <option>Admin</option>
             <option>Doctor</option>
             <option>Receptionist</option>
-            <option>View-Only</option>
-          </select>
-          <select class="filter-select" onchange="filterStaffByDept(this.value)">
-            <option value="">All Departments</option>
+            <option>Patient</option>
           </select>
           <span style="margin-left:auto;font-size:12px;color:var(--gray-500);" id="staff-count">14 staff members</span>
         </div>
@@ -1353,7 +1350,6 @@
               <tr>
                 <th>Name</th>
                 <th>Role</th>
-                <th>Department</th>
                 <th>Email</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -1611,12 +1607,7 @@
             <option>Admin</option>
             <option>Doctor</option>
             <option>Receptionist</option>
-            <option>View-Only</option>
-          </select>
-        </div>
-        <div class="form-group"><label>Department</label>
-          <select class="form-select" id="staff-dept">
-            <option value="">All Departments</option>
+            <option>Patient</option>
           </select>
         </div>
       </div>
@@ -1752,10 +1743,6 @@ function populateDeptDropdowns() {
   const opts = departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
   const docDept = document.getElementById('doc-dept');
   if (docDept) docDept.innerHTML = '<option value="">Select Department</option>' + departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
-  const staffDept = document.getElementById('staff-dept');
-  if (staffDept) staffDept.innerHTML = '<option value="">All Departments</option>' + departments.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
-  const filterDept = document.querySelector('.filter-select[onchange="filterStaffByDept(this.value)"]');
-  if (filterDept) filterDept.innerHTML = '<option value="">All Departments</option>' + departments.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
 }
 
 let showArchivedDoctors = false;
@@ -1782,7 +1769,6 @@ async function loadStaff() {
       id: u.id,
       name: u.name || u.phone,
       role: roleDisplay(u.role),
-      dept: '—',
       email: u.email || '',
       phone: u.phone || '',
       status: u.is_active ? 'active' : 'inactive',
@@ -1793,7 +1779,7 @@ async function loadStaff() {
 }
 
 function roleDisplay(role) {
-  return { 'hospital_admin': 'Admin', 'doctor': 'Doctor', 'receptionist': 'Receptionist', 'view_only': 'View-Only', 'patient': 'Patient', 'super_admin': 'Super Admin' }[role] || role;
+  return { 'hospital_admin': 'Admin', 'doctor': 'Doctor', 'receptionist': 'Receptionist', 'patient': 'Patient', 'super_admin': 'Super Admin' }[role] || role;
 }
 
 async function loadHolidays() {
@@ -2362,7 +2348,6 @@ function renderStaff(filter='') {
         </div>
       </td>
       <td><span class="badge ${roleBadge(s.role)}">${s.role}</span></td>
-      <td style="font-size:13px;color:var(--gray-600);">${s.dept}</td>
       <td style="font-size:13px;color:var(--gray-600);">${s.email}</td>
       <td>
         <label class="switch">
@@ -2386,10 +2371,6 @@ function filterStaffByRole(v) {
   const filtered = v ? staffList.filter(s => s.role === v) : staffList;
   renderStaffFiltered(filtered);
 }
-function filterStaffByDept(v) {
-  const filtered = v ? staffList.filter(s => s.dept === v || s.dept === 'All Departments') : staffList;
-  renderStaffFiltered(filtered);
-}
 function renderStaffFiltered(list) {
   const tbody = document.getElementById('staff-tbody');
   tbody.innerHTML = list.map(s => `
@@ -2404,7 +2385,6 @@ function renderStaffFiltered(list) {
         </div>
       </td>
       <td><span class="badge ${roleBadge(s.role)}">${s.role}</span></td>
-      <td style="font-size:13px;color:var(--gray-600);">${s.dept}</td>
       <td style="font-size:13px;color:var(--gray-600);">${s.email}</td>
       <td>
         <label class="switch">
@@ -2439,7 +2419,6 @@ function editStaff(id) {
   document.getElementById('staff-name').value = s.name;
   document.getElementById('staff-email').value = s.email;
   document.getElementById('staff-role').value = s.role;
-  document.getElementById('staff-dept').value = s.dept;
   document.getElementById('staff-phone').value = s.phone;
   openModal('modal-staff');
 }
@@ -2448,7 +2427,8 @@ async function saveStaff() {
   const name = document.getElementById('staff-name').value.trim();
   if (!name) { showToast('Name is required','error'); return; }
   const roleDisplay = document.getElementById('staff-role').value;
-  const roleMap = { 'Admin': 'hospital_admin', 'Doctor': 'doctor', 'Receptionist': 'receptionist', 'View-Only': 'receptionist' };
+<<<<<<< HEAD
+  const roleMap = { 'Admin': 'hospital_admin', 'Doctor': 'doctor', 'Receptionist': 'receptionist', 'View-Only': 'receptionist', 'Patient': 'patient' };
   const payload = {
     name: name,
     email: document.getElementById('staff-email').value,
@@ -3106,7 +3086,7 @@ function exportReport(type) {
 
 /* HELPERS  */
 function roleBadge(role) {
-  return {Admin:'badge-purple',Doctor:'badge-blue',Receptionist:'badge-green','View-Only':'badge-gray'}[role]||'badge-gray';
+  return {Admin:'badge-purple',Doctor:'badge-blue',Receptionist:'badge-green',Patient:'badge-gray'}[role]||'badge-gray';
 }
 function initials(name) {
   return name.split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
