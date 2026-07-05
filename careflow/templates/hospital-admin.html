@@ -1327,7 +1327,7 @@
           <p>Manage login access for admins, doctors, receptionists, and patients.</p>
         </div>
         <div class="page-banner-actions">
-          <button class="btn btn-primary" style="background:white;color:var(--green-dark);" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';closeModal('modal-staff')">+ Add Staff</button>
+          <button class="btn btn-primary" style="background:white;color:var(--green-dark);" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';document.getElementById('staff-save-btn').textContent='+ Create Account';closeModal('modal-staff')">+ Add Staff</button>
         </div>
       </div>
       <div class="section-header">
@@ -1594,7 +1594,7 @@
   <div class="modal">
     <div class="modal-header">
       <h3 id="staff-modal-title">👤 Add Staff Account</h3>
-      <button class="modal-close" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';closeModal('modal-staff')">✕</button>
+      <button class="modal-close" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';document.getElementById('staff-save-btn').textContent='+ Create Account';closeModal('modal-staff')">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-row">
@@ -1617,8 +1617,8 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';closeModal('modal-staff')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveStaff()">+ Create Account</button>
+      <button class="btn btn-ghost" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';document.getElementById('staff-save-btn').textContent='+ Create Account';closeModal('modal-staff')">Cancel</button>
+      <button class="btn btn-primary" id="staff-save-btn" onclick="saveStaff()">+ Create Account</button>
     </div>
   </div>
 </div>
@@ -1765,7 +1765,7 @@ function toggleArchivedDoctors() {
 async function loadStaff() {
   try {
     const users = await API.admin.users();
-    staffList = users.map(u => ({
+    staffList = users.filter(u => u.role !== 'super_admin').map(u => ({
       id: u.id,
       name: u.name || u.phone,
       role: roleDisplay(u.role),
@@ -2416,6 +2416,7 @@ function editStaff(id) {
   if (!s) return;
   editingStaffId = id;
   document.getElementById('staff-modal-title').textContent = '✏️ Edit Staff Account';
+  document.getElementById('staff-save-btn').textContent = '💾 Save Changes';
   document.getElementById('staff-name').value = s.name;
   document.getElementById('staff-email').value = s.email;
   document.getElementById('staff-role').value = s.role;
@@ -2443,6 +2444,7 @@ async function saveStaff() {
       showToast(`${name} account created ✅`);
     }
     editingStaffId = null;
+    document.getElementById('staff-save-btn').textContent = '+ Create Account';
     closeModal('modal-staff');
     clearForm(['staff-name','staff-email','staff-phone','staff-pass']);
     await loadStaff();

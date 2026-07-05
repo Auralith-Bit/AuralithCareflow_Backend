@@ -252,12 +252,9 @@ class DeleteStaffView(APIView):
 
     def delete(self, request, pk):
         user = get_object_or_404(User, pk=pk)
-        if user.role in ('patient', 'super_admin'):
+        if user.role == 'super_admin':
             return Response({'error': 'Cannot delete this user'}, status=400)
-        if user.role == 'doctor':
-            Doctor.objects.filter(user=user).update(is_active=False)
-        user.is_active = False
-        user.save(update_fields=['is_active'])
+        user.delete()
         return Response({'message': 'Staff deleted'}, status=200)
 
 
