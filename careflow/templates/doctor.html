@@ -668,7 +668,8 @@ async function markNoShow(){await setStatus(curIdx,'noshow');}
 
 async function markDone(){
   try {
-    await API.patch('/api/doctor/queue/'+queueData[curIdx].id+'/status/',{status:'done'});
+    const p=queueData[curIdx];if(!p){toast('No patient selected');return;}
+    await API.patch('/api/doctor/queue/'+p.id+'/status/',{status:'done'});
     await callNext();
     toast('Marked done, called next');
   } catch(e){toast('Failed to mark done');}
@@ -676,7 +677,7 @@ async function markDone(){
 
 async function setStatus(i,newStatus){
   try {
-    const p=queueData[i];
+    const p=queueData[i];if(!p){toast('No patient selected');return;}
     const res=await API.patch('/api/doctor/queue/'+p.id+'/status/',{status:newStatus});
     if(newStatus==='serving'){curIdx=i;updateCP();startTimer();}
     await loadQueue();
@@ -774,7 +775,8 @@ async function saveRefer(){
 async function cancelToken(i){
   const idx=i!==null?i:curIdx;
   const p=queueData[idx];
-  if(!p||!confirm('Cancel token '+p.token+' for '+p.patient_name+'?'))return;
+  if(!p){toast('No patient selected');return;}
+  if(!confirm('Cancel token '+p.token+' for '+p.patient_name+'?'))return;
   try {
     await API.patch('/api/doctor/queue/'+p.id+'/status/',{status:'cancelled'});
     await loadQueue();
