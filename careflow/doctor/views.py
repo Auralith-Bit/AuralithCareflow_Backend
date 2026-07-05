@@ -49,6 +49,7 @@ STATUS_KEYS = {
     'done': 'Done',
     'serving': 'In Progress',
     'waiting': 'Waiting',
+    'arrived': 'Arrived',
     'skipped': 'Skipped',
     'noshow': 'No Show',
     'hold': 'On Hold',
@@ -113,7 +114,7 @@ class DoctorQueueStatsView(APIView):
         qs = _today_queue_qs(doctor)
         total = qs.count()
         all_entries = list(qs.all())
-        waiting = sum(1 for e in all_entries if _get_extended_status(e) == 'waiting')
+        waiting = sum(1 for e in all_entries if _get_extended_status(e) in ('waiting', 'arrived'))
         serving = sum(1 for e in all_entries if _get_extended_status(e) == 'serving')
         done = sum(1 for e in all_entries if _get_extended_status(e) == 'done')
         skipped = sum(1 for e in all_entries if _get_extended_status(e) == 'skipped')
@@ -147,7 +148,7 @@ class CallNextPatientView(APIView):
             current.status = 'done'
             current.save()
 
-        next_entry = qs.filter(status='waiting').order_by('time').first()
+        next_entry = qs.filter(status__in=['waiting', 'arrived']).order_by('time').first()
         if not next_entry:
             return Response({'message': 'Queue complete', 'queue_complete': True})
 
@@ -260,7 +261,7 @@ class ReorderQueueView(APIView):
         doctor = _get_doctor_for_user(request.user)
         if not doctor:
             return Response({'error': 'Doctor not found'}, status=404)
-        qs = _today_queue_qs(doctor).filter(status='waiting').order_by('time')
+        qs = _today_queue_qs(doctor).filter(status__in=['waiting', 'arrived']).order_by('time')
         count = qs.count()
         entries = list(qs)
         priority_order = {'emergency': 0, 'priority': 1, 'normal': 2, 'Walk-In': 3}
