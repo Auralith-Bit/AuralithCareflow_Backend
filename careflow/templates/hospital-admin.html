@@ -1337,7 +1337,7 @@
         <div class="table-controls">
           <select class="filter-select" onchange="filterStaffByRole(this.value)">
             <option value="">All Roles</option>
-            <option>Admin</option>
+            <option>Hospital Admin</option>
             <option>Doctor</option>
             <option>Receptionist</option>
             <option>Patient</option>
@@ -1604,7 +1604,7 @@
       <div class="form-row">
         <div class="form-group"><label>Role</label>
           <select class="form-select" id="staff-role">
-            <option>Admin</option>
+            <option>Hospital Admin</option>
             <option>Doctor</option>
             <option>Receptionist</option>
             <option>Patient</option>
@@ -1779,7 +1779,7 @@ async function loadStaff() {
 }
 
 function roleDisplay(role) {
-  return { 'hospital_admin': 'Admin', 'doctor': 'Doctor', 'receptionist': 'Receptionist', 'patient': 'Patient', 'super_admin': 'Super Admin' }[role] || role;
+  return { 'hospital_admin': 'Hospital Admin', 'doctor': 'Doctor', 'receptionist': 'Receptionist', 'patient': 'Patient', 'super_admin': 'Super Admin' }[role] || role;
 }
 
 async function loadHolidays() {
@@ -2428,7 +2428,7 @@ async function saveStaff() {
   const name = document.getElementById('staff-name').value.trim();
   if (!name) { showToast('Name is required','error'); return; }
   const roleDisplay = document.getElementById('staff-role').value;
-  const roleMap = { 'Admin': 'hospital_admin', 'Doctor': 'doctor', 'Receptionist': 'receptionist', 'Patient': 'patient' };
+  const roleMap = { 'Hospital Admin': 'hospital_admin', 'Doctor': 'doctor', 'Receptionist': 'receptionist', 'Patient': 'patient' };
   const payload = {
     name: name,
     email: document.getElementById('staff-email').value,
@@ -3087,7 +3087,7 @@ function exportReport(type) {
 
 /* HELPERS  */
 function roleBadge(role) {
-  return {Admin:'badge-purple',Doctor:'badge-blue',Receptionist:'badge-green',Patient:'badge-gray'}[role]||'badge-gray';
+  return {'Hospital Admin':'badge-purple',Doctor:'badge-blue',Receptionist:'badge-green',Patient:'badge-gray'}[role]||'badge-gray';
 }
 function initials(name) {
   return name.split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
