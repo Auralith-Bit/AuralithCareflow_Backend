@@ -4,7 +4,7 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-j@5k)m65&2n)nraz&nm%u8*8r7i+^bd8y#xhw7xp&aw@emev5i'
-DEBUG = False
+DEBUG =True
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
@@ -62,7 +62,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'careflow_db',
         'USER': 'root',
-        'PASSWORD': '@naumaya5903',
+        'PASSWORD': '123456',
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
@@ -113,6 +113,3 @@ LOGIN_REDIRECT_URL = '/reception/'
 LOGOUT_REDIRECT_URL = '/login/'
 
 CORS_ALLOW_ALL_ORIGINS = True
-
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = None
