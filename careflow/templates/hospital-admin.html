@@ -1263,7 +1263,7 @@
           <p>Manage doctor profiles, specialities, schedules, and availability.</p>
         </div>
         <div class="page-banner-actions">
-          <button class="btn btn-primary" style="background:white;color:var(--green-dark);" onclick="editingDoctorId=null;document.getElementById('doctor-modal-title').textContent='👨‍⚕️ Add Doctor';document.getElementById('doctor-save-btn').textContent='+ Add Doctor';document.getElementById('doc-fee').value='';openModal('modal-doctor')">+ Add Doctor</button>
+          <button class="btn btn-primary" style="background:white;color:var(--green-dark);" onclick="editingDoctorId=null;document.getElementById('doctor-modal-title').textContent='👨‍⚕️ Add Doctor';document.getElementById('doctor-save-btn').textContent='+ Add Doctor';document.getElementById('doc-fee').value='';resetAvailCheckboxes();openModal('modal-doctor')">+ Add Doctor</button>
         </div>
       </div>
       <div class="section-header">
@@ -1538,7 +1538,7 @@
   <div class="modal modal-lg">
     <div class="modal-header">
       <h3 id="doctor-modal-title">👨‍⚕️ Add Doctor</h3>
-      <button class="modal-close" onclick="editingDoctorId=null;document.getElementById('doctor-modal-title').textContent='👨‍⚕️ Add Doctor';document.querySelector('#modal-doctor .btn-primary').textContent='+ Add Doctor';closeModal('modal-doctor')">✕</button>
+      <button class="modal-close" onclick="editingDoctorId=null;document.getElementById('doctor-modal-title').textContent='👨‍⚕️ Add Doctor';document.querySelector('#modal-doctor .btn-primary').textContent='+ Add Doctor';resetAvailCheckboxes();closeModal('modal-doctor')">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-row">
@@ -1587,7 +1587,7 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="editingDoctorId=null;document.getElementById('doctor-modal-title').textContent='👨‍⚕️ Add Doctor';document.getElementById('doctor-save-btn').textContent='+ Add Doctor';closeModal('modal-doctor')">Cancel</button>
+      <button class="btn btn-ghost" onclick="editingDoctorId=null;document.getElementById('doctor-modal-title').textContent='👨‍⚕️ Add Doctor';document.getElementById('doctor-save-btn').textContent='+ Add Doctor';resetAvailCheckboxes();closeModal('modal-doctor')">Cancel</button>
       <button class="btn btn-primary" id="doctor-save-btn" onclick="saveDoctor()">+ Add Doctor</button>
     </div>
   </div>
@@ -2159,6 +2159,11 @@ function editDoctor(id) {
   document.getElementById('doc-fee').value = d.consultation_fee || '';
   document.getElementById('doc-morning').value = d.morning_slots || '';
   document.getElementById('doc-evening').value = d.evening_slots || '';
+  const daysStr = (d.days_available || '').toLowerCase();
+  const dayAbbrs = ['mon','tue','wed','thu','fri','sat','sun'];
+  document.querySelectorAll('#avail-days input[type="checkbox"]').forEach((cb, i) => {
+    cb.checked = daysStr.includes(dayAbbrs[i]);
+  });
   selectedAvColor = d.avatar_color || 'av-1';
   openModal('modal-doctor');
 }
@@ -2179,8 +2184,14 @@ async function saveDoctor() {
     evening_slots: document.getElementById('doc-evening').value || '',
     consultation_fee: parseFloat(document.getElementById('doc-fee').value) || 0,
     avatar_color: selectedAvColor,
-    days_available: 'Mon–Fri',
-    slots_per_day: 20,
+    days_available: (() => {
+      const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      const checked = [...document.querySelectorAll('#avail-days input[type="checkbox"]')]
+        .map((cb, i) => cb.checked ? dayNames[i] : null)
+        .filter(Boolean);
+      return checked.length ? checked.join(', ') : 'Mon–Fri';
+    })(),
+    slots_per_day: parseInt(document.getElementById('slots-per-day')?.value) || 20,
   };
   try {
     if (editingDoctorId) {
@@ -3105,6 +3116,11 @@ function formatDate(d) {
   return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
 }
 function clearForm(ids) { ids.forEach(id => { const el = document.getElementById(id); if(el) el.value=''; }); }
+function resetAvailCheckboxes() {
+  document.querySelectorAll('#avail-days input[type="checkbox"]').forEach((cb, i) => {
+    cb.checked = i < 5; // Mon-Fri checked, Sat-Sun unchecked
+  });
+}
 
 /*  MODAL HELPERS */
 function openModal(id) { document.getElementById(id).classList.add('open'); }
