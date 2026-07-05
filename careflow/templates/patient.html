@@ -3227,10 +3227,8 @@
         }
     };
 
-    /* Reschedule */
-    window.openRescheduleModal = (token) => {
-        const data = myBookingsData.find(b => b.token === token);
-        // Pre-fill from current display values
+    /* Edit Profile */
+    window.openEditProfileModal = () => {
         document.getElementById('edit-name').value    = document.getElementById('disp-name').textContent;
         document.getElementById('edit-phone').value   = document.getElementById('disp-phone').textContent;
         document.getElementById('edit-email').value   = document.getElementById('disp-email').textContent;
