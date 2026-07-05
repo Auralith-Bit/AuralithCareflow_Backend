@@ -126,6 +126,11 @@ class DoctorViewSet(viewsets.ModelViewSet):
     def _sync_time_slots(self, doctor):
         TimeSlot.objects.filter(doctor=doctor).delete()
         slots = []
+        day_map = {'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6}
+        days_str = (doctor.days_available or '').lower()
+        selected_days = [num for abbr, num in day_map.items() if abbr in days_str]
+        if not selected_days:
+            selected_days = list(range(5))
         for range_str in [doctor.morning_slots, doctor.evening_slots]:
             if not range_str:
                 continue
@@ -140,7 +145,7 @@ class DoctorViewSet(viewsets.ModelViewSet):
                 end = datetime.strptime(parts[1].strip(), '%H:%M').time()
             except ValueError:
                 continue
-            for day in range(5):
+            for day in selected_days:
                 slots.append(TimeSlot(
                     doctor=doctor, day_of_week=day,
                     start_time=start, end_time=end,
