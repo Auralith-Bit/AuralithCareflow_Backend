@@ -211,8 +211,8 @@ class DoctorPublicListView(APIView):
                 'rating': round(avg_rating, 1) if avg_rating else None,
                 'slots_per_day': d.slots_per_day,
                 'days_available': d.days_available,
-                'morning_slots': d.morning_slots,
-                'evening_slots': d.evening_slots,
+                'day_slots': d.day_slots,
+                'night_slots': d.night_slots,
                 'waiting_count': waiting,
                 'slots_left': max(0, d.slots_per_day - waiting),
                 'status': d.status,
@@ -252,8 +252,8 @@ class DoctorPublicDetailView(APIView):
             'reviews': DoctorReviewSerializer(reviews, many=True).data,
             'slots_per_day': d.slots_per_day,
             'days_available': d.days_available,
-            'morning_slots': d.morning_slots,
-            'evening_slots': d.evening_slots,
+            'day_slots': d.day_slots,
+            'night_slots': d.night_slots,
             'waiting_count': waiting,
             'slots_left': max(0, d.slots_per_day - waiting),
             'status': d.status,
@@ -285,12 +285,30 @@ class AvailableSlotsView(APIView):
         if not doctor:
             return Response({'error': 'Doctor not found'}, status=404)
 
+        def expand_range(start_mins, end_mins, step=20):
+            times = []
+            if start_mins < end_mins:
+                for mins in range(start_mins, end_mins, step):
+                    h, m = divmod(mins, 60)
+                    times.append(f'{h:02d}:{m:02d}')
+            else:
+                for mins in range(start_mins, 1440, step):
+                    h, m = divmod(mins, 60)
+                    times.append(f'{h:02d}:{m:02d}')
+                for mins in range(0, end_mins, step):
+                    h, m = divmod(mins, 60)
+                    times.append(f'{h:02d}:{m:02d}')
+            return times
+
         time_slots_qs = doctor.time_slots.filter(day_of_week=day_of_week)
+        slot_times = []
         if time_slots_qs.exists():
-            slot_times = [s.start_time.strftime('%H:%M') for s in time_slots_qs]
+            for ts in time_slots_qs:
+                start_mins = ts.start_time.hour * 60 + ts.start_time.minute
+                end_mins = ts.end_time.hour * 60 + ts.end_time.minute
+                slot_times.extend(expand_range(start_mins, end_mins))
         else:
-            slot_times = []
-            for range_str in [doctor.morning_slots, doctor.evening_slots]:
+            for range_str in [doctor.day_slots, doctor.night_slots]:
                 if not range_str:
                     continue
                 for sep in ['–', '-']:
@@ -298,26 +316,27 @@ class AvailableSlotsView(APIView):
                         parts = range_str.split(sep)
                         if len(parts) == 2:
                             try:
-                                start_hour = datetime.strptime(parts[0].strip(), '%H:%M').hour
-                                end_hour = datetime.strptime(parts[1].strip(), '%H:%M').hour
+                                start = datetime.strptime(parts[0].strip(), '%H:%M')
+                                end = datetime.strptime(parts[1].strip(), '%H:%M')
+                                start_mins = start.hour * 60 + start.minute
+                                end_mins = end.hour * 60 + end.minute
+                                slot_times.extend(expand_range(start_mins, end_mins))
                             except ValueError:
                                 continue
-                            for hour in range(start_hour, end_hour):
-                                slot_times.append(f'{hour:02d}:00')
                         break
             if not slot_times:
                 slot_times = [f'{h:02d}:00' for h in range(9, 17)]
 
         existing_appointments = Appointment.objects.filter(
-            doctor_name=doctor.name,
+            doctor=doctor,
             appointment_date=selected_date,
-            status__in=['confirmed', 'scheduled', 'pending'],
+            status__in=['pending', 'confirmed', 'scheduled', 'rescheduled'],
         )
 
         existing_queue = QueueEntry.objects.filter(
             doctor=doctor,
             scheduled_date=selected_date,
-            status__in=['waiting'],
+            status__in=['waiting', 'arrived', 'serving'],
         )
 
         booked_times = set()

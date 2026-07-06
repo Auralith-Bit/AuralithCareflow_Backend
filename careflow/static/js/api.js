@@ -173,6 +173,7 @@ const API = {
     updateDoctor(id, data) { return API.put(`/api/admin/doctors/${id}/`, data); },
     deleteDoctor(id) { return API.del(`/api/admin/doctors/${id}/`); },
     restoreDoctor(id) { return API.post(`/api/admin/doctors/${id}/restore/`); },
+    bookedTimes(doctorId, date) { return API.get(`/api/admin/doctors/${doctorId}/booked_times/?date=${date}`); },
     hospitalProfile() { return API.get('/api/admin/hospital-profile/'); },
     updateHospitalProfile(data) { return API.put('/api/admin/hospital-profile/', data); },
     holidays(params = '') { return API.get('/api/admin/holidays/' + params); },

@@ -11,6 +11,7 @@ from django.db.models import Count, Avg, F, ExpressionWrapper, DurationField
 from accounts.permissions import IsHospitalAdmin
 from rest_framework.permissions import IsAuthenticated
 from accounts.models import User, Notification
+from Patient.models import Appointment
 from .models import Department, Doctor, HospitalProfile, Holiday, TimeSlot, EmergencyClosure
 from .serializers import (
     DepartmentSerializer, DoctorSerializer, DoctorListSerializer,
@@ -113,6 +114,33 @@ class DoctorViewSet(viewsets.ModelViewSet):
         instance.is_active = False
         instance.save(update_fields=['is_active'])
 
+    @action(detail=True, methods=['get'])
+    def booked_times(self, request, pk=None):
+        doctor = self.get_object()
+        date_str = request.query_params.get('date')
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else timezone.now().date()
+        except ValueError:
+            return Response({'error': 'Invalid date format, use YYYY-MM-DD'}, status=400)
+        appointments = Appointment.objects.filter(
+            doctor=doctor,
+            appointment_date=selected_date,
+            status__in=['pending', 'confirmed', 'scheduled', 'rescheduled'],
+        ).values_list('appointment_time', flat=True)
+        queue_entries = QueueEntry.objects.filter(
+            doctor=doctor,
+            scheduled_date=selected_date,
+            status__in=['waiting', 'arrived', 'serving'],
+        ).values_list('time', flat=True)
+        booked = set()
+        for t in appointments:
+            if t:
+                booked.add(t.strftime('%H:%M'))
+        for t in queue_entries:
+            if t:
+                booked.add(t.strftime('%H:%M'))
+        return Response(sorted(booked))
+
     @action(detail=True, methods=['post'])
     def restore(self, request, pk=None):
         doctor = get_object_or_404(Doctor, pk=pk)
@@ -131,7 +159,7 @@ class DoctorViewSet(viewsets.ModelViewSet):
         selected_days = [num for abbr, num in day_map.items() if abbr in days_str]
         if not selected_days:
             selected_days = list(range(5))
-        for range_str in [doctor.morning_slots, doctor.evening_slots]:
+        for range_str in [doctor.day_slots, doctor.night_slots]:
             if not range_str:
                 continue
             sep = '–' if '–' in range_str else '-' if '-' in range_str else None
