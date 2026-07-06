@@ -2069,7 +2069,7 @@ function renderDoctors(filter='') {
     const qual = d.qualification || '';
     const mor = rangeTo12h(d.day_slots);
     const eve = rangeTo12h(d.night_slots);
-    const slots = d.slots_per_day || 0;
+    const slots = computeTotalSlots(d.day_slots, d.night_slots) || d.slots_per_day || 0;
     const av = d.avatar_color || 'av-1';
     const status = d.status || 'active';
     const days = d.days_available || '';
@@ -2278,6 +2278,22 @@ function inRange(timeStr, range, wrapAround) {
   return mins >= range.start || mins < range.end;
 }
 
+function countSlotsInRange(range24h) {
+  if (!range24h) return 0;
+  const parts = range24h.split(/[–-]/);
+  if (parts.length !== 2) return 0;
+  const [sh, sm] = parts[0].trim().split(':').map(Number);
+  const [eh, em] = parts[1].trim().split(':').map(Number);
+  const start = sh * 60 + sm;
+  const end = eh * 60 + em;
+  if (start < end) return Math.ceil((end - start) / 20);
+  if (start > end) return Math.ceil((1440 - start) / 20) + Math.ceil(end / 20);
+  return 0;
+}
+function computeTotalSlots(day24h, night24h) {
+  return countSlotsInRange(day24h) + countSlotsInRange(night24h);
+}
+
 function syncGridFromWindow() {
   const dayVal = document.getElementById('slot-day').value.trim();
   const nightVal = document.getElementById('slot-night').value.trim();
@@ -2295,6 +2311,9 @@ function syncGridFromWindow() {
     }
     el.classList.toggle('active', !!isActive);
   });
+  const day24h = rangeFrom12h(dayVal);
+  const night24h = rangeFrom12h(nightVal);
+  document.getElementById('slot-count').value = computeTotalSlots(day24h, night24h) || '';
 }
 
 function syncWindowFromGrid() {
@@ -2331,7 +2350,7 @@ function renderSlotConfig() {
       <div class="form-row" style="margin-bottom:14px;">
         <div class="form-group"><label>Day Window</label><input class="form-input" id="slot-day" value="${rangeTo12h(doc.day_slots)}" placeholder="9:00 AM \u2013 1:00 PM" oninput="syncGridFromWindow()" /></div>
         <div class="form-group"><label>Night Window</label><input class="form-input" id="slot-night" value="${rangeTo12h(doc.night_slots)}" placeholder="9:00 PM \u2013 11:00 PM" oninput="syncGridFromWindow()" /></div>
-        <div class="form-group"><label>Slots per Day</label><input type="number" class="form-input" id="slot-count" value="${doc.slots_per_day || 20}" min="1" max="100" /></div>
+        <div class="form-group"><label>Slots per Day</label><input type="number" class="form-input" id="slot-count" value="${computeTotalSlots(doc.day_slots, doc.night_slots) || doc.slots_per_day || 20}" min="1" max="100" /></div>
       </div>
     </div>
     <div style="font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Today's Slot Availability</div>
