@@ -198,6 +198,11 @@ const API = {
     superAdminStats() { return API.get('/api/auth/super-admin-stats/'); },
   },
 
+  // Staff / Admin login & approval
+  staffLogin(employeeId, password) { return API.post('/api/auth/staff-login/', { employee_id: employeeId, password }); },
+  approveUser(id) { return API.post(`/api/auth/users/${id}/approve/`); },
+  pendingApprovals() { return API.get('/api/auth/users/pending/'); },
+
   // Shared Notifications (for all roles)
   notifications: {
     list() { return API.get('/api/auth/notifications/'); },

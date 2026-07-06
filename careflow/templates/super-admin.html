@@ -238,7 +238,7 @@
   <div class="nav-item" onclick="setNav(this, 'roles')"><span class="icon">🔐</span> Roles & Access</div>
   <div class="nav-item" onclick="setNav(this, 'groups')"><span class="icon">👥</span> Groups</div>
   <div class="nav-section">System</div>
-  <div class="nav-item" onclick="window.location.href='/admin/'"><span class="icon">⚙️</span> Django Admin</div>
+
   <div class="nav-item" onclick="setNav(this, 'notifications')"><span class="icon">🔔</span> Notifications <span class="nav-badge" id="notif-badge">0</span></div>
   <div class="sidebar-bottom">
     <div class="user-card">
@@ -393,8 +393,6 @@
       <div class="form-group"><label>Role</label>
         <select class="form-select" id="staff-role">
           <option value="hospital_admin">Hospital Admin</option>
-          <option value="doctor">Doctor</option>
-          <option value="receptionist">Receptionist</option>
         </select>
       </div>
     </div>

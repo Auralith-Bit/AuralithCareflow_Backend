@@ -1,11 +1,9 @@
-from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import render, redirect
-from django.contrib.auth import views as auth_views
 from django.views.static import serve as serve_static
-from accounts.views import LoginView, LogoutView as CustomLogoutView
+from accounts.views import LoginView, LogoutView as CustomLogoutView, staff_login_page, admin_login_page
 from hospital_admin import views as hospital_admin_views
 
 
@@ -14,7 +12,6 @@ def login_registration_page(request):
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')),
     path('api/reception/', include('reception.urls')),
     path('api/admin/', include('hospital_admin.urls')),
@@ -32,7 +29,13 @@ urlpatterns = [
     # Patient API
     path('api/patient/', include('Patient.urls')),
 
-    # Login/Registration page
+    # Staff login page (employee ID + password)
+    path('staff/', staff_login_page, name='staff-login-page'),
+
+    # Admin login page (employee ID + password)
+    path('admin/', admin_login_page, name='admin-login-page'),
+
+    # Login/Registration page (patient phone + OTP)
     path('login/', login_registration_page, name='login'),
 
     # Logout

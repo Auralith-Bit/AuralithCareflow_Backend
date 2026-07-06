@@ -73,6 +73,11 @@ DATABASES = {
 
 AUTH_USER_MODEL = 'accounts.User'
 
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmployeeIDBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 AUTH_PASSWORD_VALIDATORS = []
 
 LANGUAGE_CODE = 'en-us'

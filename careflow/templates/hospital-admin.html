@@ -1319,7 +1319,17 @@
     </div>
 
     <!--  STAFF  -->
-    <div id="view-staff" class="view">
+     <div id="view-staff" class="view">
+      <!-- PENDING APPROVALS -->
+      <div class="page-banner" style="background:#fff3cd;border:1px solid #ffc107;margin-bottom:1rem;display:none;" id="pending-banner">
+        <div class="page-banner-icon">⏳</div>
+        <div class="page-banner-text">
+          <h2 style="color:#856404;">Pending Approvals</h2>
+          <p style="color:#856404;">Staff accounts awaiting activation. Once approved they can log in.</p>
+        </div>
+      </div>
+      <div id="pending-list" style="margin-bottom:1.5rem;"></div>
+
       <div class="page-banner">
         <div class="page-banner-icon">👥</div>
         <div class="page-banner-text">
@@ -1327,7 +1337,7 @@
           <p>Manage login access for admins, doctors, receptionists, and patients.</p>
         </div>
         <div class="page-banner-actions">
-          <button class="btn btn-primary" style="background:white;color:var(--green-dark);" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';document.getElementById('staff-save-btn').textContent='+ Create Account';closeModal('modal-staff')">+ Add Staff</button>
+          <button class="btn btn-primary" style="background:white;color:var(--green-dark);" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';document.getElementById('staff-save-btn').textContent='+ Create Account';document.getElementById('staff-email').setAttribute('readonly','');document.getElementById('staff-email').setAttribute('disabled','');document.getElementById('staff-email').style.opacity='0.6';clearForm(['staff-name','staff-email']);openModal('modal-staff')">+ Add Staff</button>
         </div>
       </div>
       <div class="section-header">
@@ -1599,26 +1609,50 @@
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label>Full Name</label><input class="form-input" id="staff-name" placeholder="Full name" /></div>
-        <div class="form-group"><label>Email</label><input class="form-input" id="staff-email" placeholder="email@hospital.com" /></div>
+        <div class="form-group"><label>Email</label><input class="form-input" id="staff-email" placeholder="email@hospital.com" readonly disabled style="opacity:0.6" /></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Role</label>
           <select class="form-select" id="staff-role">
-            <option>Hospital Admin</option>
             <option>Doctor</option>
             <option>Receptionist</option>
-            <option>Patient</option>
           </select>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>Phone</label><input class="form-input" id="staff-phone" placeholder="+91 ..." /></div>
-        <div class="form-group"><label>Password</label><input type="password" class="form-input" id="staff-pass" placeholder="Set password" /></div>
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:12px;color:#166534;margin-top:4px;">
+        <i class="ti ti-info-circle" style="vertical-align:-1px"></i> Employee ID and a strong password will be auto-generated. Show them once after creation.
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';document.getElementById('staff-save-btn').textContent='+ Create Account';closeModal('modal-staff')">Cancel</button>
       <button class="btn btn-primary" id="staff-save-btn" onclick="saveStaff()">+ Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Credentials Display Modal -->
+<div class="modal-overlay" id="modal-credentials">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>✅ Staff Account Created</h3>
+      <button class="modal-close" onclick="closeModal('modal-credentials')">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <div style="font-size:40px;margin-bottom:8px;">🔑</div>
+      <p style="font-size:14px;color:var(--gray-600);margin-bottom:16px;">Share these credentials with the staff member. They will not be shown again.</p>
+      <div style="background:#f7faf8;border:1px solid var(--border-color);border-radius:10px;padding:16px;text-align:left;">
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--gray-500);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Employee ID</div>
+          <div style="font-size:18px;font-weight:700;font-family:monospace;word-break:break-all;" id="cred-employee-id">—</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--gray-500);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Password</div>
+          <div style="font-size:18px;font-weight:700;font-family:monospace;word-break:break-all;" id="cred-password">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:center;">
+      <button class="btn btn-primary" onclick="closeModal('modal-credentials');document.getElementById('staff-save-btn').textContent='+ Create Account';clearForm(['staff-name']);loadStaff();">Done</button>
     </div>
   </div>
 </div>
@@ -1723,6 +1757,7 @@ async function loadAll() {
     loadHolidays(),
     loadDashboardStats(currentAnalyticsRange),
     loadHospitalProfile(),
+    loadPendingApprovals(),
   ]);
 }
 
@@ -2419,35 +2454,84 @@ function editStaff(id) {
   document.getElementById('staff-save-btn').textContent = '💾 Save Changes';
   document.getElementById('staff-name').value = s.name;
   document.getElementById('staff-email').value = s.email;
+  document.getElementById('staff-email').removeAttribute('readonly');
+  document.getElementById('staff-email').removeAttribute('disabled');
+  document.getElementById('staff-email').style.opacity = '1';
   document.getElementById('staff-role').value = s.role;
-  document.getElementById('staff-phone').value = s.phone;
   openModal('modal-staff');
+}
+
+async function loadPendingApprovals() {
+  try {
+    const users = await API.pendingApprovals();
+    const container = document.getElementById('pending-list');
+    const banner = document.getElementById('pending-banner');
+    if (!users.length) { container.innerHTML = ''; banner.style.display = 'none'; return; }
+    banner.style.display = 'flex';
+    container.innerHTML = `
+      <div class="panel" style="border:1px solid #ffc107;">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Name</th><th>Role</th><th>Employee ID</th><th>Created</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              ${users.map(u => `
+                <tr>
+                  <td><strong>${u.name}</strong></td>
+                  <td><span class="role-pill">${roleDisplay(u.role)}</span></td>
+                  <td style="font-family:monospace;font-weight:600;">${u.employee_id || '—'}</td>
+                  <td style="font-size:12px;color:var(--gray-500)">${new Date(u.date_joined).toLocaleDateString()}</td>
+                  <td><button class="btn btn-sm btn-primary" onclick="approveStaff(${u.id})">Approve</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch (e) { /* silently ignore */ }
+}
+
+async function approveStaff(id) {
+  try {
+    await API.approveUser(id);
+    showToast('Staff account approved ✅');
+    await loadPendingApprovals();
+    await loadStaff();
+  } catch (e) { showToast(e.message || 'Error approving staff','error'); }
 }
 
 async function saveStaff() {
   const name = document.getElementById('staff-name').value.trim();
   if (!name) { showToast('Name is required','error'); return; }
   const roleDisplay = document.getElementById('staff-role').value;
-  const roleMap = { 'Hospital Admin': 'hospital_admin', 'Doctor': 'doctor', 'Receptionist': 'receptionist', 'Patient': 'patient' };
-  const payload = {
-    name: name,
-    email: document.getElementById('staff-email').value,
-    role: roleMap[roleDisplay] || 'receptionist',
-    phone: document.getElementById('staff-phone').value,
-  };
+  const roleMap = { 'Doctor': 'doctor', 'Receptionist': 'receptionist' };
+  const role = roleMap[roleDisplay] || 'receptionist';
   try {
     if (editingStaffId) {
-      await API.admin.updateUser(editingStaffId, payload);
+      await API.admin.updateUser(editingStaffId, {
+        name: name,
+        email: document.getElementById('staff-email').value,
+        role: role,
+      });
       showToast(`${name} updated ✅`);
+      editingStaffId = null;
+      document.getElementById('staff-save-btn').textContent = '+ Create Account';
+      closeModal('modal-staff');
+      clearForm(['staff-name','staff-email']);
+      document.getElementById('staff-email').setAttribute('readonly','');
+      document.getElementById('staff-email').setAttribute('disabled','');
+      document.getElementById('staff-email').style.opacity = '0.6';
+      await loadStaff();
     } else {
-      await API.admin.createStaff(payload);
+      const result = await API.admin.createStaff({ name, role });
       showToast(`${name} account created ✅`);
+      closeModal('modal-staff');
+      document.getElementById('cred-employee-id').textContent = result.employee_id;
+      document.getElementById('cred-password').textContent = result.password;
+      openModal('modal-credentials');
     }
-    editingStaffId = null;
-    document.getElementById('staff-save-btn').textContent = '+ Create Account';
-    closeModal('modal-staff');
-    clearForm(['staff-name','staff-email','staff-phone','staff-pass']);
-    await loadStaff();
   } catch (e) { showToast(e.message || 'Error saving staff','error'); }
 }
 

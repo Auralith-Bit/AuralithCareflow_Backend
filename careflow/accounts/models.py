@@ -1,20 +1,26 @@
+import secrets
+import string
+
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, phone, name, password=None, **extra_fields):
-        if not phone:
-            raise ValueError('Phone is required')
-        user = self.model(phone=phone, name=name, **extra_fields)
+    def create_user(self, name, password=None, phone=None, **extra_fields):
+        user = self.model(name=name, phone=phone, **extra_fields)
+        if password:
+            user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, phone, name, password=None, **extra_fields):
+    def create_superuser(self, name, password=None, phone=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        return self.create_user(phone, name, password, **extra_fields)
+        extra_fields.setdefault('role', 'super_admin')
+        if not extra_fields.get('employee_id'):
+            extra_fields['employee_id'] = f"SUP-{self.model.objects.filter(role='super_admin').count() + 1:03d}"
+        return self.create_user(name, password, phone, **extra_fields)
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -38,6 +44,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     gender = models.CharField(max_length=10, choices=Gender.choices, blank=True, default='')
     date_of_birth = models.DateField(null=True, blank=True)
     address = models.TextField(blank=True, default='')
+    employee_id = models.CharField(max_length=20, unique=True, null=True, blank=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -49,6 +56,44 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.name} ({self.get_role_display()})"
+
+    @classmethod
+    def generate_employee_id(cls, role):
+        prefix_map = {
+            'hospital_admin': 'ADM',
+            'doctor': 'DOC',
+            'receptionist': 'REC',
+            'super_admin': 'SUP',
+        }
+        prefix = prefix_map.get(role)
+        if not prefix:
+            return None
+        last = cls.objects.filter(role=role, employee_id__startswith=f"{prefix}-").order_by('employee_id').last()
+        if last and last.employee_id:
+            try:
+                num = int(last.employee_id.split('-')[1]) + 1
+            except (IndexError, ValueError):
+                num = 1
+        else:
+            num = 1
+        return f"{prefix}-{num:03d}"
+
+    @staticmethod
+    def generate_password(length=12):
+        upper = string.ascii_uppercase
+        lower = string.ascii_lowercase
+        digits = string.digits
+        symbols = '!@#$%&*'
+        all_chars = upper + lower + digits + symbols
+        pwd = [
+            secrets.choice(upper),
+            secrets.choice(lower),
+            secrets.choice(digits),
+            secrets.choice(symbols),
+        ]
+        pwd += [secrets.choice(all_chars) for _ in range(length - 4)]
+        secrets.SystemRandom().shuffle(pwd)
+        return ''.join(pwd)
 
 
 class Notification(models.Model):
