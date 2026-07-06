@@ -203,6 +203,7 @@ const API = {
   staffLogin(employeeId, password) { return API.post('/api/auth/staff-login/', { employee_id: employeeId, password }); },
   approveUser(id) { return API.post(`/api/auth/users/${id}/approve/`); },
   pendingApprovals() { return API.get('/api/auth/users/pending/'); },
+  resetPassword(id) { return API.post(`/api/auth/users/${id}/reset-password/`); },
 
   // Shared Notifications (for all roles)
   notifications: {

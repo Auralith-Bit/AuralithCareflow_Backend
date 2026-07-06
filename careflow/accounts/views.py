@@ -331,6 +331,19 @@ class UserGroupsView(APIView):
         return Response({'groups': [{'id': g.id, 'name': g.name} for g in user.groups.all()]})
 
 
+class ResetPasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsHospitalAdmin]
+
+    def post(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        if user.role == 'super_admin' and request.user.role != 'super_admin':
+            return Response({'error': 'Only Super Admin can reset another Super Admin\'s password'}, status=403)
+        password = User.generate_password()
+        user.set_password(password)
+        user.save()
+        return Response({'employee_id': user.employee_id, 'password': password})
+
+
 class UserGroupMappingsView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsHospitalAdmin]
 

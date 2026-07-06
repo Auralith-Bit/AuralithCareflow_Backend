@@ -19,6 +19,7 @@ urlpatterns = [
     path('users/<int:pk>/update/', views.UpdateUserView.as_view(), name='update-user'),
     path('users/<int:pk>/delete/', views.DeleteStaffView.as_view(), name='delete-staff'),
     path('users/<int:pk>/', views.UserDetailView.as_view(), name='user-detail'),
+    path('users/<int:pk>/reset-password/', views.ResetPasswordView.as_view(), name='reset-password'),
     path('users/<int:pk>/groups/', views.UserGroupsView.as_view(), name='user-groups'),
     path('user-group-mappings/', views.UserGroupMappingsView.as_view(), name='user-group-mappings'),
     path('permissions/', views.PermissionListView.as_view(), name='permissions'),

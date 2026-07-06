@@ -68,14 +68,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         prefix = prefix_map.get(role)
         if not prefix:
             return None
-        last = cls.objects.filter(role=role, employee_id__startswith=f"{prefix}-").order_by('employee_id').last()
-        if last and last.employee_id:
-            try:
-                num = int(last.employee_id.split('-')[1]) + 1
-            except (IndexError, ValueError):
-                num = 1
-        else:
-            num = 1
+        existing = set(
+            cls.objects.filter(role=role, employee_id__startswith=f"{prefix}-")
+            .values_list('employee_id', flat=True)
+        )
+        num = 1
+        while f"{prefix}-{num:03d}" in existing:
+            num += 1
         return f"{prefix}-{num:03d}"
 
     @staticmethod
