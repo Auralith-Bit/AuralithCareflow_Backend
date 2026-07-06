@@ -2350,7 +2350,9 @@ function renderSlotConfig() {
 
 async function loadSlotsForDoctor(doctorId) {
   try {
-    const slots = await API.admin.slots(`?doctor=${doctorId}`);
+    const today = new Date().toISOString().slice(0, 10);
+    const bookedRes = await API.admin.bookedTimes(doctorId, today);
+    const bookedTimes = Array.isArray(bookedRes) ? bookedRes : [];
     const grid = document.getElementById('slot-grid');
     if (!grid) return;
     const fmt = t => { const [h,m]=t.split(':').map(Number); const p=h>=12?'pm':'am'; const h12=h%12||12; return `${h12}:${String(m).padStart(2,'0')} ${p}`; };
@@ -2363,7 +2365,7 @@ async function loadSlotsForDoctor(doctorId) {
     const dayRange = parse24hRange(doc?.day_slots || '');
     const nightRange = parse24hRange(doc?.night_slots || '');
     const renderGroup = (times, isNight) => times.map(t => {
-      const isBooked = slots.some(s => s.start_time === t + ':00' && s.is_booked);
+      const isBooked = bookedTimes.includes(t);
       const inDay = dayRange && inRange(t, dayRange, false);
       const inNight = nightRange && inRange(t, nightRange, true);
       const isActive = isNight ? inNight : inDay;
