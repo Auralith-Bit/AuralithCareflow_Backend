@@ -1,0 +1,113 @@
+{% load static %}<meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareFlow — Admin Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/login-style.css' %}">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-brand">
+            <div class="auth-brand-header">
+                <div class="auth-logo-circle"><i class="fa-solid fa-shield-halved"></i></div>
+                <h2>CareFlow</h2>
+                <p style="font-size:13px;color:#a0bfb5;margin-top:2px;">Admin Portal</p>
+            </div>
+        </div>
+
+        <div class="auth-card">
+            <h3><i class="fa-solid fa-user-tie" style="color:var(--primary-teal);margin-right:6px;"></i> Admin Login</h3>
+            <p class="auth-subtitle">Enter your Employee ID and password to continue.</p>
+
+            <form onsubmit="handleAdminLogin(event)">
+                <div class="input-group">
+                    <label for="emp-id"><i class="fa-solid fa-id-card"></i> Employee ID</label>
+                    <input type="text" id="emp-id" placeholder="e.g. ADM-001" required autofocus>
+                </div>
+                <div class="input-group">
+                    <label for="password"><i class="fa-solid fa-lock"></i> Password</label>
+                    <input type="password" id="password" placeholder="Enter your password" required>
+                </div>
+
+                <button type="submit" class="btn-auth-submit" id="login-btn">
+                    Sign In <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <div id="login-error" class="hidden" style="color:#e63946;font-size:13px;text-align:center;margin-top:12px;"></div>
+            <div id="login-pending" class="hidden" style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;text-align:center;margin-top:12px;font-size:13px;color:#856404;"></div>
+
+            <div class="resend-container">
+                <a href="/login/" class="resend-link"><i class="fa-solid fa-arrow-left"></i> Patient Login</a>
+            </div>
+        </div>
+
+        <footer class="auth-footer">
+            By continuing, you agree to CareFlow's <a href="#">Terms of Service</a> & <a href="#">Privacy Policy</a>.
+        </footer>
+    </div>
+
+    <script>
+        function getCSRF() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+
+        async function handleAdminLogin(e) {
+            e.preventDefault();
+            const employeeId = document.getElementById('emp-id').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('login-btn');
+            const errorEl = document.getElementById('login-error');
+            const pendingEl = document.getElementById('login-pending');
+
+            errorEl.classList.add('hidden');
+            pendingEl.classList.add('hidden');
+
+            if (!employeeId || !password) {
+                errorEl.textContent = 'Both Employee ID and Password are required.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = 'Signing in...';
+
+            try {
+                const res = await fetch('/api/auth/staff-login/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                    body: JSON.stringify({ employee_id: employeeId, password }),
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    if (res.status === 403 && data.pending) {
+                        pendingEl.textContent = data.message || 'Your account is pending admin approval.';
+                        pendingEl.classList.remove('hidden');
+                        return;
+                    }
+                    throw new Error(data.error || 'Invalid credentials');
+                }
+
+                localStorage.setItem('careflow_token', data.access);
+                const role = data.user.role;
+                if (role === 'hospital_admin' || role === 'super_admin') {
+                    window.location.href = '/admin/';
+                } else {
+                    window.location.href = '/patient/';
+                }
+            } catch (err) {
+                errorEl.textContent = err.message || 'Login failed. Please try again.';
+                errorEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Sign In <i class="fa-solid fa-arrow-right"></i>';
+            }
+        }
+    </script>
+</body>
+</html>

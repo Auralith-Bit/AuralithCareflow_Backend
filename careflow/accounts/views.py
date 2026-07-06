@@ -1,11 +1,11 @@
 import random
 import time
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import redirect
-from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Notification
 from .serializers import UserSerializer, PermissionSerializer, GroupSerializer, UserDetailSerializer, NotificationSerializer
@@ -165,30 +165,46 @@ class LogoutView(APIView):
 
 
 class CreateStaffView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsHospitalAdmin]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        phone = request.data.get('phone', '').strip()
         name = request.data.get('name', '').strip()
         role = request.data.get('role', '').strip().lower()
 
-        if not phone or not name or role not in ('receptionist', 'doctor', 'hospital_admin'):
-            return Response({'error': 'Valid phone, name, and role are required'}, status=400)
-        if User.objects.filter(phone=phone).exists():
-            return Response({'error': 'Phone already registered'}, status=400)
+        if not name or role not in ('receptionist', 'doctor', 'hospital_admin'):
+            return Response({'error': 'Valid name and role are required'}, status=400)
+
+        user_role = request.user.role
+        if user_role == 'super_admin' and role != 'hospital_admin':
+            return Response({'error': 'Super admin can only create hospital admin accounts'}, status=403)
+        if user_role == 'hospital_admin' and role not in ('doctor', 'receptionist'):
+            return Response({'error': 'Hospital admin can only create doctors and receptionists'}, status=403)
+        if user_role not in ('super_admin', 'hospital_admin'):
+            return Response({'error': 'You do not have permission to create staff'}, status=403)
+
+        employee_id = User.generate_employee_id(role)
+        if not employee_id:
+            return Response({'error': 'Could not generate employee ID'}, status=500)
+
+        if User.objects.filter(employee_id=employee_id).exists():
+            return Response({'error': 'Employee ID collision. Try again.'}, status=500)
+
+        password = User.generate_password()
 
         user = User(
-            phone=phone,
             name=name,
+            employee_id=employee_id,
             role=role,
+            is_active=False,
         )
+        user.set_password(password)
         user.save()
 
         Notification.send(
             user=request.user,
             type='staff_added',
             title='👤 Staff Created',
-            message=f"{name} added as {role.replace('_', ' ').title()}",
+            message=f"{name} added as {role.replace('_', ' ').title()} (ID: {employee_id})",
             icon='ti-user-plus',
             icon_color='ni-green',
         )
@@ -197,7 +213,7 @@ class CreateStaffView(APIView):
                 user=admin,
                 type='staff_added',
                 title='👤 Staff Created',
-                message=f"{name} added as {role.replace('_', ' ').title()} by {request.user.name}",
+                message=f"{name} added as {role.replace('_', ' ').title()} by {request.user.name} (ID: {employee_id})",
                 icon='ti-user-plus',
                 icon_color='ni-green',
             )
@@ -208,11 +224,15 @@ class CreateStaffView(APIView):
             Doctor.objects.create(
                 user=user,
                 name=name,
-                phone=phone,
+                employee_id=employee_id,
                 prefix=prefix,
             )
 
-        return Response(UserSerializer(user).data, status=201)
+        return Response({
+            'user': UserSerializer(user).data,
+            'employee_id': employee_id,
+            'password': password,
+        }, status=201)
 
 
 class ToggleUserStatusView(APIView):
@@ -428,3 +448,84 @@ class ClearNotificationsView(APIView):
     def delete(self, request):
         Notification.objects.filter(user=request.user).delete()
         return Response({'message': 'Notifications cleared'})
+
+
+# ─── Staff / Admin Login (Employee ID + Password) ─────────────────────────
+
+
+class StaffLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        employee_id = request.data.get('employee_id', '').strip()
+        password = request.data.get('password', '')
+
+        if not employee_id or not password:
+            return Response({'error': 'Employee ID and password are required'}, status=400)
+
+        user = authenticate(request, employee_id=employee_id, password=password)
+
+        if not user:
+            return Response({'error': 'Invalid Employee ID or password'}, status=401)
+
+        if not user.is_active:
+            return Response({
+                'pending': True,
+                'message': 'Your account is pending admin approval. Please wait for a Hospital Admin to activate your account.',
+            }, status=403)
+
+        refresh = RefreshToken.for_user(user)
+        auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': UserSerializer(user).data,
+        })
+
+
+class ApproveUserView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsHospitalAdmin]
+
+    def post(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        if user.is_active:
+            return Response({'error': 'User is already active'}, status=400)
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+        Notification.send(
+            user=user,
+            type='account_approved',
+            title='✅ Account Approved',
+            message=f"Your account has been approved by {request.user.name}. You can now log in with your Employee ID.",
+            icon='ti-check',
+            icon_color='ni-green',
+        )
+        return Response(UserSerializer(user).data)
+
+
+class PendingApprovalsView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsHospitalAdmin]
+
+    def get(self, request):
+        users = User.objects.filter(
+            is_active=False,
+            role__in=['hospital_admin', 'doctor', 'receptionist'],
+        ).order_by('date_joined')
+        return Response(UserSerializer(users, many=True).data)
+
+
+# ─── Login Page Views ─────────────────────────────────────────────────────
+
+
+def staff_login_page(request):
+    return render(request, 'staff-login.html')
+
+
+def admin_login_page(request):
+    if request.user.is_authenticated:
+        if request.user.role == 'hospital_admin':
+            return render(request, 'hospital-admin.html')
+        if request.user.role == 'super_admin':
+            return render(request, 'super-admin.html')
+    return render(request, 'admin-login.html')
