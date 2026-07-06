@@ -1281,7 +1281,7 @@
         <div class="page-banner-icon">🕐</div>
         <div class="page-banner-text">
           <h2>Time Slot Configuration</h2>
-          <p>Set morning and evening windows and manage daily slot availability per doctor.</p>
+          <p>Set day and night windows and manage daily slot availability per doctor.</p>
         </div>
       </div>
       <div class="panel">
@@ -1568,8 +1568,8 @@
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Morning Slots (e.g. 09:00–13:00)</label><input class="form-input" id="doc-morning" placeholder="09:00 – 13:00, 20 slots" /></div>
-        <div class="form-group"><label>Evening Slots (optional)</label><input class="form-input" id="doc-evening" placeholder="16:00 – 19:00, 15 slots" /></div>
+        <div class="form-group"><label>Day Slots (e.g. 9:00 AM–1:00 PM)</label><input class="form-input" id="doc-day" placeholder="9:00 AM – 1:00 PM, 20 slots" /></div>
+        <div class="form-group"><label>Night Slots (optional)</label><input class="form-input" id="doc-night" placeholder="9:00 PM – 11:00 PM, 15 slots" /></div>
       </div>
       <div class="form-group"><label>Avatar Color</label>
         <div style="display:flex;gap:8px;margin-top:6px;" id="doc-avatar-picker">
@@ -2067,8 +2067,8 @@ function renderDoctors(filter='') {
     const deptName = d.department_name || '';
     const spec = d.specialty || '';
     const qual = d.qualification || '';
-    const mor = d.morning_slots || '';
-    const eve = d.evening_slots || '';
+    const mor = rangeTo12h(d.day_slots);
+    const eve = rangeTo12h(d.night_slots);
     const slots = d.slots_per_day || 0;
     const av = d.avatar_color || 'av-1';
     const status = d.status || 'active';
@@ -2087,8 +2087,8 @@ function renderDoctors(filter='') {
       <div style="font-size:12px;color:var(--gray-500);">📅 ${days}</div>
       <div style="font-size:13px;font-weight:600;color:var(--primary);margin-top:4px;">💰 Rs. ${parseFloat(d.consultation_fee || 0).toFixed(2)}</div>
       <div class="slot-pills">
-        ${mor ? `<span class="slot-pill">🌅 ${mor}</span>` : ''}
-        ${eve ? `<span class="slot-pill">🌆 ${eve}</span>` : ''}
+        ${mor ? `<span class="slot-pill">☀️ ${mor}</span>` : ''}
+        ${eve ? `<span class="slot-pill">🌙 ${eve}</span>` : ''}
         <span class="slot-pill" style="background:#e3f2fd;color:#1565c0;">${slots} slots/day</span>
       </div>
       <div class="doc-card-actions">
@@ -2143,8 +2143,8 @@ function editDoctor(id) {
   document.getElementById('doc-phone').value = d.phone || '';
   document.getElementById('doc-email').value = d.email || '';
   document.getElementById('doc-fee').value = d.consultation_fee || '';
-  document.getElementById('doc-morning').value = d.morning_slots || '';
-  document.getElementById('doc-evening').value = d.evening_slots || '';
+  document.getElementById('doc-day').value = rangeTo12h(d.day_slots);
+  document.getElementById('doc-night').value = rangeTo12h(d.night_slots);
   const daysStr = (d.days_available || '').toLowerCase();
   const dayAbbrs = ['mon','tue','wed','thu','fri','sat','sun'];
   document.querySelectorAll('#avail-days input[type="checkbox"]').forEach((cb, i) => {
@@ -2166,8 +2166,8 @@ async function saveDoctor() {
     qualification: document.getElementById('doc-qual').value || '',
     phone: document.getElementById('doc-phone').value || '',
     email: document.getElementById('doc-email').value || '',
-    morning_slots: document.getElementById('doc-morning').value || '',
-    evening_slots: document.getElementById('doc-evening').value || '',
+    day_slots: rangeFrom12h(document.getElementById('doc-day').value || ''),
+    night_slots: rangeFrom12h(document.getElementById('doc-night').value || ''),
     consultation_fee: parseFloat(document.getElementById('doc-fee').value) || 0,
     avatar_color: selectedAvColor,
     days_available: (() => {
@@ -2190,7 +2190,7 @@ async function saveDoctor() {
     editingDoctorId = null;
     document.getElementById('doctor-save-btn').textContent = '+ Add Doctor';
     closeModal('modal-doctor');
-    clearForm(['doc-name','doc-spec','doc-qual','doc-phone','doc-email','doc-morning','doc-evening']);
+    clearForm(['doc-name','doc-spec','doc-qual','doc-phone','doc-email','doc-day','doc-night']);
     await loadDoctors();
     await loadDepartments();
     await loadDashboardStats();
@@ -2201,6 +2201,109 @@ function selectAvColor(el, cls) {
   selectedAvColor = cls;
   document.querySelectorAll('#doc-avatar-picker > div').forEach(d => d.style.border = '3px solid transparent');
   el.style.border = '3px solid var(--green-main)';
+}
+
+/*  TIME SLOTS — HELPERS */
+function to12h(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return t;
+  const p = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${p}`;
+}
+
+function from12h(str) {
+  const m = str.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return null;
+  let h = parseInt(m[1]);
+  if (m[3].toUpperCase() === 'PM' && h !== 12) h += 12;
+  if (m[3].toUpperCase() === 'AM' && h === 12) h = 0;
+  return `${String(h).padStart(2, '0')}:${m[2]}`;
+}
+
+function rangeTo12h(rangeStr) {
+  if (!rangeStr) return '';
+  const sep = rangeStr.includes('\u2013') ? '\u2013' : rangeStr.includes('-') ? '-' : null;
+  if (!sep) return rangeStr;
+  const parts = rangeStr.split(sep).map(s => s.trim());
+  if (parts.length !== 2) return rangeStr;
+  return `${to12h(parts[0])} \u2013 ${to12h(parts[1])}`;
+}
+
+function rangeFrom12h(rangeStr) {
+  if (!rangeStr) return '';
+  const sep = rangeStr.includes('\u2013') ? '\u2013' : rangeStr.includes('-') ? '-' : null;
+  if (!sep) return rangeStr;
+  const parts = rangeStr.split(sep).map(s => s.trim());
+  if (parts.length !== 2) return rangeStr;
+  const s = from12h(parts[0]);
+  const e = from12h(parts[1]);
+  if (!s || !e) return rangeStr;
+  return `${s}\u2013${e}`;
+}
+
+function parse24hRange(str) {
+  if (!str) return null;
+  const sep = str.includes('\u2013') ? '\u2013' : str.includes('-') ? '-' : null;
+  if (!sep) return null;
+  const parts = str.split(sep).map(s => s.trim());
+  if (parts.length !== 2) return null;
+  const [sh, sm] = parts[0].split(':').map(Number);
+  const [eh, em] = parts[1].split(':').map(Number);
+  if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return null;
+  return { start: sh * 60 + sm, end: eh * 60 + em };
+}
+
+function parse12hRange(str) {
+  if (!str) return null;
+  const sep = str.includes('\u2013') ? '\u2013' : str.includes('-') ? '-' : null;
+  if (!sep) return null;
+  const parts = str.split(sep).map(s => s.trim());
+  if (parts.length !== 2) return null;
+  const s = from12h(parts[0]);
+  const e = from12h(parts[1]);
+  if (!s || !e) return null;
+  const [sh, sm] = s.split(':').map(Number);
+  const [eh, em] = e.split(':').map(Number);
+  return { start: sh * 60 + sm, end: eh * 60 + em };
+}
+
+function inRange(timeStr, range, wrapAround) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const mins = h * 60 + m;
+  if (!wrapAround || range.start <= range.end) {
+    return mins >= range.start && mins < range.end;
+  }
+  return mins >= range.start || mins < range.end;
+}
+
+function syncGridFromWindow() {
+  const dayVal = document.getElementById('slot-day').value.trim();
+  const nightVal = document.getElementById('slot-night').value.trim();
+  const dayRange = parse12hRange(dayVal);
+  const nightRange = parse12hRange(nightVal);
+  document.querySelectorAll('.time-slot').forEach(el => {
+    if (el.classList.contains('booked')) return;
+    const grids = document.querySelectorAll('.slot-grid');
+    const isNight = grids.length >= 2 && el.closest('.slot-grid') === grids[1];
+    let isActive;
+    if (isNight) {
+      isActive = nightRange && inRange(el.dataset.start, nightRange, true);
+    } else {
+      isActive = dayRange && inRange(el.dataset.start, dayRange, false);
+    }
+    el.classList.toggle('active', !!isActive);
+  });
+}
+
+function syncWindowFromGrid() {
+  const grids = document.querySelectorAll('.slot-grid');
+  if (grids.length < 2) return;
+  const daySlots = [...grids[0].querySelectorAll('.time-slot.active')].map(el => el.dataset.start).sort();
+  const nightSlots = [...grids[1].querySelectorAll('.time-slot.active')].map(el => el.dataset.start).sort();
+  document.getElementById('slot-day').value = daySlots.length ? `${to12h(daySlots[0])} \u2013 ${to12h(daySlots[daySlots.length-1])}` : '';
+  document.getElementById('slot-night').value = nightSlots.length ? `${to12h(nightSlots[0])} \u2013 ${to12h(nightSlots[nightSlots.length-1])}` : '';
 }
 
 /*  TIME SLOTS */
@@ -2226,8 +2329,8 @@ function renderSlotConfig() {
         </div>
       </div>
       <div class="form-row" style="margin-bottom:14px;">
-        <div class="form-group"><label>Morning Window</label><input class="form-input" id="slot-morning" value="${doc.morning_slots || ''}" placeholder="09:00 – 13:00" /></div>
-        <div class="form-group"><label>Evening Window</label><input class="form-input" id="slot-evening" value="${doc.evening_slots || ''}" placeholder="17:00 – 19:00" /></div>
+        <div class="form-group"><label>Day Window</label><input class="form-input" id="slot-day" value="${rangeTo12h(doc.day_slots)}" placeholder="9:00 AM \u2013 1:00 PM" oninput="syncGridFromWindow()" /></div>
+        <div class="form-group"><label>Night Window</label><input class="form-input" id="slot-night" value="${rangeTo12h(doc.night_slots)}" placeholder="9:00 PM \u2013 11:00 PM" oninput="syncGridFromWindow()" /></div>
         <div class="form-group"><label>Slots per Day</label><input type="number" class="form-input" id="slot-count" value="${doc.slots_per_day || 20}" min="1" max="100" /></div>
       </div>
     </div>
@@ -2236,7 +2339,7 @@ function renderSlotConfig() {
       <div style="display:flex;align-items:center;gap:5px;font-size:12px;"><div style="width:14px;height:14px;border-radius:3px;background:var(--green-main);"></div> Available</div>
       <div style="display:flex;align-items:center;gap:5px;font-size:12px;"><div style="width:14px;height:14px;border-radius:3px;background:var(--gray-300);"></div> Booked</div>
     </div>
-    <div class="slot-grid" id="slot-grid"></div>
+    <div id="slot-grid"></div>
     <div style="margin-top:16px;display:flex;gap:10px;">
       <button class="btn btn-primary" onclick="saveSlotConfig(${doc.id})">💾 Save Slots</button>
       <button class="btn btn-outline" onclick="showToast('Slots reset to default','warning')">↺ Reset to Default</button>
@@ -2250,17 +2353,27 @@ async function loadSlotsForDoctor(doctorId) {
     const slots = await API.admin.slots(`?doctor=${doctorId}`);
     const grid = document.getElementById('slot-grid');
     if (!grid) return;
-    const times = [];
-    for (let h = 9; h <= 12; h++) {
-      for (let m = 0; m < 60; m += 20) times.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-    }
-    for (let h = 17; h <= 18; h++) {
-      for (let m = 0; m < 60; m += 20) times.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-    }
-    grid.innerHTML = times.map(t => {
+    const fmt = t => { const [h,m]=t.split(':').map(Number); const p=h>=12?'pm':'am'; const h12=h%12||12; return `${h12}:${String(m).padStart(2,'0')} ${p}`; };
+    const gen = (s,e) => { const r=[]; for(let h=s;h<=e;h++) for(let m=0;m<60;m+=20) r.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`); return r; };
+    const sections = [
+      { label: '☀️ Day (6:00 AM \u2013 8:40 PM)', range: gen(6,20) },
+      { label: '🌙 Night (9:00 PM \u2013 5:40 AM)', range: [...gen(21,23), ...gen(0,5)] },
+    ];
+    const doc = doctors.find(d => d.id === doctorId);
+    const dayRange = parse24hRange(doc?.day_slots || '');
+    const nightRange = parse24hRange(doc?.night_slots || '');
+    const renderGroup = (times, isNight) => times.map(t => {
       const isBooked = slots.some(s => s.start_time === t + ':00' && s.is_booked);
-      return `<div class="time-slot ${isBooked ? 'booked' : 'active'}" data-start="${t}" onclick="toggleSlot(this)">${t}</div>`;
+      const inDay = dayRange && inRange(t, dayRange, false);
+      const inNight = nightRange && inRange(t, nightRange, true);
+      const isActive = isNight ? inNight : inDay;
+      const cls = isBooked ? 'booked' : isActive ? 'active' : '';
+      return `<div class="time-slot ${cls}" data-start="${t}" onclick="toggleSlot(this)">${fmt(t)}</div>`;
     }).join('');
+    grid.innerHTML = sections.map((s, i) => `
+      ${s.label ? `<div style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px;">${s.label}</div>` : ''}
+      <div class="slot-grid" style="${i < sections.length - 1 ? 'margin-bottom:16px;' : ''}">${renderGroup(s.range, i === 1)}</div>
+    `).join('');
   } catch (e) {
     document.getElementById('slot-grid').innerHTML = '<div class="empty-state"><p>No slots loaded</p></div>';
   }
@@ -2269,22 +2382,25 @@ async function loadSlotsForDoctor(doctorId) {
 function toggleSlot(el) {
   if (el.classList.contains('booked')) return;
   el.classList.toggle('active');
+  syncWindowFromGrid();
 }
 
 async function saveSlotConfig(doctorId) {
-  const morning = document.getElementById('slot-morning').value.trim();
-  const evening = document.getElementById('slot-evening').value.trim();
+  const daySlots12h = document.getElementById('slot-day').value.trim();
+  const nightSlots12h = document.getElementById('slot-night').value.trim();
+  const daySlots24h = rangeFrom12h(daySlots12h);
+  const nightSlots24h = rangeFrom12h(nightSlots12h);
   const slotsPerDay = parseInt(document.getElementById('slot-count').value) || 20;
   try {
-    await API.admin.updateDoctor(doctorId, {
-      morning_slots: morning,
-      evening_slots: evening,
+    await API.patch(`/api/admin/doctors/${doctorId}/`, {
+      day_slots: daySlots24h,
+      night_slots: nightSlots24h,
       slots_per_day: slotsPerDay,
     });
     const doc = doctors.find(d => d.id === doctorId);
     if (doc) {
-      doc.morning_slots = morning;
-      doc.evening_slots = evening;
+      doc.day_slots = daySlots24h;
+      doc.night_slots = nightSlots24h;
       doc.slots_per_day = slotsPerDay;
     }
     showToast('Time slots saved ✅');

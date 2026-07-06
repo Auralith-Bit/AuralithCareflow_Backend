@@ -131,7 +131,7 @@ class DoctorViewSet(viewsets.ModelViewSet):
         selected_days = [num for abbr, num in day_map.items() if abbr in days_str]
         if not selected_days:
             selected_days = list(range(5))
-        for range_str in [doctor.morning_slots, doctor.evening_slots]:
+        for range_str in [doctor.day_slots, doctor.night_slots]:
             if not range_str:
                 continue
             sep = '–' if '–' in range_str else '-' if '-' in range_str else None

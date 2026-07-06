@@ -211,8 +211,8 @@ class DoctorPublicListView(APIView):
                 'rating': round(avg_rating, 1) if avg_rating else None,
                 'slots_per_day': d.slots_per_day,
                 'days_available': d.days_available,
-                'morning_slots': d.morning_slots,
-                'evening_slots': d.evening_slots,
+                'day_slots': d.day_slots,
+                'night_slots': d.night_slots,
                 'waiting_count': waiting,
                 'slots_left': max(0, d.slots_per_day - waiting),
                 'status': d.status,
@@ -252,8 +252,8 @@ class DoctorPublicDetailView(APIView):
             'reviews': DoctorReviewSerializer(reviews, many=True).data,
             'slots_per_day': d.slots_per_day,
             'days_available': d.days_available,
-            'morning_slots': d.morning_slots,
-            'evening_slots': d.evening_slots,
+            'day_slots': d.day_slots,
+            'night_slots': d.night_slots,
             'waiting_count': waiting,
             'slots_left': max(0, d.slots_per_day - waiting),
             'status': d.status,
@@ -290,7 +290,7 @@ class AvailableSlotsView(APIView):
             slot_times = [s.start_time.strftime('%H:%M') for s in time_slots_qs]
         else:
             slot_times = []
-            for range_str in [doctor.morning_slots, doctor.evening_slots]:
+            for range_str in [doctor.day_slots, doctor.night_slots]:
                 if not range_str:
                     continue
                 for sep in ['–', '-']:
