@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 from .models import PatientProfile, FamilyMember, Appointment, DoctorReview, NotificationLog
 
@@ -49,14 +50,13 @@ class AppointmentCreateSerializer(serializers.Serializer):
     payment_method = serializers.CharField(required=False, allow_blank=True, default='')
 
     def create(self, validated_data):
-        from django.utils import timezone
-        from .models import Appointment
         from hospital_admin.models import Doctor
+        patient = validated_data.get('patient')
+        if not patient:
+            raise serializers.ValidationError({'patient': 'This field is required.'})
         doctor_id = validated_data.pop('doctor_id', None)
         validated_data.pop('patient_name', None)
         validated_data.pop('patient_phone', None)
-        payment_method = validated_data.pop('payment_method', '')
-        validated_data['payment_method'] = payment_method
         if doctor_id and not validated_data.get('fee'):
             doctor = Doctor.objects.filter(id=doctor_id).first()
             if doctor and getattr(doctor, 'consultation_fee', None):

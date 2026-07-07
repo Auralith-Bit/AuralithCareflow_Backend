@@ -1,4 +1,3 @@
-from datetime import timezone
 from rest_framework import serializers
 from .models import User, Notification
 from django.contrib.auth.models import Group, Permission

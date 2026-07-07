@@ -220,7 +220,13 @@ class CreateStaffView(APIView):
 
         if role == 'doctor':
             used = set(Doctor.objects.values_list('prefix', flat=True))
-            prefix = next((l for l in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' if l not in used), f'D{Doctor.objects.count() + 1}')
+            prefix = next((l for l in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' if l not in used), None)
+            if not prefix:
+                max_num = max(
+                    (int(p[1:]) for p in used if p.startswith('D') and p[1:].isdigit()),
+                    default=0
+                )
+                prefix = f'D{max_num + 1}'
             Doctor.objects.create(
                 user=user,
                 name=name,
