@@ -503,7 +503,7 @@
                 <div style="background:#e8f5e9;border:1.5px solid var(--green-light);border-radius:9px;padding:12px;font-size:13px;">
                   <div style="font-weight:700;color:var(--green-mid);margin-bottom:6px;">🟢 Reuse a Cancelled Slot</div>
                   <div style="color:var(--gray-600);margin-bottom:8px;font-size:12px;">Assign this patient an available slot from a cancelled token:</div>
-                  <select class="form-select" id="wk-reuse-slot" style="font-size:12.5px;"><option value="">Issue new token (next in sequence)</option></select>
+                  <select class="form-select" id="wk-reuse-slot" style="font-size:12.5px;" onchange="onReuseSlotChange(this)"><option value="">Issue new token (next in sequence)</option></select>
                 </div>
               </div>
               <div class="token-preview-box" id="token-preview"><div class="tp-label">Token Assigned</div><div class="tp-token" id="tp-token-num">A-00</div><div class="tp-info" id="tp-token-info">General OPD · Room 3</div></div>
@@ -582,7 +582,7 @@
         <div class="form-group"><label>Phone Number *</label><input class="form-input" id="m-wk-phone" type="tel" placeholder="+977-98XXXXXXXX"></div>
         <div class="form-group"><label>Doctor / Department *</label><select class="form-select" id="m-wk-doctor"></select></div>
         <div class="form-group"><label>Visit Type</label><select class="form-select" id="m-wk-type"><option>Walk-In</option><option>Emergency</option><option>Follow-Up</option></select></div>
-        <div id="m-cancelled-reuse" style="display:none;background:#e8f5e9;border:1.5px solid var(--green-light);border-radius:9px;padding:12px;"><div style="font-weight:700;color:var(--green-mid);margin-bottom:6px;font-size:13px;">🟢 Reuse Cancelled Slot?</div><select class="form-select" id="m-wk-reuse-slot" style="font-size:12.5px;"><option value="">Issue next token in sequence</option></select></div>
+        <div id="m-cancelled-reuse" style="display:none;background:#e8f5e9;border:1.5px solid var(--green-light);border-radius:9px;padding:12px;"><div style="font-weight:700;color:var(--green-mid);margin-bottom:6px;font-size:13px;">🟢 Reuse Cancelled Slot?</div><select class="form-select" id="m-wk-reuse-slot" style="font-size:12.5px;" onchange="onReuseSlotChange(this)"><option value="">Issue next token in sequence</option></select></div>
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('walkin-modal')">Cancel</button><button class="btn btn-primary" onclick="issueWalkInFromModal()">🎫 Issue Token</button></div>
@@ -940,6 +940,16 @@ function renderRecentWalkIns() {
     : '<div style="color:var(--gray-400);text-align:center;padding:20px;font-size:13px;">No walk-ins yet</div>';
 }
 
+function onReuseSlotChange(select) {
+  const slotId = select.value;
+  if (!slotId) return;
+  const slot = queueData.find(t => t.id === parseInt(slotId));
+  if (!slot || !slot.doctor) return;
+  const isModal = select.id === 'm-wk-reuse-slot';
+  const docSelect = document.getElementById(isModal ? 'm-wk-doctor' : 'wk-doctor');
+  docSelect.value = `${slot.doctor}|${slot.doctor_name}|${slot.department_name}|`;
+}
+
 function populateCancelledReuseSlots() {
   const available = queueData.filter(t => t.status === 'cancelled' && !t.reassigned);
   const section = document.getElementById('cancelled-reuse-section');
@@ -965,6 +975,9 @@ function reuseSlot(id) {
   populateCancelledReuseSlots();
   document.getElementById('wk-reuse-slot').value = id;
   document.getElementById('cancelled-reuse-section').style.display = 'block';
+  if (slot.doctor) {
+    document.getElementById('wk-doctor').value = `${slot.doctor}|${slot.doctor_name}|${slot.department_name}|`;
+  }
   showToast(`🟢 Slot ${slot.token} selected for reassignment`, 'info');
 }
 
