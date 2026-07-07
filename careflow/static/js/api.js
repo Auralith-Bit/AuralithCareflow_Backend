@@ -116,6 +116,9 @@ const API = {
     return this.get('/api/auth/me/');
   },
 
+  getMyProfile() { return this.get('/api/auth/my-profile/'); },
+  updateMyProfile(data) { return this.patch('/api/auth/my-profile/', data); },
+
   // Reception APIs
   reception: {
     queue(params = '') { return API.get('/api/reception/queue/' + params); },

@@ -961,7 +961,7 @@
   <div class="nav-item" onclick="setNav(this,'notifications')"><span class="icon">🔔</span> Notifications <span class="nav-badge" id="notif-badge">0</span></div>
 
   <div class="sidebar-bottom">
-    <div class="receptionist-card">
+    <div class="receptionist-card" onclick="openProfileModal()" style="cursor:pointer;">
       <div class="rec-avatar">{{ user.name|first|default:'A' }}</div>
       <div class="rec-info">
         <div class="rec-name">{{ user.name }}</div>
@@ -3487,6 +3487,95 @@ setInterval(async () => {
     } catch(e) {}
   }
 }, 30000);
+
+/* ─── MY PROFILE ─────────────────────────────────── */
+async function openProfileModal() {
+  try {
+    const user = await API.getMyProfile();
+    const details = [
+      { label: 'Full Name', value: user.name, field: 'name' },
+      { label: 'Phone', value: user.phone || '—', field: 'phone' },
+      { label: 'Email', value: user.email || '—', field: 'email' },
+      { label: 'Role', value: roleDisplay(user.role), field: null },
+      { label: 'Employee ID', value: user.employee_id || '—', field: null },
+      { label: 'Gender', value: user.gender ? (user.gender.charAt(0).toUpperCase() + user.gender.slice(1)) : '—', field: 'gender' },
+      { label: 'Date of Birth', value: user.date_of_birth || '—', field: 'date_of_birth' },
+      { label: 'Address', value: user.address || '—', field: 'address' },
+    ];
+    let html = '';
+    details.forEach(d => {
+      if (d.field === 'gender') {
+        html += `<div class="form-group"><label>${d.label}</label>
+          <select class="form-control profile-field" data-field="gender" disabled>
+            <option value="">—</option>
+            <option value="male" ${user.gender === 'male' ? 'selected' : ''}>Male</option>
+            <option value="female" ${user.gender === 'female' ? 'selected' : ''}>Female</option>
+            <option value="other" ${user.gender === 'other' ? 'selected' : ''}>Other</option>
+          </select></div>`;
+      } else if (d.field === 'date_of_birth') {
+        html += `<div class="form-group"><label>${d.label}</label><input class="form-control profile-field" data-field="date_of_birth" type="date" value="${user.date_of_birth || ''}" disabled /></div>`;
+      } else if (d.field) {
+        html += `<div class="form-group"><label>${d.label}</label><input class="form-control profile-field" data-field="${d.field}" value="${d.value === '—' ? '' : d.value}" disabled /></div>`;
+      } else {
+        html += `<div class="form-group"><label>${d.label}</label><input class="form-control" value="${d.value}" disabled style="background:#f5f7fa;" /></div>`;
+      }
+    });
+    document.getElementById('profile-modal-body').innerHTML = html;
+    document.getElementById('profile-modal-title').textContent = `${user.name} — Profile`;
+    document.getElementById('profile-edit-btn').style.display = 'inline-block';
+    document.getElementById('profile-save-btn').style.display = 'none';
+    document.getElementById('profile-cancel-btn').style.display = 'none';
+    openModal('modal-profile');
+  } catch (e) { showToast('Failed to load profile','error'); }
+}
+
+async function saveProfileData() {
+  const data = {};
+  document.querySelectorAll('.profile-field').forEach(el => {
+    const val = el.value.trim();
+    if (val) data[el.dataset.field] = val;
+  });
+  try {
+    await API.updateMyProfile(data);
+    showToast('Profile updated ✅');
+    openProfileModal();
+  } catch (e) { showToast(e.message || 'Failed to update','error'); }
+}
+
+document.getElementById('profile-edit-btn')?.addEventListener('click', function() {
+  document.querySelectorAll('.profile-field').forEach(el => el.disabled = false);
+  this.style.display = 'none';
+  document.getElementById('profile-save-btn').style.display = 'inline-block';
+  document.getElementById('profile-cancel-btn').style.display = 'inline-block';
+});
+
+document.getElementById('profile-cancel-btn')?.addEventListener('click', function() {
+  openProfileModal();
+});
 </script>
+
+<div id="modal-profile" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-profile')">
+  <div class="modal-panel" style="background:#fff;border-radius:16px;padding:28px;width:440px;max-width:92vw;max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h3 id="profile-modal-title" style="margin:0;font-size:18px;">Profile</h3>
+      <button onclick="closeModal('modal-profile')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;">✕</button>
+    </div>
+    <div id="profile-modal-body"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;border-top:1px solid #eee;padding-top:16px;">
+      <button class="btn btn-ghost" id="profile-cancel-btn" style="display:none;">Cancel</button>
+      <button class="btn btn-primary" id="profile-save-btn" style="display:none;" onclick="saveProfileData()">Save</button>
+      <button class="btn btn-primary" id="profile-edit-btn">Edit</button>
+    </div>
+  </div>
+</div>
+
+<style>
+#modal-profile .form-group { margin-bottom:14px; }
+#modal-profile .form-group label { display:block; font-size:12px; font-weight:600; color:var(--gray-500); margin-bottom:4px; }
+#modal-profile .form-control { width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; background:#fff; transition:border-color .2s; box-sizing:border-box; }
+#modal-profile .form-control:focus { outline:none; border-color:var(--primary-teal); }
+#modal-profile .form-control:disabled { background:#f8fafc; color:#475569; }
+</style>
+
 </body>
 </html>

@@ -155,6 +155,39 @@ class MeView(APIView):
         return Response(UserSerializer(request.user).data)
 
 
+class MyProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(UserSerializer(request.user).data)
+
+    def patch(self, request):
+        user = request.user
+        name = request.data.get('name', '').strip()
+        phone = request.data.get('phone', '').strip()
+        email = request.data.get('email', '').strip()
+        gender = request.data.get('gender', '').strip()
+        date_of_birth = request.data.get('date_of_birth', None)
+        address = request.data.get('address', '').strip()
+
+        if phone and phone != user.phone:
+            if User.objects.filter(phone=phone).exclude(pk=user.pk).exists():
+                return Response({'error': 'Phone already in use'}, status=400)
+            user.phone = phone
+
+        if name:
+            user.name = name
+        user.email = email
+        if gender:
+            user.gender = gender
+        if date_of_birth:
+            user.date_of_birth = date_of_birth
+        user.address = address
+        user.save()
+
+        return Response(UserSerializer(user).data)
+
+
 class LogoutView(APIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
