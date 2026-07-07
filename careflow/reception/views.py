@@ -112,6 +112,7 @@ class CreateQueueEntryView(APIView):
             entry.visit_type = data['visit_type']
             entry.status = 'waiting'
             entry.reassigned = True
+            entry.time = data.get('time') or timezone.localtime(timezone.now()).time()
             entry.notes = data.get('notes', '')
             entry.save()
             ActivityLog.objects.create(
@@ -165,7 +166,7 @@ class CreateQueueEntryView(APIView):
             department_name=doctor.department.name if doctor.department else '',
             room='',
             visit_type=data['visit_type'],
-            time=now.time(),
+            time=data.get('time') or timezone.localtime(now).time(),
             status='waiting',
             notes=data.get('notes', ''),
             created_by=request.user,
@@ -288,10 +289,23 @@ class RescheduleQueueEntryView(APIView):
         serializer = QueueEntryRescheduleSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+        old_doctor_id = entry.doctor_id
+        if data.get('new_doctor_id'):
+            new_doc = get_object_or_404(Doctor, id=data['new_doctor_id'])
+            entry.doctor = new_doc
+            entry.doctor_name = new_doc.name
+            entry.department_name = new_doc.department.name if new_doc.department else ''
         entry.notes = f"Rescheduled to {data['new_date']}. {data.get('reason', '')}"
         entry.status = 'waiting'
         entry.scheduled_date = data['new_date']
+        if data.get('new_time'):
+            entry.time = data['new_time']
+        else:
+            entry.time = timezone.localtime(timezone.now()).time()
         entry.save()
+        if data.get('new_doctor_id') and data['new_doctor_id'] != old_doctor_id:
+            entry.token = TokenCounter.get_next_token(entry.doctor.prefix)
+            entry.save(update_fields=['token'])
         ActivityLog.objects.create(
             user=request.user,
             type=ActivityLog.Type.CHECKIN,
