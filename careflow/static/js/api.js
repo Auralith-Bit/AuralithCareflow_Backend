@@ -202,6 +202,7 @@ const API = {
   // Staff / Admin login & approval
   staffLogin(employeeId, password) { return API.post('/api/auth/staff-login/', { employee_id: employeeId, password }); },
   approveUser(id) { return API.post(`/api/auth/users/${id}/approve/`); },
+  rejectUser(id) { return API.post(`/api/auth/users/${id}/reject/`); },
   pendingApprovals() { return API.get('/api/auth/users/pending/'); },
   resetPassword(id) { return API.post(`/api/auth/users/${id}/reset-password/`); },
 

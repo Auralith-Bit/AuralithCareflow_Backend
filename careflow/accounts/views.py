@@ -488,10 +488,34 @@ class StaffLoginView(APIView):
         if not user:
             return Response({'error': 'Invalid Employee ID or password'}, status=401)
 
+        if user.rejected:
+            return Response({
+                'error': 'Your account has been rejected. Contact your administrator.',
+            }, status=403)
+
         if not user.is_active:
+            if user.role in ('doctor', 'receptionist'):
+                admins = User.objects.filter(role='hospital_admin', is_active=True)
+                notif_type = f'staff_login_pending:{user.pk}'
+            elif user.role == 'hospital_admin':
+                admins = User.objects.filter(role='super_admin', is_active=True)
+                notif_type = f'admin_login_pending:{user.pk}'
+            else:
+                admins = []
+
+            for admin in admins:
+                Notification.send(
+                    user=admin,
+                    type=notif_type,
+                    title=f'⏳ Pending Login: {user.name}',
+                    message=f'{user.name} ({user.employee_id}) is trying to log in as {user.get_role_display()}.',
+                    icon='ti-user',
+                    icon_color='ni-yellow',
+                )
+
             return Response({
                 'pending': True,
-                'message': 'Your account is pending admin approval. Please wait for a Hospital Admin to activate your account.',
+                'message': 'Your account is pending admin approval. Please wait for approval.',
             }, status=403)
 
         refresh = RefreshToken.for_user(user)
@@ -503,6 +527,26 @@ class StaffLoginView(APIView):
         })
 
 
+class RejectUserView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsHospitalAdmin]
+
+    def post(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        if user.is_active:
+            return Response({'error': 'User is already active'}, status=400)
+        user.rejected = True
+        user.save(update_fields=['rejected'])
+        Notification.send(
+            user=user,
+            type='account_rejected',
+            title='❌ Account Rejected',
+            message=f'Your account has been rejected by {request.user.name}. Contact your administrator.',
+            icon='ti-close',
+            icon_color='ni-red',
+        )
+        return Response(UserSerializer(user).data)
+
+
 class ApproveUserView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsHospitalAdmin]
 
@@ -511,7 +555,8 @@ class ApproveUserView(APIView):
         if user.is_active:
             return Response({'error': 'User is already active'}, status=400)
         user.is_active = True
-        user.save(update_fields=['is_active'])
+        user.rejected = False
+        user.save(update_fields=['is_active', 'rejected'])
         Notification.send(
             user=user,
             type='account_approved',
@@ -529,6 +574,7 @@ class PendingApprovalsView(APIView):
     def get(self, request):
         users = User.objects.filter(
             is_active=False,
+            rejected=False,
             role__in=['hospital_admin', 'doctor', 'receptionist'],
         ).order_by('date_joined')
         return Response(UserSerializer(users, many=True).data)

@@ -15,6 +15,7 @@ urlpatterns = [
     path('staff-login/', views.StaffLoginView.as_view(), name='staff-login'),
     path('users/pending/', views.PendingApprovalsView.as_view(), name='pending-users'),
     path('users/<int:pk>/approve/', views.ApproveUserView.as_view(), name='approve-user'),
+    path('users/<int:pk>/reject/', views.RejectUserView.as_view(), name='reject-user'),
     path('users/<int:pk>/toggle-status/', views.ToggleUserStatusView.as_view(), name='toggle-user-status'),
     path('users/<int:pk>/update/', views.UpdateUserView.as_view(), name='update-user'),
     path('users/<int:pk>/delete/', views.DeleteStaffView.as_view(), name='delete-staff'),

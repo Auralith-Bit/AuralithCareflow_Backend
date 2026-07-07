@@ -327,6 +327,14 @@
         <div class="section-title">👥 All Staff</div>
         <div class="search-bar"><span>🔍</span><input placeholder="Search by name or phone..." oninput="filterStaff(this.value)" /></div>
       </div>
+      <div class="page-banner" style="background:#fff3cd;border:1px solid #ffc107;margin-bottom:1rem;display:none;" id="pending-banner">
+        <div class="page-banner-icon" style="font-size:24px;">⏳</div>
+        <div class="page-banner-text">
+          <h2 style="color:#856404;margin:0;">Pending Approvals</h2>
+          <p style="color:#856404;margin:4px 0 0;">Hospital Admin accounts awaiting activation.</p>
+        </div>
+      </div>
+      <div id="pending-list" style="margin-bottom:1.5rem;"></div>
       <div class="panel">
         <div class="table-controls">
           <select class="filter-select" id="staff-role-filter" onchange="renderStaff(document.querySelector('#view-staff .search-bar input').value)">
@@ -534,7 +542,7 @@ function setNav(el, view) {
   document.getElementById('view-' + view).classList.add('active');
   const titles = { dashboard: 'Super Admin <span>Dashboard</span>', create: 'Create <span>Staff</span>', staff: 'All <span>Staff</span>', roles: 'Roles & <span>Access</span>', groups: 'User <span>Groups</span>', notifications: '<span>Notifications</span>' };
   document.getElementById('topbar-title').innerHTML = titles[view] || 'Super Admin';
-  if (view === 'staff') renderStaff();
+  if (view === 'staff') { renderStaff(); loadPendingApprovals(); }
   if (view === 'create') renderStaffList();
   if (view === 'roles') renderRoles();
   if (view === 'groups') renderGroups();
@@ -578,16 +586,25 @@ async function loadNotifs() {
     if (data.length === 0) {
       listEl.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--gray-400);font-size:14px;">🔔 No notifications yet</div>';
     } else {
-      listEl.innerHTML = data.map(n => `
+      listEl.innerHTML = data.map(n => {
+        const isPendingLogin = n.type && (n.type.startsWith('staff_login_pending:') || n.type.startsWith('admin_login_pending:'));
+        const pendingId = isPendingLogin ? parseInt(n.type.split(':')[1], 10) : null;
+        return `
         <div class="notif-item ${n.is_read ? '' : 'notif-unread'}">
           <div class="notif-icon ${n.icon_color || 'ni-blue'}"><i class="ti ${n.icon || 'ti-info-circle'}"></i></div>
           <div class="notif-content">
             <div class="notif-title">${n.title || n.type}</div>
             <div class="notif-message">${n.message}</div>
+            ${isPendingLogin ? `
+              <div style="margin-top:8px;display:flex;gap:8px;">
+                <button class="btn btn-sm btn-primary" onclick="approveStaff(${pendingId});event.stopPropagation();">Approve</button>
+                <button class="btn btn-sm btn-outline" style="color:#c62828;border-color:#c62828;" onclick="rejectStaff(${pendingId});event.stopPropagation();">Reject</button>
+              </div>
+            ` : ''}
             <div class="notif-time">${n.time_ago || ''}</div>
           </div>
         </div>
-      `).join('');
+      `}).join('');
     }
   } catch(e) { console.warn('Failed to load notifications:', e); }
 }
@@ -615,6 +632,63 @@ async function clearNotifs() {
     });
     showToast('Notifications cleared');
   } catch(e) { showToast('Failed to clear', 'error'); }
+}
+
+/*  PENDING APPROVALS  */
+async function loadPendingApprovals() {
+  try {
+    const users = await API.pendingApprovals();
+    const container = document.getElementById('pending-list');
+    const banner = document.getElementById('pending-banner');
+    if (!users.length) { container.innerHTML = ''; banner.style.display = 'none'; return; }
+    banner.style.display = 'flex';
+    const roleLabels = { hospital_admin: 'Hospital Admin', doctor: 'Doctor', receptionist: 'Receptionist' };
+    container.innerHTML = `
+      <div class="panel" style="border:1px solid #ffc107;">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Name</th><th>Role</th><th>Employee ID</th><th>Created</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              ${users.map(u => `
+                <tr>
+                  <td><strong>${u.name}</strong></td>
+                  <td><span class="badge badge-purple">${roleLabels[u.role] || u.role}</span></td>
+                  <td style="font-family:monospace;font-weight:600;">${u.employee_id || '—'}</td>
+                  <td style="font-size:12px;color:var(--gray-500)">${new Date(u.date_joined).toLocaleDateString()}</td>
+                  <td>
+                    <button class="btn btn-sm btn-primary" onclick="approveStaff(${u.id})">Approve</button>
+                    <button class="btn btn-sm btn-outline" style="color:#c62828;border-color:#c62828;margin-left:6px;" onclick="rejectStaff(${u.id})">Reject</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch (e) { /* silently ignore */ }
+}
+
+async function approveStaff(id) {
+  try {
+    await API.approveUser(id);
+    showToast('Account approved ✅');
+    await loadPendingApprovals();
+    await loadData();
+    await loadNotifs();
+  } catch (e) { showToast(e.message || 'Error approving','error'); }
+}
+
+async function rejectStaff(id) {
+  try {
+    await API.rejectUser(id);
+    showToast('Account rejected ❌');
+    await loadPendingApprovals();
+    await loadData();
+    await loadNotifs();
+  } catch (e) { showToast(e.message || 'Error rejecting','error'); }
 }
 
 async function loadData() {
