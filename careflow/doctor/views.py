@@ -79,6 +79,7 @@ def _today_queue_qs(doctor):
         doctor=doctor,
     ).filter(
         Q(created_at__gte=today_start, created_at__lt=today_end, scheduled_date__isnull=True) |
+        Q(status__in=['waiting', 'arrived', 'serving'], scheduled_date__isnull=True) |
         Q(scheduled_date=today)
     )
 
