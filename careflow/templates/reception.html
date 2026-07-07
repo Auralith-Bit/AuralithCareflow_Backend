@@ -255,7 +255,7 @@
   .modal-header h3 { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; flex: 1; }
   .modal-close { width: 30px; height: 30px; border-radius: 50%; background: var(--gray-100); border: none; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--gray-500); transition: all 0.15s; }
   .modal-close:hover { background: var(--gray-200); color: var(--gray-700); }
-  .modal-body { padding: 20px 24px; }
+  .modal-body { padding: 20px 24px; max-height: 60vh; overflow-y: auto; }
   .modal-footer { padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; gap: 10px; justify-content: flex-end; }
   .slip-preview { background: var(--white); border: 2px dashed var(--gray-300); border-radius: 12px; padding: 20px; text-align: center; font-family: 'Courier New', monospace; }
   .slip-preview h4 { font-size: 18px; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; }
@@ -346,6 +346,13 @@
   :root.dark-mode .btn-outline { border-color: var(--border-color); color: var(--green-light); }
   :root.dark-mode .btn-outline:hover { background: rgba(82,183,136,0.1); border-color: var(--green-light); }
   .slip-print-area { display: none; position: fixed; inset: 0; z-index: 9999; background: white; padding: 20px; font-family: 'Courier New', monospace; text-align: center; }
+  .slots-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 8px 0; }
+  .slot-btn { padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 1.5px solid var(--gray-300); cursor: pointer; text-align: center; background: var(--white); color: var(--gray-600); transition: all 0.15s; }
+  .slot-btn:hover { border-color: var(--green-main); color: var(--green-main); }
+  .slot-btn.selected { background: var(--green-main); border-color: var(--green-main); color: white; }
+  :root.dark-mode .slot-btn { background: var(--bg-secondary); color: var(--text-secondary); border-color: var(--border-color); }
+  :root.dark-mode .slot-btn:hover { border-color: var(--green-light); color: var(--green-light); }
+  :root.dark-mode .slot-btn.selected { background: var(--green-main); border-color: var(--green-main); color: white; }
   @media (max-width: 1200px) { .stats-row { grid-template-columns: repeat(3, 1fr); } .two-col { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -496,8 +503,9 @@
               <div class="form-group"><label>Patient Full Name *</label><input class="form-input" id="wk-name" type="text" placeholder="e.g. Sushil Thapa"></div>
               <div class="form-group"><label>Phone Number *</label><input class="form-input" id="wk-phone" type="tel" placeholder="e.g. +977-9812345678" oninput="checkExistingPatient(this.value)"></div>
               <div id="existing-patient-alert" style="display:none;background:#fff3e0;border:1px solid var(--accent-orange);border-radius:9px;padding:10px 14px;font-size:13px;color:#7c4700;">⚠️ Patient already has a token today: <strong id="existing-token-info"></strong></div>
-              <div class="form-group"><label>Doctor / Department *</label><select class="form-select" id="wk-doctor"></select></div>
+              <div class="form-group"><label>Doctor / Department *</label><select class="form-select" id="wk-doctor" onchange="loadWalkInSlots('wk')"></select></div>
               <div class="form-group"><label>Visit Type</label><select class="form-select" id="wk-type"><option>Walk-In</option><option>Emergency</option><option>Follow-Up</option></select></div>
+              <div class="form-group"><label>Time Slot (optional)</label><div class="slots-grid" id="wk-time-slots"><div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">Select a doctor to see available slots</div></div></div>
               <div class="form-group"><label>Notes (Optional)</label><input class="form-input" id="wk-notes" type="text" placeholder="e.g. Referred by Dr. X, urgent..."></div>
               <div id="cancelled-reuse-section" style="display:none;">
                 <div style="background:#e8f5e9;border:1.5px solid var(--green-light);border-radius:9px;padding:12px;font-size:13px;">
@@ -580,8 +588,9 @@
       <div style="display:flex;flex-direction:column;gap:13px;">
         <div class="form-group"><label>Patient Full Name *</label><input class="form-input" id="m-wk-name" type="text" placeholder="e.g. Sushil Thapa"></div>
         <div class="form-group"><label>Phone Number *</label><input class="form-input" id="m-wk-phone" type="tel" placeholder="+977-98XXXXXXXX"></div>
-        <div class="form-group"><label>Doctor / Department *</label><select class="form-select" id="m-wk-doctor"></select></div>
+        <div class="form-group"><label>Doctor / Department *</label><select class="form-select" id="m-wk-doctor" onchange="loadWalkInSlots('m-wk')"></select></div>
         <div class="form-group"><label>Visit Type</label><select class="form-select" id="m-wk-type"><option>Walk-In</option><option>Emergency</option><option>Follow-Up</option></select></div>
+        <div class="form-group"><label>Time Slot (optional)</label><div class="slots-grid" id="m-wk-time-slots"><div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">Select a doctor to see available slots</div></div></div>
         <div id="m-cancelled-reuse" style="display:none;background:#e8f5e9;border:1.5px solid var(--green-light);border-radius:9px;padding:12px;"><div style="font-weight:700;color:var(--green-mid);margin-bottom:6px;font-size:13px;">🟢 Reuse Cancelled Slot?</div><select class="form-select" id="m-wk-reuse-slot" style="font-size:12.5px;" onchange="onReuseSlotChange(this)"><option value="">Issue next token in sequence</option></select></div>
       </div>
     </div>
@@ -602,8 +611,9 @@
     <div class="modal-header"><h3>📅 Reschedule Appointment</h3><button class="modal-close" onclick="closeModal('reschedule-modal')">✕</button></div>
     <div class="modal-body">
       <div id="reschedule-patient-info" style="background:var(--gray-100);border-radius:9px;padding:12px;margin-bottom:16px;font-size:13.5px;"></div>
-      <div class="form-group"><label>New Date</label><input class="form-input" id="reschedule-date" type="date"></div>
-      <div class="form-group"><label>New Doctor</label><select class="form-select" id="reschedule-doctor"></select></div>
+      <div class="form-group"><label>New Date</label><input class="form-input" id="reschedule-date" type="date" min="" onchange="loadRescheduleSlots(this.value)"></div>
+      <div class="form-group"><label>New Time</label><div class="slots-grid" id="reschedule-slots"><div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">Select a date to see available slots</div></div></div>
+      <div class="form-group"><label>New Doctor</label><select class="form-select" id="reschedule-doctor" onchange="loadRescheduleSlots(document.getElementById('reschedule-date').value)"></select></div>
       <div class="form-group"><label>Reason</label><input class="form-input" id="reschedule-reason" type="text" placeholder="Optional"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('reschedule-modal')">Cancel</button><button class="btn btn-primary" onclick="confirmReschedule()">Reschedule</button></div>
@@ -727,9 +737,7 @@ function populateDoctorDropdowns() {
   ).join('');
   sel1.innerHTML = opts;
   sel2.innerHTML = opts;
-  sel3.innerHTML = '<option value="">Select Doctor</option>' + doctorsList.map(d =>
-    `<option value="${d.name} — ${d.dept}">${d.name} — ${d.dept}</option>`
-  ).join('');
+  sel3.innerHTML = opts;
 }
 
 function setNav(el, viewName) {
@@ -859,6 +867,32 @@ async function markWaiting(id) {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
+async function loadWalkInSlots(prefix) {
+  const docVal = document.getElementById(`${prefix}-doctor`).value;
+  const parts = docVal.split('|');
+  const docId = parseInt(parts[0]);
+  const grid = document.getElementById(`${prefix}-time-slots`);
+  if (!docId) {
+    grid.innerHTML = '<div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">Select a doctor to see available slots</div>';
+    return;
+  }
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    const data = await API.patient.doctorSlots(`doctor_id=${docId}&date=${today}`);
+    const slots = data.slots || [];
+    grid.innerHTML = slots.length
+      ? slots.map(s => `<div class="slot-btn" onclick="selectWalkInSlot('${prefix}', this)" data-time="${s.time}">${s.label}</div>`).join('')
+      : '<div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">No slots available today</div>';
+  } catch (e) {
+    grid.innerHTML = '<div style="color:var(--gray-400);font-size:13px;">Failed to load slots</div>';
+  }
+}
+
+function selectWalkInSlot(prefix, el) {
+  document.querySelectorAll(`#${prefix}-time-slots .slot-btn`).forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
 async function issueWalkInToken() {
   const name = document.getElementById('wk-name').value.trim();
   const phone = document.getElementById('wk-phone').value.trim();
@@ -867,6 +901,8 @@ async function issueWalkInToken() {
   const reuseSlotVal = document.getElementById('wk-reuse-slot').value;
   if (!name || !phone || !docVal) { showToast('Please fill all required fields.', 'error'); return; }
   const parts = docVal.split('|');
+  const selectedSlot = document.querySelector('#wk-time-slots .slot-btn.selected');
+  const selectedTime = selectedSlot ? selectedSlot.dataset.time : null;
   try {
     const entry = await API.reception.createEntry({
       patient_name: name,
@@ -875,6 +911,7 @@ async function issueWalkInToken() {
       visit_type: type,
       notes: document.getElementById('wk-notes').value,
       reuse_slot_id: reuseSlotVal ? parseInt(reuseSlotVal) : null,
+      time: selectedTime,
     });
     showToast(`🎫 Token ${entry.token} issued to ${name}`);
     addActivity(`Walk-in token ${entry.token} issued to ${name}`, 'issue');
@@ -893,6 +930,8 @@ async function issueWalkInFromModal() {
   const reuseSlot = document.getElementById('m-wk-reuse-slot').value;
   if (!name || !phone || !docVal) { showToast('Please fill all required fields.', 'error'); return; }
   const parts = docVal.split('|');
+  const selectedSlot = document.querySelector('#m-wk-time-slots .slot-btn.selected');
+  const selectedTime = selectedSlot ? selectedSlot.dataset.time : null;
   try {
     const entry = await API.reception.createEntry({
       patient_name: name,
@@ -901,6 +940,7 @@ async function issueWalkInFromModal() {
       visit_type: type,
       notes: '',
       reuse_slot_id: reuseSlot ? parseInt(reuseSlot) : null,
+      time: selectedTime,
     });
     showToast(`🎫 Token ${entry.token} issued to ${name}`);
     addActivity(`Walk-in token ${entry.token} issued to ${name}`, 'issue');
@@ -916,6 +956,7 @@ function resetWalkInForm() {
   document.getElementById('wk-doctor').value = '';
   document.getElementById('token-preview').classList.remove('show');
   document.getElementById('existing-patient-alert').style.display = 'none';
+  document.getElementById('wk-time-slots').innerHTML = '<div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">Select a doctor to see available slots</div>';
 }
 
 async function checkExistingPatient(phone) {
@@ -977,6 +1018,7 @@ function reuseSlot(id) {
   document.getElementById('cancelled-reuse-section').style.display = 'block';
   if (slot.doctor) {
     document.getElementById('wk-doctor').value = `${slot.doctor}|${slot.doctor_name}|${slot.department_name}|`;
+    loadWalkInSlots('wk');
   }
   showToast(`🟢 Slot ${slot.token} selected for reassignment`, 'info');
 }
@@ -1005,16 +1047,48 @@ function openReschedule(id) {
   const t = queueData.find(x => x.id === id);
   pendingRescheduleId = id;
   document.getElementById('reschedule-patient-info').innerHTML = `<strong>${t.patient_name}</strong> — Token <strong>${t.token}</strong><br>Currently: ${t.doctor_name} · ${t.time}`;
-  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-  document.getElementById('reschedule-date').value = tomorrow.toISOString().split('T')[0];
+  const today = new Date();
+  document.getElementById('reschedule-date').value = today.toISOString().split('T')[0];
+  document.getElementById('reschedule-date').min = today.toISOString().split('T')[0];
+  if (t.doctor) {
+    document.getElementById('reschedule-doctor').value = `${t.doctor}|${t.doctor_name}|${t.department_name}|`;
+  }
   openModal('reschedule-modal');
+  loadRescheduleSlots(today.toISOString().split('T')[0]);
+}
+
+async function loadRescheduleSlots(dateStr) {
+  const docVal = document.getElementById('reschedule-doctor').value;
+  const parts = docVal.split('|');
+  const docId = parseInt(parts[0]);
+  if (!docId) return;
+  const grid = document.getElementById('reschedule-slots');
+  try {
+    const data = await API.patient.doctorSlots(`doctor_id=${docId}&date=${dateStr}`);
+    const slots = data.slots || [];
+    grid.innerHTML = slots.length
+      ? slots.map(s => `<div class="slot-btn" onclick="selectRescheduleSlot(this)" data-time="${s.time}">${s.label}</div>`).join('')
+      : '<div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">No slots available</div>';
+  } catch (e) {
+    grid.innerHTML = '<div style="color:var(--gray-400);font-size:13px;">Failed to load slots</div>';
+  }
+}
+
+function selectRescheduleSlot(el) {
+  document.querySelectorAll('#reschedule-slots .slot-btn').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
 }
 
 async function confirmReschedule() {
   const t = queueData.find(x => x.id === pendingRescheduleId);
   const newDate = document.getElementById('reschedule-date').value;
+  const selectedSlot = document.querySelector('#reschedule-slots .slot-btn.selected');
+  const newTime = selectedSlot ? selectedSlot.dataset.time : null;
   try {
-    await API.reception.reschedule(pendingRescheduleId, { new_date: newDate, reason: document.getElementById('reschedule-reason').value });
+    const docVal = document.getElementById('reschedule-doctor').value;
+    const parts = docVal.split('|');
+    const newDoctorId = parts[0] ? parseInt(parts[0]) : null;
+    await API.reception.reschedule(pendingRescheduleId, { new_date: newDate, new_time: newTime, new_doctor_id: newDoctorId, reason: document.getElementById('reschedule-reason').value });
     showToast(`📅 ${t.patient_name} rescheduled to ${newDate}`);
     addActivity(`Token ${t.token} rescheduled — ${t.patient_name} → ${newDate}`, 'checkin');
     if (t) t.status = 'done';
@@ -1175,6 +1249,7 @@ function openWalkInModal() {
   document.getElementById('m-wk-doctor').value = '';
   document.getElementById('m-wk-type').value = 'Walk-In';
   populateCancelledReuseSlots();
+  document.getElementById('m-wk-time-slots').innerHTML = '<div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">Select a doctor to see available slots</div>';
   openModal('walkin-modal');
 }
 

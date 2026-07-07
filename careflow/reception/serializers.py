@@ -25,6 +25,7 @@ class QueueEntryCreateSerializer(serializers.Serializer):
     visit_type = serializers.CharField(max_length=20, default='Walk-In')
     notes = serializers.CharField(required=False, allow_blank=True, default='')
     reuse_slot_id = serializers.IntegerField(required=False, allow_null=True)
+    time = serializers.TimeField(required=False, allow_null=True)
 
 
 class QueueEntryStatusSerializer(serializers.Serializer):
@@ -37,6 +38,7 @@ class QueueEntryCancelSerializer(serializers.Serializer):
 
 class QueueEntryRescheduleSerializer(serializers.Serializer):
     new_date = serializers.DateField()
+    new_time = serializers.TimeField(required=False, allow_null=True)
     new_doctor_id = serializers.IntegerField(required=False, allow_null=True)
     reason = serializers.CharField(required=False, allow_blank=True, default='')
 
