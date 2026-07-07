@@ -1,10 +1,10 @@
 {% load static %}
-<meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
 <title>CareFlow — Hospital Admin Module</title>
 <style>
   :root {
@@ -2252,7 +2252,7 @@ async function saveDoctor() {
         .filter(Boolean);
       return checked.length ? checked.join(', ') : 'Mon–Fri';
     })(),
-    slots_per_day: parseInt(document.getElementById('slots-per-day')?.value) || 20,
+    slots_per_day: parseInt(document.getElementById('slot-count')?.value) || 20,
   };
   try {
     if (editingDoctorId) {
@@ -2537,11 +2537,16 @@ async function saveHoliday() {
   } catch (e) { showToast(e.message || 'Error saving holiday','error'); }
 }
 
-function saveEmergency() {
+async function saveEmergency() {
   const reason = document.getElementById('emg-reason').value.trim();
+  const fromDate = document.getElementById('emg-from').value;
+  const toDate = document.getElementById('emg-to').value;
   if (!reason) { showToast('Please provide a reason','error'); return; }
-  showToast(`🚨 Emergency closure activated: ${reason}`, 'error');
-  closeModal('modal-emergency');
+  try {
+    await API.admin.emergencyClosure({ reason, from_date: fromDate, to_date: toDate || null });
+    showToast(`🚨 Emergency closure activated: ${reason}`, 'error');
+    closeModal('modal-emergency');
+  } catch (e) { showToast(e.message || 'Failed to activate emergency closure','error'); }
 }
 
 /*  STAFF  */
@@ -2570,7 +2575,7 @@ function renderStaff(filter='') {
       <td>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-outline btn-sm" onclick="editStaff(${s.id})">✏️</button>
-          <button class="btn btn-ghost btn-sm" onclick="openStaffInfoModal(${s.id}, '${(s.name||'').replace(/'/g, "\\'")}', '${s.role_key||''}', '${(s.employee_id||'').replace(/'/g, "\\'")}')">📋</button>
+          <button class="btn btn-ghost btn-sm" onclick="openStaffInfoModal(${s.id}, '${(s.name||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', '${s.role_key||''}', '${(s.employee_id||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}')">📋</button>
           <button class="btn btn-danger btn-sm" onclick="confirmDelete('staff',${s.id},'staff account')">🗑</button>
         </div>
       </td>
@@ -2608,7 +2613,7 @@ function renderStaffFiltered(list) {
       <td>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-outline btn-sm" onclick="editStaff(${s.id})">✏️</button>
-          <button class="btn btn-ghost btn-sm" onclick="openStaffInfoModal(${s.id}, '${(s.name||'').replace(/'/g, "\\'")}', '${s.role_key||''}', '${(s.employee_id||'').replace(/'/g, "\\'")}')">📋</button>
+          <button class="btn btn-ghost btn-sm" onclick="openStaffInfoModal(${s.id}, '${(s.name||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', '${s.role_key||''}', '${(s.employee_id||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}')">📋</button>
           <button class="btn btn-danger btn-sm" onclick="confirmDelete('staff',${s.id},'staff account')">🗑</button>
         </div>
       </td>
@@ -2718,9 +2723,9 @@ async function approveStaff(id) {
 async function saveStaff() {
   const name = document.getElementById('staff-name').value.trim();
   if (!name) { showToast('Name is required','error'); return; }
-  const roleDisplay = document.getElementById('staff-role').value;
+  const selectedRole = document.getElementById('staff-role').value;
   const roleMap = { 'Doctor': 'doctor', 'Receptionist': 'receptionist' };
-  const role = roleMap[roleDisplay] || 'receptionist';
+  const role = roleMap[selectedRole] || 'receptionist';
   try {
     if (editingStaffId) {
       await API.admin.updateUser(editingStaffId, {
@@ -3420,12 +3425,12 @@ function showToast(msg, type='success') {
 /* THEME  */
 function toggleTheme() {
   const isDark = document.documentElement.classList.toggle('dark-mode');
-  localStorage.setItem('careflow-admin-theme', isDark?'dark':'light');
+  localStorage.setItem('careflow-theme', isDark?'dark':'light');
   document.getElementById('theme-toggle').textContent = isDark?'☀️':'🌙';
 }
 
 function initTheme() {
-  const saved = localStorage.getItem('careflow-admin-theme');
+  const saved = localStorage.getItem('careflow-theme');
   const pref = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const isDark = saved ? saved==='dark' : pref;
   if (isDark) { document.documentElement.classList.add('dark-mode'); document.getElementById('theme-toggle').textContent='☀️'; }

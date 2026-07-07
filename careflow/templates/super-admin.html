@@ -1,9 +1,10 @@
-{% load static %}<meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
 <title>CareFlow — Super Admin</title>
 <script src="{% static 'js/api.js' %}"></script>
 <style>
@@ -552,12 +553,12 @@ function setDate() {
 
 function toggleTheme() {
   const isDark = document.documentElement.classList.toggle('dark-mode');
-  localStorage.setItem('careflow-super-admin-theme', isDark ? 'dark' : 'light');
+  localStorage.setItem('careflow-theme', isDark ? 'dark' : 'light');
   document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
 }
 
 function initTheme() {
-  const saved = localStorage.getItem('careflow-super-admin-theme');
+  const saved = localStorage.getItem('careflow-theme');
   const pref = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const isDark = saved ? saved === 'dark' : pref;
   if (isDark) { document.documentElement.classList.add('dark-mode'); document.getElementById('theme-toggle').textContent = '☀️'; }
@@ -618,12 +619,18 @@ async function clearNotifs() {
 
 async function loadData() {
   try {
-    const [users, doctorRecords, stats] = await Promise.all([
+    const [users, doctorRecords, stats, perms, groups, mappings] = await Promise.all([
       API.admin.users(),
       API.admin.doctors().catch(() => []),
       API.admin.superAdminStats().catch(() => null),
+      API.admin.permissions(),
+      API.admin.groups(),
+      API.admin.userGroupMappings()
     ]);
     allUsers = users;
+    allPermissions = perms;
+    allGroups = groups;
+    allUserGroups = mappings;
     const admins = users.filter(u => u.role === 'hospital_admin');
     const userDoctors = users.filter(u => u.role === 'doctor');
     const receptionists = users.filter(u => u.role === 'receptionist');
@@ -638,14 +645,6 @@ async function loadData() {
     renderStaffList();
     renderStaff();
     renderRoles();
-    const [perms, groups, mappings] = await Promise.all([
-      API.admin.permissions(),
-      API.admin.groups(),
-      API.admin.userGroupMappings()
-    ]);
-    allPermissions = perms;
-    allGroups = groups;
-    allUserGroups = mappings;
   } catch (e) { showToast(e.message, 'error'); }
 }
 
@@ -662,7 +661,7 @@ function renderStaffList(role) {
     <td><span class="badge ${roleBadge[u.role]||'badge-gray'}">${roleLabels[u.role]||u.role||''}</span></td>
     <td style="color:var(--gray-500);font-size:13px;">${u.email||'-'}</td>
     <td><span class="badge ${u.is_active ? 'badge-green' : 'badge-gray'}">${u.is_active ? '✅ Active' : '❌ Inactive'}</span></td>
-    <td><button class="btn btn-sm btn-outline" onclick="openEditModal(${u.id}, '${(u.name||'').replace(/'/g, "\\'")}', '${(u.phone||'').replace(/'/g, "\\'")}', '${(u.email||'').replace(/'/g, "\\'")}')">✏️ Edit</button> <button class="btn btn-sm btn-ghost" onclick="openStaffInfoModal(${u.id}, '${(u.name||'').replace(/'/g, "\\'")}', '${u.role||''}', '${(u.employee_id||'').replace(/'/g, "\\'")}')">📋 Info</button></td>
+    <td><button class="btn btn-sm btn-outline" onclick="openEditModal(${u.id}, '${(u.name||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', '${(u.phone||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', '${(u.email||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}')">✏️ Edit</button> <button class="btn btn-sm btn-ghost" onclick="openStaffInfoModal(${u.id}, '${(u.name||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', '${u.role||''}', '${(u.employee_id||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}')">📋 Info</button></td>
   </tr>`).join('');
   document.getElementById('admins-count').textContent = `${list.length} staff member${list.length !== 1 ? 's' : ''}`;
 }
@@ -688,7 +687,7 @@ function renderStaff(filter) {
     <td><div class="groups-list">${groupBadges}</div></td>
     <td style="color:var(--gray-500);font-size:13px;">${u.email||'-'}</td>
     <td><span class="badge ${u.is_active ? 'badge-green' : 'badge-gray'}">${u.is_active ? '✅ Active' : '❌ Inactive'}</span></td>
-     <td style="white-space:nowrap;"><button class="btn btn-sm btn-outline" onclick="openEditModal(${u.id}, '${(u.name||'').replace(/'/g, "\\'")}', '${(u.phone||'').replace(/'/g, "\\'")}', '${(u.email||'').replace(/'/g, "\\'")}')">✏️ Edit</button> <button class="btn btn-sm btn-ghost ${u.role === 'super_admin' ? '' : ''}" onclick="openStaffInfoModal(${u.id}, '${(u.name||'').replace(/'/g, "\\'")}', '${u.role||''}', '${(u.employee_id||'').replace(/'/g, "\\'")}')">📋 Info</button> <button class="btn btn-sm ${u.is_active ? 'btn-ghost' : 'btn-primary'}" onclick="toggleUserStatus(${u.id}, '${(u.name||'').replace(/'/g, "\\'")}')">${u.is_active ? '❌ Deactivate' : '✅ Activate'}</button></td>
+     <td style="white-space:nowrap;"><button class="btn btn-sm btn-outline" onclick="openEditModal(${u.id}, '${(u.name||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', '${(u.phone||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', '${(u.email||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}')">✏️ Edit</button> <button class="btn btn-sm btn-ghost ${u.role === 'super_admin' ? '' : ''}" onclick="openStaffInfoModal(${u.id}, '${(u.name||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', '${u.role||''}', '${(u.employee_id||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}')">📋 Info</button> <button class="btn btn-sm ${u.is_active ? 'btn-ghost' : 'btn-primary'}" onclick="toggleUserStatus(${u.id}, '${(u.name||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}')">${u.is_active ? '❌ Deactivate' : '✅ Activate'}</button></td>
   </tr>`}).join('');
   document.getElementById('staff-count').textContent = `${list.length} user${list.length !== 1 ? 's' : ''}`;
 }
@@ -760,14 +759,6 @@ async function toggleUserStatus(id, name) {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-function openEditModal(id, name, phone, email) {
-  document.getElementById('edit-user-id').value = id;
-  document.getElementById('edit-name').value = name;
-  document.getElementById('edit-phone').value = phone;
-  document.getElementById('edit-email').value = email;
-  openModal('modal-edit');
-}
-
 async function saveEdit() {
   const id = document.getElementById('edit-user-id').value;
   const name = document.getElementById('edit-name').value.trim();
@@ -817,7 +808,7 @@ function renderGroups() {
     <td><span class="badge badge-green">${g.user_count || 0} users</span></td>
     <td>
       <button class="btn btn-sm btn-outline" onclick="openEditGroupModal(${g.id})">✏️ Edit</button>
-      <button class="btn btn-sm btn-ghost" onclick="deleteGroup(${g.id}, '${(g.name||'').replace(/'/g, "\\'")}')">🗑 Delete</button>
+      <button class="btn btn-sm btn-ghost" onclick="deleteGroup(${g.id}, '${(g.name||'').replace(/\\/g, "\\\\").replace(/'/g, "\\'")}')">🗑 Delete</button>
     </td>
   </tr>`).join('');
 }
