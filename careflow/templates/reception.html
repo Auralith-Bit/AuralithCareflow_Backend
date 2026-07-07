@@ -642,6 +642,7 @@ let activityLog = [];
 let currentFilter = 'all';
 let currentSortKey = 'token';
 let searchType = 'all';
+let searchResults = [];
 let pendingCancelId = null;
 let pendingRescheduleId = null;
 
@@ -1010,7 +1011,7 @@ function populateCancelledReuseSlots() {
 }
 
 function reuseSlot(id) {
-  const slot = queueData.find(t => t.id === id);
+  const slot = queueData.find(t => t.id === id) || searchResults.find(t => t.id === id);
   if (!slot) return;
   setNavById('walkin');
   populateCancelledReuseSlots();
@@ -1024,7 +1025,8 @@ function reuseSlot(id) {
 }
 
 function openCancel(id) {
-  const t = queueData.find(x => x.id === id);
+  const t = queueData.find(x => x.id === id) || searchResults.find(x => x.id === id);
+  if (!t) return;
   pendingCancelId = id;
   document.getElementById('cancel-patient-info').innerHTML = `<strong>${t.patient_name}</strong> — Token <strong>${t.token}</strong><br>${t.doctor_name} · ${t.department_name} · ${t.time}`;
   openModal('cancel-modal');
@@ -1044,7 +1046,8 @@ async function confirmCancel() {
 }
 
 function openReschedule(id) {
-  const t = queueData.find(x => x.id === id);
+  const t = queueData.find(x => x.id === id) || searchResults.find(x => x.id === id);
+  if (!t) return;
   pendingRescheduleId = id;
   document.getElementById('reschedule-patient-info').innerHTML = `<strong>${t.patient_name}</strong> — Token <strong>${t.token}</strong><br>Currently: ${t.doctor_name} · ${t.time}`;
   const today = new Date();
@@ -1080,7 +1083,8 @@ function selectRescheduleSlot(el) {
 }
 
 async function confirmReschedule() {
-  const t = queueData.find(x => x.id === pendingRescheduleId);
+  const t = queueData.find(x => x.id === pendingRescheduleId) || searchResults.find(x => x.id === pendingRescheduleId);
+  if (!t) return;
   const newDate = document.getElementById('reschedule-date').value;
   const selectedSlot = document.querySelector('#reschedule-slots .slot-btn.selected');
   const newTime = selectedSlot ? selectedSlot.dataset.time : null;
@@ -1098,7 +1102,7 @@ async function confirmReschedule() {
 }
 
 function openPrintSlip(id) {
-  const t = queueData.find(x => x.id === id);
+  const t = queueData.find(x => x.id === id) || searchResults.find(x => x.id === id);
   if (!t) return;
   openPrintSlipDirect(t.token, t.patient_name, t.doctor_name, t.department_name, t.room, t.time);
 }
@@ -1142,6 +1146,7 @@ async function performSearch(query) {
     params.set('q', q);
     if (searchType !== 'all') params.set('type', searchType);
     const results = await API.reception.searchPatients(params.toString());
+    searchResults = results;
     if (!results.length) {
       container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--gray-400);font-size:14px;">No patients found for "<strong>${query}</strong>"</div>`;
       return;

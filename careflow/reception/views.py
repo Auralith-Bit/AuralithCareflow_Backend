@@ -37,8 +37,7 @@ class QueueListView(generics.ListAPIView):
 
         qs = QueueEntry.objects.filter(
             Q(created_at__gte=today_start, created_at__lt=today_end, scheduled_date__isnull=True) |
-            Q(status__in=['waiting', 'arrived', 'serving'], scheduled_date__isnull=True) |
-            Q(scheduled_date=today, status__in=['waiting', 'arrived', 'serving']) |
+            Q(status__in=['waiting', 'arrived', 'serving']) |
             Q(status='cancelled', reassigned=False)
         )
         status_filter = self.request.query_params.get('status')
@@ -69,8 +68,7 @@ class QueueStatsView(APIView):
 
         qs = QueueEntry.objects.filter(
             Q(created_at__gte=today_start, created_at__lt=today_end, scheduled_date__isnull=True) |
-            Q(status__in=['waiting', 'arrived', 'serving'], scheduled_date__isnull=True) |
-            Q(scheduled_date=today, status__in=['waiting', 'arrived', 'serving']) |
+            Q(status__in=['waiting', 'arrived', 'serving']) |
             Q(status='cancelled', reassigned=False)
         )
         return Response({
