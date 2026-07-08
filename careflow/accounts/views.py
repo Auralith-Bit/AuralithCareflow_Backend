@@ -292,18 +292,21 @@ class UpdateUserView(APIView):
     def patch(self, request, pk):
         user = get_object_or_404(User, pk=pk)
         name = request.data.get('name', '').strip()
-        phone = request.data.get('phone', '').strip()
         email = request.data.get('email', '').strip()
 
-        if phone and phone != user.phone:
-            if User.objects.filter(phone=phone).exclude(pk=user.pk).exists():
-                return Response({'error': 'Phone already in use'}, status=400)
         if not name:
             return Response({'error': 'Name is required'}, status=400)
 
         user.name = name
-        user.phone = phone
         user.email = email
+
+        if 'phone' in request.data:
+            phone = request.data.get('phone', '').strip() or None
+            if phone and phone != user.phone:
+                if User.objects.filter(phone=phone).exclude(pk=user.pk).exists():
+                    return Response({'error': 'Phone already in use'}, status=400)
+            user.phone = phone
+
         user.save()
         return Response(UserSerializer(user).data)
 
