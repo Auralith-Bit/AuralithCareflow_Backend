@@ -13,36 +13,87 @@
     <div class="auth-wrapper">
         <div class="auth-container">
 
-            <!-- View 1: Phone Entry -->
-            <div class="auth-card" id="phone-view">
-                <h3>Welcome to CareFlow</h3>
-                <p class="auth-subtitle">Enter your mobile number to log in or create a new account.</p>
-                
-                <form onsubmit="handlePhoneSubmit(event)">
-                    <div class="input-group">
-                        <label for="phone"><i class="fa-solid fa-phone"></i> Mobile Number</label>
-                        <div class="phone-input-wrapper">
-                            <span class="country-code">+977</span>
-                            <input type="tel" id="phone" placeholder="98XXXXXXXX" pattern="[9][6-8][0-9]{8}" required autofocus>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="btn-auth-submit" id="phone-submit-btn">
-                        Send Verification Code <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </form>
+            <div class="auth-card" id="main-view">
+                <div class="auth-tabs">
+                    <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Login</button>
+                    <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</button>
+                </div>
 
-                <div id="phone-error" class="hidden" style="color:#e63946;font-size:13px;text-align:center;margin-top:12px;"></div>
+                <!-- Login Form -->
+                <div id="login-form">
+                    <h3>Welcome Back</h3>
+                    <p class="auth-subtitle">Enter your mobile number to log in.</p>
+                    <form onsubmit="handleLoginPhoneSubmit(event)">
+                        <div class="input-group">
+                            <label for="login-phone"><i class="fa-solid fa-phone"></i> Mobile Number</label>
+                            <div class="phone-input-wrapper">
+                                <span class="country-code">+977</span>
+                                <input type="tel" id="login-phone" placeholder="98XXXXXXXX" pattern="[9][6-8][0-9]{8}" required autofocus>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-auth-submit" id="login-phone-btn">
+                            Send Verification Code <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </form>
+                    <div id="login-error" class="hidden" style="color:#e63946;font-size:13px;text-align:center;margin-top:12px;"></div>
+                </div>
+
+                <!-- Register Form -->
+                <div id="register-form" class="hidden">
+                    <h3>Create Account</h3>
+                    <p class="auth-subtitle">Fill in your details to get started.</p>
+                    <form onsubmit="handleRegisterSubmit(event)">
+                        <div class="input-group">
+                            <label for="reg-phone"><i class="fa-solid fa-phone"></i> Mobile Number</label>
+                            <div class="phone-input-wrapper">
+                                <span class="country-code">+977</span>
+                                <input type="tel" id="reg-phone" placeholder="98XXXXXXXX" pattern="[9][6-8][0-9]{8}" required>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="reg-name"><i class="fa-regular fa-user"></i> Full Name</label>
+                            <input type="text" id="reg-name" placeholder="e.g. Ram Thapa" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="reg-email"><i class="fa-regular fa-envelope"></i> Email</label>
+                            <input type="email" id="reg-email" placeholder="e.g. ram@example.com">
+                        </div>
+                        <div class="input-group">
+                            <label for="reg-gender"><i class="fa-regular fa-venus-mars"></i> Gender</label>
+                            <select id="reg-gender" required>
+                                <option value="">Select Gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="reg-dob"><i class="fa-regular fa-calendar"></i> Date of Birth</label>
+                            <input type="date" id="reg-dob" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="reg-address"><i class="fa-regular fa-location-dot"></i> Address</label>
+                            <textarea id="reg-address" rows="2" placeholder="e.g. Kathmandu, Nepal" required></textarea>
+                        </div>
+                        <button type="submit" class="btn-auth-submit" id="register-submit-btn">
+                            Create Account <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </form>
+                    <div class="back-to-login" onclick="switchAuthTab('login')">
+                        <i class="fa-solid fa-arrow-left"></i> Back to Login
+                    </div>
+                    <div id="register-error" class="hidden" style="color:#e63946;font-size:13px;text-align:center;margin-top:12px;"></div>
+                </div>
             </div>
 
-            <!-- View 2: OTP Verification -->
+            <!-- OTP Verification (shared for both flows) -->
             <div class="auth-card hidden" id="otp-view">
-                <button class="back-link-btn" onclick="switchView('phone-view')">
-                    <i class="fa-solid fa-arrow-left"></i> Change Number
+                <button class="back-link-btn" onclick="backFromOTP()">
+                    <i class="fa-solid fa-arrow-left"></i> Back
                 </button>
                 <h3>Enter Verification Code</h3>
                 <p class="auth-subtitle">A 6-digit code has been sent to <strong id="otp-phone-display"></strong></p>
-                
+
                 <div id="otp-demo-display" class="hidden" style="background:#e8f5e9;border:1px dashed #2d6a4f;border-radius:8px;padding:10px;text-align:center;margin-bottom:16px;font-size:14px;">
                     <strong>Demo OTP:</strong> <span style="font-size:22px;letter-spacing:4px;font-weight:700;color:#2d6a4f;" id="otp-code-display"></span>
                 </div>
@@ -52,58 +103,12 @@
                         <label for="otp-code"><i class="fa-solid fa-shield-halved"></i> One-Time Password (OTP)</label>
                         <input type="text" id="otp-code" class="otp-input" placeholder="0 0 0 0 0 0" maxlength="6" pattern="[0-9]{6}" required autofocus>
                     </div>
-
                     <button type="submit" class="btn-auth-submit" id="otp-submit-btn">Verify & Login</button>
-                    
                     <div class="resend-container">
                         Didn't receive the code? <a href="#" class="resend-link" onclick="resendOTP(event)">Resend</a>
                     </div>
                 </form>
-
                 <div id="otp-error" class="hidden" style="color:#e63946;font-size:13px;text-align:center;margin-top:12px;"></div>
-            </div>
-
-            <!-- View 3: Registration (for new users) -->
-            <div class="auth-card hidden" id="register-view">
-                <button class="back-link-btn" onclick="switchView('phone-view')">
-                    <i class="fa-solid fa-arrow-left"></i> Back
-                </button>
-                <h3>Complete Your Profile</h3>
-                <p class="auth-subtitle">Create your account to get started.</p>
-                
-                    <form onsubmit="handleRegisterSubmit(event)">
-                    <div class="input-group">
-                        <label for="reg-name"><i class="fa-regular fa-user"></i> Full Name</label>
-                        <input type="text" id="reg-name" placeholder="e.g. Ram Thapa" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="reg-email"><i class="fa-regular fa-envelope"></i> Email</label>
-                        <input type="email" id="reg-email" placeholder="e.g. ram@example.com">
-                    </div>
-                    <div class="input-group">
-                        <label for="reg-gender"><i class="fa-regular fa-venus-mars"></i> Gender</label>
-                        <select id="reg-gender" required>
-                            <option value="">Select Gender</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="reg-dob"><i class="fa-regular fa-calendar"></i> Date of Birth</label>
-                        <input type="date" id="reg-dob" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="reg-address"><i class="fa-regular fa-location-dot"></i> Address</label>
-                        <textarea id="reg-address" rows="2" placeholder="e.g. Kathmandu, Nepal" required></textarea>
-                    </div>
-
-                    <button type="submit" class="btn-auth-submit" id="register-submit-btn">
-                        Create Account & Enter <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </form>
-
-                <div id="register-error" class="hidden" style="color:#e63946;font-size:13px;text-align:center;margin-top:12px;"></div>
             </div>
 
             <footer class="auth-footer">
@@ -113,23 +118,45 @@
         </div>
     </div>
 
+    <style>
+        .auth-tabs { display:flex; gap:0; margin-bottom:1.5rem; background:#f0f7f4; border-radius:12px; padding:4px; }
+        .auth-tab { flex:1; padding:10px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; background:transparent; color:#5a7a72; transition:all .2s; }
+        .auth-tab.active { background:#fff; color:#00897b; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+        .auth-tab:hover:not(.active) { color:#00897b; }
+        .back-to-login { text-align:center; margin-top:16px; font-size:13px; color:#5a7a72; cursor:pointer; transition:color .2s; }
+        .back-to-login:hover { color:#00897b; }
+    </style>
+
     <script>
         let currentPhone = '';
         let currentOTP = '';
+        let currentFlow = 'login';
+
+        function switchAuthTab(tab) {
+            currentFlow = tab;
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+            document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
+            document.getElementById('login-error')?.classList.add('hidden');
+            document.getElementById('register-error')?.classList.add('hidden');
+        }
 
         function showOTPDisplay() {
             const el = document.getElementById('otp-demo-display');
-            if (el) {
-                el.classList.remove('hidden');
-            }
+            if (el) el.classList.remove('hidden');
         }
 
         function switchView(viewId) {
             document.querySelectorAll('.auth-card').forEach(card => card.classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
-            document.getElementById('phone-error')?.classList.add('hidden');
+            document.getElementById('login-error')?.classList.add('hidden');
             document.getElementById('otp-error')?.classList.add('hidden');
             document.getElementById('register-error')?.classList.add('hidden');
+        }
+
+        function backFromOTP() {
+            switchView('main-view');
         }
 
         function showError(id, msg) {
@@ -141,13 +168,13 @@
             return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
         }
 
-        async function handlePhoneSubmit(e) {
+        async function handleLoginPhoneSubmit(e) {
             e.preventDefault();
-            const phone = '+977' + document.getElementById('phone').value.trim();
+            const phone = '+977' + document.getElementById('login-phone').value.trim();
             currentPhone = phone;
-            const btn = document.getElementById('phone-submit-btn');
+            const btn = document.getElementById('login-phone-btn');
             btn.disabled = true;
-            btn.innerHTML = 'Checking...';
+            btn.innerHTML = 'Sending...';
 
             try {
                 const check = await fetch('/api/auth/check-phone/', {
@@ -156,6 +183,13 @@
                     body: JSON.stringify({ phone }),
                 });
                 const checkData = await check.json();
+
+                if (!checkData.exists) {
+                    showError('login-error', 'No account found with this number. Please register first.');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Send Verification Code <i class="fa-solid fa-arrow-right"></i>';
+                    return;
+                }
 
                 const otpRes = await fetch('/api/auth/send-otp/', {
                     method: 'POST',
@@ -167,15 +201,10 @@
 
                 document.getElementById('otp-phone-display').textContent = phone;
                 document.getElementById('otp-code-display').textContent = currentOTP;
-
-                if (checkData.exists) {
-                    switchView('otp-view');
-                    showOTPDisplay();
-                } else {
-                    switchView('register-view');
-                }
+                switchView('otp-view');
+                showOTPDisplay();
             } catch (err) {
-                showError('phone-error', 'Failed to connect. Please try again.');
+                showError('login-error', 'Failed to connect. Please try again.');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = 'Send Verification Code <i class="fa-solid fa-arrow-right"></i>';
@@ -223,10 +252,10 @@
                 currentOTP = data.otp || '';
                 document.getElementById('otp-code-display').textContent = currentOTP;
                 showOTPDisplay();
-                showError('otp-error', '');
-                document.getElementById('otp-error').textContent = '✅ Code resent!';
-                document.getElementById('otp-error').style.color = '#2d6a4f';
-                document.getElementById('otp-error').classList.remove('hidden');
+                const errEl = document.getElementById('otp-error');
+                errEl.textContent = '✅ Code resent!';
+                errEl.style.color = '#2d6a4f';
+                errEl.classList.remove('hidden');
             } catch (err) {
                 showError('otp-error', 'Failed to resend. Try again.');
             }
@@ -234,6 +263,7 @@
 
         async function handleRegisterSubmit(e) {
             e.preventDefault();
+            const phone = '+977' + document.getElementById('reg-phone').value.trim();
             const name = document.getElementById('reg-name').value.trim();
             const email = document.getElementById('reg-email').value.trim();
             const gender = document.getElementById('reg-gender').value;
@@ -245,26 +275,52 @@
             btn.innerHTML = 'Creating Account...';
 
             try {
+                const check = await fetch('/api/auth/check-phone/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                    body: JSON.stringify({ phone }),
+                });
+                const checkData = await check.json();
+                if (checkData.exists) {
+                    showError('register-error', 'This number is already registered. Please log in instead.');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Create Account <i class="fa-solid fa-arrow-right"></i>';
+                    return;
+                }
+
                 const res = await fetch('/api/patient/register/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
-                    body: JSON.stringify({ phone: currentPhone, name, email, gender, date_of_birth, address }),
+                    body: JSON.stringify({ phone, name, email, gender, date_of_birth, address }),
                 });
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
                     throw new Error(errData.error || 'Registration failed');
                 }
+
+                currentPhone = phone;
+
+                const otpRes = await fetch('/api/auth/send-otp/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+                    body: JSON.stringify({ phone }),
+                });
+                const otpData = await otpRes.json();
+                currentOTP = otpData.otp || '';
+
+                document.getElementById('otp-phone-display').textContent = phone;
+                document.getElementById('otp-code-display').textContent = currentOTP;
                 switchView('otp-view');
                 showOTPDisplay();
-                showError('otp-error', '');
-                document.getElementById('otp-error').textContent = '✅ Account created! Enter the OTP sent to your phone.';
-                document.getElementById('otp-error').style.color = '#2d6a4f';
-                document.getElementById('otp-error').classList.remove('hidden');
+                const errEl = document.getElementById('otp-error');
+                errEl.textContent = '✅ Account created! Enter the OTP sent to your phone.';
+                errEl.style.color = '#2d6a4f';
+                errEl.classList.remove('hidden');
             } catch (err) {
                 showError('register-error', err.message || 'Registration failed. Please try again.');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = 'Create Account & Enter <i class="fa-solid fa-arrow-right"></i>';
+                btn.innerHTML = 'Create Account <i class="fa-solid fa-arrow-right"></i>';
             }
         }
 
