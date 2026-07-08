@@ -293,6 +293,7 @@ class UpdateUserView(APIView):
         user = get_object_or_404(User, pk=pk)
         name = request.data.get('name', '').strip()
         email = request.data.get('email', '').strip()
+        caller_role = request.user.role
 
         if not name:
             return Response({'error': 'Name is required'}, status=400)
@@ -306,6 +307,17 @@ class UpdateUserView(APIView):
                 if User.objects.filter(phone=phone).exclude(pk=user.pk).exists():
                     return Response({'error': 'Phone already in use'}, status=400)
             user.phone = phone
+
+        if 'role' in request.data:
+            new_role = request.data.get('role', '').strip().lower()
+            valid_roles = [r.value for r in User.Role]
+            if new_role not in valid_roles:
+                return Response({'error': 'Invalid role'}, status=400)
+            if caller_role == 'hospital_admin' and new_role not in ('doctor', 'receptionist'):
+                return Response({'error': 'Hospital admin can only assign doctor or receptionist roles'}, status=403)
+            if new_role == 'super_admin' and caller_role != 'super_admin':
+                return Response({'error': 'Only super admin can assign super admin role'}, status=403)
+            user.role = new_role
 
         user.save()
         return Response(UserSerializer(user).data)

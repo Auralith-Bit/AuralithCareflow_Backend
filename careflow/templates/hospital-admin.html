@@ -1614,8 +1614,11 @@
       <div class="form-row">
         <div class="form-group"><label>Role</label>
           <select class="form-select" id="staff-role">
-            <option>Doctor</option>
-            <option>Receptionist</option>
+            <option value="doctor">Doctor</option>
+            <option value="receptionist">Receptionist</option>
+            <option value="patient">Patient</option>
+            <option value="hospital_admin">Hospital Admin</option>
+            <option value="super_admin">Super Admin</option>
           </select>
         </div>
       </div>
@@ -1838,7 +1841,7 @@ function toggleArchivedDoctors() {
 async function loadStaff() {
   try {
     const users = await API.admin.users();
-    staffList = users.filter(u => u.role !== 'super_admin').map(u => ({
+    staffList = users.map(u => ({
       id: u.id,
       name: u.name || u.phone,
       employee_id: u.employee_id || '',
@@ -2650,7 +2653,7 @@ function editStaff(id) {
   document.getElementById('staff-email').removeAttribute('readonly');
   document.getElementById('staff-email').removeAttribute('disabled');
   document.getElementById('staff-email').style.opacity = '1';
-  document.getElementById('staff-role').value = s.role;
+  document.getElementById('staff-role').value = s.role_key;
   openModal('modal-staff');
 }
 
@@ -2746,9 +2749,7 @@ async function rejectStaff(id) {
 async function saveStaff() {
   const name = document.getElementById('staff-name').value.trim();
   if (!name) { showToast('Name is required','error'); return; }
-  const selectedRole = document.getElementById('staff-role').value;
-  const roleMap = { 'Doctor': 'doctor', 'Receptionist': 'receptionist' };
-  const role = roleMap[selectedRole] || 'receptionist';
+  const role = document.getElementById('staff-role').value;
   try {
     if (editingStaffId) {
       await API.admin.updateUser(editingStaffId, {
@@ -3413,7 +3414,7 @@ function exportReport(type) {
 
 /* HELPERS  */
 function roleBadge(role) {
-  return {'Hospital Admin':'badge-purple',Doctor:'badge-blue',Receptionist:'badge-green',Patient:'badge-gray'}[role]||'badge-gray';
+  return {'Hospital Admin':'badge-purple','Super Admin':'badge-red',Doctor:'badge-blue',Receptionist:'badge-green',Patient:'badge-gray'}[role]||'badge-gray';
 }
 function initials(name) {
   return name.split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
