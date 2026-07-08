@@ -1337,7 +1337,7 @@
           <p>Manage login access for admins, doctors, receptionists, and patients.</p>
         </div>
         <div class="page-banner-actions">
-          <button class="btn btn-primary" style="background:white;color:var(--green-dark);" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';document.getElementById('staff-save-btn').textContent='+ Create Account';document.getElementById('staff-email').setAttribute('readonly','');document.getElementById('staff-email').setAttribute('disabled','');document.getElementById('staff-email').style.opacity='0.6';clearForm(['staff-name','staff-email']);openModal('modal-staff')">+ Add Staff</button>
+          <button class="btn btn-primary" style="background:white;color:var(--green-dark);" onclick="editingStaffId=null;document.getElementById('staff-modal-title').textContent='👤 Add Staff Account';document.getElementById('staff-save-btn').textContent='+ Create Account';clearForm(['staff-name','staff-email']);openModal('modal-staff')">+ Add Staff</button>
         </div>
       </div>
       <div class="section-header">
@@ -1609,7 +1609,7 @@
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label>Full Name</label><input class="form-input" id="staff-name" placeholder="Full name" /></div>
-        <div class="form-group"><label>Email</label><input class="form-input" id="staff-email" placeholder="email@hospital.com" readonly disabled style="opacity:0.6" /></div>
+        <div class="form-group"><label>Email</label><input class="form-input" id="staff-email" placeholder="email@hospital.com" /></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Role</label>
@@ -2766,7 +2766,8 @@ async function saveStaff() {
       document.getElementById('staff-email').style.opacity = '0.6';
       await loadStaff();
     } else {
-      const result = await API.admin.createStaff({ name, role });
+      const email = document.getElementById('staff-email').value;
+      const result = await API.admin.createStaff({ name, role, email });
       showToast(`${name} account created ✅`);
       closeModal('modal-staff');
       document.getElementById('cred-employee-id').textContent = result.employee_id;

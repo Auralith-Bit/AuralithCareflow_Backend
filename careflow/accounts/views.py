@@ -203,6 +203,7 @@ class CreateStaffView(APIView):
     def post(self, request):
         name = request.data.get('name', '').strip()
         role = request.data.get('role', '').strip().lower()
+        email = request.data.get('email', '').strip()
 
         if not name or role not in ('receptionist', 'doctor', 'hospital_admin'):
             return Response({'error': 'Valid name and role are required'}, status=400)
@@ -229,6 +230,7 @@ class CreateStaffView(APIView):
             employee_id=employee_id,
             role=role,
             is_active=False,
+            email=email,
         )
         user.set_password(password)
         user.save()
