@@ -265,7 +265,6 @@ class CreateStaffView(APIView):
             Doctor.objects.create(
                 user=user,
                 name=name,
-                employee_id=employee_id,
                 prefix=prefix,
             )
 

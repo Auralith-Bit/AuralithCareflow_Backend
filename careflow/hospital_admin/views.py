@@ -86,11 +86,13 @@ class DoctorViewSet(viewsets.ModelViewSet):
                 icon_color='ni-green',
             )
         if not doctor.user:
+            employee_id = User.generate_employee_id('doctor')
             user = User(
                 phone=doctor.phone or '',
                 name=doctor.name,
                 email=doctor.email or '',
                 role='doctor',
+                employee_id=employee_id,
             )
             user.save()
             doctor.user = user

@@ -20,6 +20,7 @@ class DepartmentSerializer(serializers.ModelSerializer):
 
 class DoctorSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True, allow_null=True)
+    employee_id = serializers.CharField(source='user.employee_id', read_only=True, allow_null=True)
 
     class Meta:
         model = Doctor
@@ -28,13 +29,14 @@ class DoctorSerializer(serializers.ModelSerializer):
 
 class DoctorListSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True, allow_null=True)
+    employee_id = serializers.CharField(source='user.employee_id', read_only=True, allow_null=True)
 
     class Meta:
         model = Doctor
         fields = ['id', 'name', 'specialty', 'department_name', 'qualification', 'prefix',
                   'status', 'slots_per_day', 'avatar_color', 'days_available',
                   'day_slots', 'night_slots', 'consultation_fee',
-                  'phone', 'email', 'department', 'is_active']
+                  'phone', 'email', 'department', 'is_active', 'employee_id']
 
 
 class HospitalProfileSerializer(serializers.ModelSerializer):
