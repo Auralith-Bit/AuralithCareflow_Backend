@@ -168,6 +168,7 @@ class CreateQueueEntryView(APIView):
             status='waiting',
             notes=data.get('notes', ''),
             created_by=request.user,
+            scheduled_date=timezone.now().date(),
         )
         ActivityLog.objects.create(
             user=request.user,

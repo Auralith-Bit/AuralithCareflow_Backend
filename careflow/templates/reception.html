@@ -350,6 +350,8 @@
   .slot-btn { padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 1.5px solid var(--gray-300); cursor: pointer; text-align: center; background: var(--white); color: var(--gray-600); transition: all 0.15s; }
   .slot-btn:hover { border-color: var(--green-main); color: var(--green-main); }
   .slot-btn.selected { background: var(--green-main); border-color: var(--green-main); color: white; }
+  .slot-btn.disabled { opacity: 0.45; cursor: not-allowed; background: var(--gray-200); border-color: var(--gray-300); color: var(--gray-400); pointer-events: none; }
+  :root.dark-mode .slot-btn.disabled { background: var(--gray-700); border-color: var(--gray-600); color: var(--gray-500); }
   :root.dark-mode .slot-btn { background: var(--bg-secondary); color: var(--text-secondary); border-color: var(--border-color); }
   :root.dark-mode .slot-btn:hover { border-color: var(--green-light); color: var(--green-light); }
   :root.dark-mode .slot-btn.selected { background: var(--green-main); border-color: var(--green-main); color: white; }
@@ -505,7 +507,7 @@
               <div id="existing-patient-alert" style="display:none;background:#fff3e0;border:1px solid var(--accent-orange);border-radius:9px;padding:10px 14px;font-size:13px;color:#7c4700;">⚠️ Patient already has a token today: <strong id="existing-token-info"></strong></div>
               <div class="form-group"><label>Doctor / Department *</label><select class="form-select" id="wk-doctor" onchange="loadWalkInSlots('wk')"></select></div>
               <div class="form-group"><label>Visit Type</label><select class="form-select" id="wk-type"><option>Walk-In</option><option>Emergency</option><option>Follow-Up</option></select></div>
-              <div class="form-group"><label>Time Slot (optional)</label><div class="slots-grid" id="wk-time-slots"><div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">Select a doctor to see available slots</div></div></div>
+              <div class="form-group"><label>Time Slot *</label><div class="slots-grid" id="wk-time-slots"><div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">Select a doctor to see available slots</div></div></div>
               <div class="form-group"><label>Notes (Optional)</label><input class="form-input" id="wk-notes" type="text" placeholder="e.g. Referred by Dr. X, urgent..."></div>
               <div id="cancelled-reuse-section" style="display:none;">
                 <div style="background:#e8f5e9;border:1.5px solid var(--green-light);border-radius:9px;padding:12px;font-size:13px;">
@@ -590,7 +592,7 @@
         <div class="form-group"><label>Phone Number *</label><input class="form-input" id="m-wk-phone" type="tel" placeholder="+977-98XXXXXXXX"></div>
         <div class="form-group"><label>Doctor / Department *</label><select class="form-select" id="m-wk-doctor" onchange="loadWalkInSlots('m-wk')"></select></div>
         <div class="form-group"><label>Visit Type</label><select class="form-select" id="m-wk-type"><option>Walk-In</option><option>Emergency</option><option>Follow-Up</option></select></div>
-        <div class="form-group"><label>Time Slot (optional)</label><div class="slots-grid" id="m-wk-time-slots"><div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">Select a doctor to see available slots</div></div></div>
+        <div class="form-group"><label>Time Slot *</label><div class="slots-grid" id="m-wk-time-slots"><div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">Select a doctor to see available slots</div></div></div>
         <div id="m-cancelled-reuse" style="display:none;background:#e8f5e9;border:1.5px solid var(--green-light);border-radius:9px;padding:12px;"><div style="font-weight:700;color:var(--green-mid);margin-bottom:6px;font-size:13px;">🟢 Reuse Cancelled Slot?</div><select class="form-select" id="m-wk-reuse-slot" style="font-size:12.5px;" onchange="onReuseSlotChange(this)"><option value="">Issue next token in sequence</option></select></div>
       </div>
     </div>
@@ -645,6 +647,8 @@ let searchType = 'all';
 let searchResults = [];
 let pendingCancelId = null;
 let pendingRescheduleId = null;
+let lastSelectedSlotEl = null;
+let lastSelectedModalSlotEl = null;
 
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
@@ -882,7 +886,7 @@ async function loadWalkInSlots(prefix) {
     const data = await API.patient.doctorSlots(`doctor_id=${docId}&date=${today}`);
     const slots = data.slots || [];
     grid.innerHTML = slots.length
-      ? slots.map(s => `<div class="slot-btn" onclick="selectWalkInSlot('${prefix}', this)" data-time="${s.time}">${s.label}</div>`).join('')
+      ? slots.map(s => `<div class="slot-btn${s.available ? '' : ' disabled'}" onclick="${s.available ? `selectWalkInSlot('${prefix}', this)` : ''}" data-time="${s.time}">${s.label}</div>`).join('')
       : '<div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">No slots available today</div>';
   } catch (e) {
     grid.innerHTML = '<div style="color:var(--gray-400);font-size:13px;">Failed to load slots</div>';
@@ -892,6 +896,8 @@ async function loadWalkInSlots(prefix) {
 function selectWalkInSlot(prefix, el) {
   document.querySelectorAll(`#${prefix}-time-slots .slot-btn`).forEach(s => s.classList.remove('selected'));
   el.classList.add('selected');
+  if (prefix === 'wk') lastSelectedSlotEl = el;
+  if (prefix === 'm-wk') lastSelectedModalSlotEl = el;
 }
 
 async function issueWalkInToken() {
@@ -900,10 +906,10 @@ async function issueWalkInToken() {
   const docVal = document.getElementById('wk-doctor').value;
   const type = document.getElementById('wk-type').value;
   const reuseSlotVal = document.getElementById('wk-reuse-slot').value;
-  if (!name || !phone || !docVal) { showToast('Please fill all required fields.', 'error'); return; }
   const parts = docVal.split('|');
   const selectedSlot = document.querySelector('#wk-time-slots .slot-btn.selected');
   const selectedTime = selectedSlot ? selectedSlot.dataset.time : null;
+  if (!name || !phone || !docVal || (!selectedTime && !reuseSlotVal)) { showToast('Please fill all required fields and select a time slot.', 'error'); return; }
   try {
     const entry = await API.reception.createEntry({
       patient_name: name,
@@ -916,10 +922,16 @@ async function issueWalkInToken() {
     });
     showToast(`🎫 Token ${entry.token} issued to ${name}`);
     addActivity(`Walk-in token ${entry.token} issued to ${name}`, 'issue');
+    if (lastSelectedSlotEl) {
+      lastSelectedSlotEl.classList.add('disabled');
+      lastSelectedSlotEl.classList.remove('selected');
+      lastSelectedSlotEl.removeAttribute('onclick');
+      lastSelectedSlotEl = null;
+    }
     loadAllData();
     loadNotifs();
     openPrintSlipDirect(entry.token, name, entry.doctor_name, entry.department_name, entry.room, entry.time);
-    resetWalkInForm();
+    resetWalkInFormFields();
   } catch (e) { console.error('issueWalkInToken error:', e); showToast(e.message, 'error'); }
 }
 
@@ -929,10 +941,10 @@ async function issueWalkInFromModal() {
   const docVal = document.getElementById('m-wk-doctor').value;
   const type = document.getElementById('m-wk-type').value;
   const reuseSlot = document.getElementById('m-wk-reuse-slot').value;
-  if (!name || !phone || !docVal) { showToast('Please fill all required fields.', 'error'); return; }
   const parts = docVal.split('|');
   const selectedSlot = document.querySelector('#m-wk-time-slots .slot-btn.selected');
   const selectedTime = selectedSlot ? selectedSlot.dataset.time : null;
+  if (!name || !phone || !docVal || (!selectedTime && !reuseSlot)) { showToast('Please fill all required fields and select a time slot.', 'error'); return; }
   try {
     const entry = await API.reception.createEntry({
       patient_name: name,
@@ -945,6 +957,12 @@ async function issueWalkInFromModal() {
     });
     showToast(`🎫 Token ${entry.token} issued to ${name}`);
     addActivity(`Walk-in token ${entry.token} issued to ${name}`, 'issue');
+    if (lastSelectedModalSlotEl) {
+      lastSelectedModalSlotEl.classList.add('disabled');
+      lastSelectedModalSlotEl.classList.remove('selected');
+      lastSelectedModalSlotEl.removeAttribute('onclick');
+      lastSelectedModalSlotEl = null;
+    }
     closeModal('walkin-modal');
     loadAllData();
     loadNotifs();
@@ -952,11 +970,16 @@ async function issueWalkInFromModal() {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-function resetWalkInForm() {
+function resetWalkInFormFields() {
   ['wk-name','wk-phone','wk-notes'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('wk-doctor').value = '';
+  document.querySelectorAll('#wk-time-slots .slot-btn').forEach(s => s.classList.remove('selected'));
   document.getElementById('token-preview').classList.remove('show');
   document.getElementById('existing-patient-alert').style.display = 'none';
+}
+
+function resetWalkInForm() {
+  resetWalkInFormFields();
+  document.getElementById('wk-doctor').value = '';
   document.getElementById('wk-time-slots').innerHTML = '<div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">Select a doctor to see available slots</div>';
 }
 
@@ -1040,8 +1063,15 @@ async function confirmCancel() {
     showToast(`❌ ${t ? t.patient_name : ''}'s appointment cancelled. Token available.`, 'warning');
     addActivity(`Token ${t ? t.token : ''} cancelled by receptionist. Slot available.`, 'cancel');
     closeModal('cancel-modal');
-    loadAllData();
-    loadNotifs();
+    const currentDoc = document.getElementById('wk-doctor').value;
+    await Promise.all([
+      loadAllData(),
+      loadNotifs(),
+    ]);
+    if (currentDoc) {
+        document.getElementById('wk-doctor').value = currentDoc;
+        await loadWalkInSlots('wk');
+    }
   } catch (e) { showToast(e.message, 'error'); }
 }
 
@@ -1070,7 +1100,7 @@ async function loadRescheduleSlots(dateStr) {
     const data = await API.patient.doctorSlots(`doctor_id=${docId}&date=${dateStr}`);
     const slots = data.slots || [];
     grid.innerHTML = slots.length
-      ? slots.map(s => `<div class="slot-btn" onclick="selectRescheduleSlot(this)" data-time="${s.time}">${s.label}</div>`).join('')
+      ? slots.map(s => `<div class="slot-btn${s.available ? '' : ' disabled'}" onclick="${s.available ? `selectRescheduleSlot(this)` : ''}" data-time="${s.time}">${s.label}</div>`).join('')
       : '<div style="color:var(--gray-400);font-size:13px;grid-column:1/-1;text-align:center;padding:10px;">No slots available</div>';
   } catch (e) {
     grid.innerHTML = '<div style="color:var(--gray-400);font-size:13px;">Failed to load slots</div>';

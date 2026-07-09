@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from django.shortcuts import render, get_object_or_404
 from accounts.decorators import role_required
 from django.utils import timezone
-from django.db.models import Count, Avg, F, ExpressionWrapper, DurationField
+from django.db.models import Count, Avg, F, ExpressionWrapper, DurationField, Q
 from accounts.permissions import IsHospitalAdmin
 from rest_framework.permissions import IsAuthenticated
 from accounts.models import User, Notification
@@ -131,8 +131,10 @@ class DoctorViewSet(viewsets.ModelViewSet):
         ).values_list('appointment_time', flat=True)
         queue_entries = QueueEntry.objects.filter(
             doctor=doctor,
-            scheduled_date=selected_date,
             status__in=['waiting', 'arrived', 'serving'],
+        ).filter(
+            Q(scheduled_date=selected_date) | 
+            Q(created_at__date=selected_date, scheduled_date__isnull=True)
         ).values_list('time', flat=True)
         booked = set()
         for t in appointments:

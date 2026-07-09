@@ -59,9 +59,11 @@ def _slot_is_available(doctor, appointment_date, appointment_time, exclude_appoi
 
     queue_qs = QueueEntry.objects.filter(
         doctor=doctor,
-        scheduled_date=appointment_date,
         time=appointment_time,
         status__in=['waiting', 'arrived', 'serving'],
+    ).filter(
+        Q(scheduled_date=appointment_date) |
+        Q(created_at__date=appointment_date, scheduled_date__isnull=True)
     )
 
     return not appointment_qs.exists() and not queue_qs.exists()
@@ -335,7 +337,6 @@ class AvailableSlotsView(APIView):
 
         existing_queue = QueueEntry.objects.filter(
             doctor=doctor,
-            scheduled_date=selected_date,
             status__in=['waiting', 'arrived', 'serving'],
         )
 
@@ -345,24 +346,29 @@ class AvailableSlotsView(APIView):
         for entry in existing_queue:
             booked_times.add(entry.time.strftime('%H:%M'))
 
-        available = []
+        all_slots = []
         for time_key in slot_times:
-            if time_key not in booked_times:
-                from datetime import datetime as dt
-                hour = int(time_key.split(':')[0])
-                period = 'PM' if hour >= 12 else 'AM'
-                disp_hour = hour % 12 or 12
-                available.append({
-                    'time': time_key,
-                    'label': f'{disp_hour}:{time_key.split(":")[1]} {period}',
-                })
+            from datetime import datetime as dt
+            hour = int(time_key.split(':')[0])
+            period = 'PM' if hour >= 12 else 'AM'
+            disp_hour = hour % 12 or 12
+            is_available = time_key not in booked_times
+            all_slots.append({
+                'time': time_key,
+                'label': f'{disp_hour}:{time_key.split(':')[1]} {period}',
+                'available': is_available,
+            })
+
+        available = [s for s in all_slots if s['available']]
 
         return Response({
             'date': date_str,
             'day': selected_date.strftime('%A'),
             'doctor_id': doctor.id,
             'doctor_name': doctor.name,
-            'slots': available,
+            'slots': all_slots,
+            'available_slots': available,
+            'booked_times': sorted(booked_times),
             'total_available': len(available),
         })
 
