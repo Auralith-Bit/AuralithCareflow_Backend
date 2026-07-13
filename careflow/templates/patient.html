@@ -1194,6 +1194,44 @@
         .reschedule-notice i { margin-top: 1px; flex-shrink: 0; }
 
         /* ==========================================================================
+           DARK MODE: Hardcoded Color Overrides
+           ========================================================================== */
+        [data-theme="dark"] .icon-btn { background: var(--bg-card); color: var(--text-main); border-color: var(--border-color); }
+        [data-theme="dark"] .icon-btn:hover { background: var(--btn-action-hover); }
+        [data-theme="dark"] .break-badge { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        [data-theme="dark"] .break-badge.available { background: rgba(16,163,127,0.15); color: #34d399; }
+        [data-theme="dark"] .card-teal .card-icon-wrapper { background-color: rgba(16,163,127,0.12); color: #34d399; }
+        [data-theme="dark"] .card-orange .card-icon-wrapper { background-color: rgba(245,158,11,0.12); color: #fbbf24; }
+        [data-theme="dark"] .card-blue .card-icon-wrapper { background-color: rgba(59,130,246,0.12); color: #60a5fa; }
+        [data-theme="dark"] .card-teal .status-subtext { color: #34d399; }
+        [data-theme="dark"] .card-orange .status-subtext { color: #fbbf24; }
+        [data-theme="dark"] .card-blue .status-subtext { color: #60a5fa; }
+        [data-theme="dark"] .progress-fill { background: #34d399; }
+        [data-theme="dark"] .col-token { color: #34d399; }
+        [data-theme="dark"] .row-active .status-badge { color: #34d399; }
+        [data-theme="dark"] .tab-item.active { color: var(--primary); }
+        [data-theme="dark"] .card-header-banner { background-color: #065f46; }
+        [data-theme="dark"] .initials-avatar { background-color: rgba(16,163,127,0.15); color: #34d399; }
+        [data-theme="dark"] .status-pill.confirmed, [data-theme="dark"] .status-pill.scheduled { background-color: var(--primary); color: #ffffff; }
+        [data-theme="dark"] .meta-details-line .item .paid-amount { color: #34d399; }
+        [data-theme="dark"] .see-all { color: #34d399; }
+        [data-theme="dark"] .ni-green { background: rgba(16,163,127,0.15); color: #34d399; }
+        [data-theme="dark"] .ni-amber { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        [data-theme="dark"] .ni-red { background: rgba(239,68,68,0.15); color: #f87171; }
+        [data-theme="dark"] .ni-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        [data-theme="dark"] .sdc-status-avail { background: rgba(16,163,127,0.15); color: #34d399; }
+        [data-theme="dark"] .sdc-status-break { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        [data-theme="dark"] .live-indicator { color: #34d399; }
+        [data-theme="dark"] .live-indicator::before { background: #34d399; }
+        [data-theme="dark"] .nav-link-left i { color: #34d399; }
+        [data-theme="dark"] .section-card-header .action-header-link { color: #34d399; }
+        [data-theme="dark"] .field-pill-left i { color: #34d399; }
+        [data-theme="dark"] .welcome-hero { background: linear-gradient(135deg, #022c22, #065f46); }
+        [data-theme="dark"] .token-hero-banner { background: linear-gradient(135deg, #022c22, #065f46); }
+        [data-theme="dark"] .book-now-btn { background: #065f46; }
+        [data-theme="dark"] .book-now-btn:hover { background: #045743; }
+
+        /* ==========================================================================
            RESPONSIVE
            ========================================================================== */
         @media (max-width: 992px) {

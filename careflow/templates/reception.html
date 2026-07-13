@@ -355,6 +355,38 @@
   :root.dark-mode .slot-btn { background: var(--bg-secondary); color: var(--text-secondary); border-color: var(--border-color); }
   :root.dark-mode .slot-btn:hover { border-color: var(--green-light); color: var(--green-light); }
   :root.dark-mode .slot-btn.selected { background: var(--green-main); border-color: var(--green-main); color: white; }
+
+  /* ── DARK MODE: Additional Overrides ── */
+  :root.dark-mode .notif-icon.ni-red { background: rgba(230,57,70,0.15); color: #ff6b6b; }
+  :root.dark-mode .notif-icon.ni-green { background: rgba(82,183,136,0.15); color: var(--green-light); }
+  :root.dark-mode .notif-icon.ni-blue { background: rgba(67,97,238,0.15); color: #7986cb; }
+  :root.dark-mode .notif-icon.ni-yellow { background: rgba(245,127,23,0.15); color: #ffb74d; }
+  :root.dark-mode .notif-unread { background: rgba(82,183,136,0.08); border-left-color: var(--green-light); }
+  :root.dark-mode .notif-title { color: var(--text-primary); }
+  :root.dark-mode .notif-message { color: var(--text-secondary); }
+  :root.dark-mode .btn-danger { background: rgba(230,57,70,0.12); border-color: rgba(230,57,70,0.3); }
+  :root.dark-mode .btn-danger:hover { background: var(--accent-red); }
+  :root.dark-mode .queue-table tbody tr.cancelled-row { background: rgba(230,57,70,0.08); }
+  :root.dark-mode .queue-table tbody tr.cancelled-row:hover { background: rgba(230,57,70,0.12); }
+  :root.dark-mode .status-badge.waiting { background: rgba(244,162,97,0.15); color: #ffb74d; }
+  :root.dark-mode .status-badge.serving { background: rgba(82,183,136,0.15); color: var(--green-light); }
+  :root.dark-mode .status-badge.serving::before { background: var(--green-light); }
+  :root.dark-mode .status-badge.arrived { background: rgba(67,97,238,0.15); color: #7986cb; }
+  :root.dark-mode .status-badge.done { background: var(--bg-secondary); color: var(--text-muted); }
+  :root.dark-mode .status-badge.cancelled { background: rgba(230,57,70,0.12); border-color: rgba(230,57,70,0.25); }
+  :root.dark-mode .cancelled-notice { background: rgba(230,57,70,0.1); border-color: rgba(230,57,70,0.25); }
+  :root.dark-mode .doc-count { background: rgba(82,183,136,0.15); color: var(--green-light); }
+  :root.dark-mode .toast { background: var(--bg-tertiary); color: var(--text-primary); }
+  :root.dark-mode .topbar-date { color: var(--text-secondary); }
+  :root.dark-mode .topbar-date strong { color: var(--text-primary); }
+  :root.dark-mode .stat-label { color: var(--text-muted); }
+  :root.dark-mode .stat-value { color: var(--text-primary); }
+  :root.dark-mode .stat-sub { color: var(--text-secondary); }
+  :root.dark-mode .section-title { color: var(--text-primary); }
+  :root.dark-mode .panel-header h3 { color: var(--text-primary); }
+  :root.dark-mode .filter-btn { background: var(--bg-tertiary); color: var(--text-secondary); border-color: var(--border-color); }
+  :root.dark-mode .filter-btn.active { background: var(--green-main); color: #ffffff; border-color: var(--green-main); }
+
   @media (max-width: 1200px) { .stats-row { grid-template-columns: repeat(3, 1fr); } .two-col { grid-template-columns: 1fr; } }
 </style>
 </head>
